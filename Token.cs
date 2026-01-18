@@ -198,6 +198,7 @@ namespace stilt
 		[Symbol("""[\r\n;]+""", true)]
 		StmtSeparator,
 
+		[BinaryOperator(15, typeof(CommaExpr))]
 		[Symbol(",")]
 		Comma,
 
@@ -299,6 +300,9 @@ namespace stilt
 
 		[Symbol("import")]
 		Import,
+
+		[Symbol("use")]
+		Use,
 
 		[Symbol("while")]
 		While,
