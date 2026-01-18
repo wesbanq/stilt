@@ -1,19 +1,16 @@
-﻿using stilt.AST;
-using System.ComponentModel.DataAnnotations;
-using System.Reflection;
-using System.Runtime.InteropServices;
+﻿using System.Reflection;
 using System.Text;
 
 namespace stilt
 {
 	public class ProgramArgs
 	{
-		[Required]
-		public Command Action { get; set; }
+		public Command Action;
+		public int DebugLevel;
+		public string MainCodeFilepath;
+		public List<Option> UsedOptions = [];
+		public bool Throw = false;
 
-		public int DebugLevel { get; set; }
-		public string MainCodeFilepath { get; set; }
-		public List<Option> UsedOptions { get; set; } = new List<Option>();
 		public static void PrintHelp()
 		{
 			Console.WriteLine("help text");
@@ -29,7 +26,7 @@ namespace stilt
 				{
 					if (String.Compare(s.Name, arg) == 0)
 					{
-						return (Option)(i-1);
+						return (Option)(i - 1);
 					}
 				}
 			}
@@ -54,10 +51,14 @@ namespace stilt
 					MainCodeFilepath = value;
 					break;
 				}
+				case "Throw":
+				{
+					Throw = true;
+					break;
+				}
 				default:
 				{
-					
-					break;
+					throw new ArgumentException($"Non-existent argument: {opt}");
 				}
 			}
 		}
@@ -66,12 +67,12 @@ namespace stilt
 		{
 			public NotEnoughArgmunetsException() : base("Not enough arguments passed") { }
 		}
-		
+
 		public class ArgumentParsingException : Exception
 		{
 			public string OptionName { get; set; }
 			public string? GivenValue { get; set; }
-			
+
 			public ArgumentParsingException(string optName, string givenValue)
 				: base($"Invalid value given to option '{optName}': '{givenValue}'")
 			{
@@ -102,24 +103,6 @@ namespace stilt
 
 			Action = Compiler.GetEnumFromDescription<Command, ActionAttribute>(args[0].ToLower());
 
-			//Lexer.GetSymbolAttribute(out var symbols, out var regex);
-			//var optsa = typeof(Option).GetFields();
-			//for (int i = 1; i < optsa.Length; i++)
-			//{
-			//	var sym = optsa[i].GetCustomAttribute<OptionAttribute>();
-			//	var idx = args.IndexOf(sym?.Name);
-			//	if (idx != -1)
-			//	{
-			//		if (sym.Kind != OptionType.Flag && (args.Length <= idx + 1 || 
-			//			WhichOption(args[idx + 1]) != Option.None))
-			//		{
-			//			throw new Exception($"No value given for option '{sym.Name}'");
-			//		}
-			//		GiveValueTo(sym.AssociatedPropertyName, sym.Kind == OptionType.Flag ? "" : args[idx + 1]);
-			//		UsedOptions.Add((Option)(i-1));
-			//	}
-			//}
-
 			for (int i = 1; i < args.Length; i++)
 			{
 				var current = WhichOption(args[i]);
@@ -134,7 +117,8 @@ namespace stilt
 						&& !UsedOptions.Contains(current)
 						)
 					{
-						GiveValueTo(currentAttribute.AssociatedPropertyName, nextAttribute == null ? args[i + 1] : "");
+						GiveValueTo(currentAttribute.AssociatedPropertyName,
+							nextAttribute == null && currentAttribute?.Kind != OptionType.Flag ? args[i + 1] : "");
 						UsedOptions.Add(current);
 					}
 				}
@@ -162,21 +146,11 @@ namespace stilt
 		[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
 		public class OptionAttribute : Attribute, IDescriptable
 		{
-			[Required]
 			public string Name { get; set; }
+			public OptionType Kind;
+			public string AssociatedPropertyName;
+			public string HelpText;
 
-			[Required]
-			public OptionType Kind { get; set; }
-
-			[Required]
-			public string AssociatedPropertyName { get; set; }
-			public string HelpText { get; set; }
-
-			public string GetDescription()
-			{
-				return Name;
-			}
-			
 			public OptionAttribute(string optChar, string propName, string helpText, OptionType tpe = OptionType.ValueRequired)
 			{
 				Name = optChar;
@@ -186,7 +160,7 @@ namespace stilt
 			}
 		}
 
-		public static A? GetEnumAttribute<T, A>(T opt) 
+		public static A? GetEnumAttribute<T, A>(T opt)
 			where T : Enum
 			where A : Attribute
 		{
@@ -196,13 +170,8 @@ namespace stilt
 		[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
 		public class ActionAttribute : Attribute, IDescriptable
 		{
-			[Required] public Option[]? Required;
-			[Required] public string Name;
-
-			public string GetDescription()
-			{
-				return Name;
-			}
+			public Option[]? Required;
+			public string Name { get; set; }
 
 			public ActionAttribute(string name, Option[]? required = null)
 			{
@@ -214,13 +183,13 @@ namespace stilt
 		public enum OptionType
 		{ ValueRequired, ValueOptional, Flag }
 
-		public enum Command 
+		public enum Command
 		{
 			[Action("help")]
 			Help,
 
 			[Action("build", [Option.InputFile])]
-			Build, 
+			Build,
 
 			[Action("token", [Option.InputFile])]
 			Tokenize,
@@ -233,7 +202,7 @@ namespace stilt
 		}
 
 		public enum Option
-		{ 
+		{
 			None = 0,
 
 			[Option("-d", "DebugLevel", "Set debug level (for compiler developers)"/*, OptionType.ValueOptional*/)]
@@ -241,6 +210,9 @@ namespace stilt
 
 			[Option("-i", "MainCodeFilepath", "Sets the main code filepath to use")]
 			InputFile,
+
+			[Option("-t", "Throw", "Crash the program instead of printing the error (for debugging)", OptionType.Flag)]
+			Throw,
 		}
 
 	}
@@ -263,21 +235,21 @@ namespace stilt
 				try
 				{
 					var value = prop.GetValue(obj);
-					if (value == null) 
+					if (value == null)
 					{
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = null");
 						continue;
 					}
-						if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
-						{
-							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
-							$"{(value is string ? $"\"{Escape((string)value)}\"" : value)}");
-						}
-						else
-						{
-							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
-							Dump(value, l + 1);
-						} 
+					if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
+					{
+						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
+						$"{(value is string ? $"\"{Escape((string)value)}\"" : value)}");
+					}
+					else
+					{
+						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
+						Dump(value, l + 1);
+					}
 				}
 				catch { }
 			}
@@ -308,6 +280,7 @@ namespace stilt
 
 		public static string Escape(string s)
 		{
+			if (s == "") return "";
 			var sb = new StringBuilder(s.Length);
 			foreach (char c in s)
 			{
@@ -328,10 +301,8 @@ namespace stilt
 		static int Main(string[] args)
 		{
 			ProgramArgs arg;
-
 			//TODO
 			//implement ValueOptional
-
 			try
 			{
 				arg = new ProgramArgs(args);
@@ -369,28 +340,17 @@ namespace stilt
 				}
 				case ProgramArgs.Command.Tree:
 				{
-					//AdditionExpr test = new(2)
-					//{
-					//	Left = new IdentityExpr()
-					//	{
-					//		Identity = new VarSymbol("a", "")
-					//	},
-					//};
-
-					//Dump(test.FindFirstPrecedenceOrNull(2, out var parent));
-
-					//test.Right = new IdentityExpr() {Identity = new VarSymbol("b", "")};
-
-					//Dump(test.FindFirstPrecedenceOrNull(2, out parent));
-
 					var lex = new Lexer(arg);
-					var parse = new Parser(lex);
-					parse.ParseBranch();
+					var parse = new Parser(lex, arg);
+					parse.ParseFile();
 
 					foreach (var stmt in parse.Statements)
 					{
 						Dump(stmt);
 					}
+
+					parse.WriteErrors();
+					//Console.WriteLine(parse.Statements.Count);
 
 					break;
 				}

@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
-using System.Reflection;
+﻿using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace stilt
@@ -8,7 +7,7 @@ namespace stilt
 	{
 		protected readonly List<Token> Tokens = new List<Token>();
 		protected int CurrentPos = 0;
-		public readonly string Filepath = "If you see this message, please report it as a bug.";
+		public readonly string Filepath;
 		public Token? CurrentToken => Tokens.Count > CurrentPos ? Tokens[CurrentPos] : null;
 
 		public static void GetSymbolAttribute(out List<string[]> symbols, out List<string[]> regex)
@@ -25,8 +24,8 @@ namespace stilt
 
 		public class OverlappingTokensException : Exception
 		{
-			[Required] Token Token1;
-			[Required] Token Token2;
+			Token Token1;
+			Token Token2;
 
 			public OverlappingTokensException(string message, Token token1, Token token2) : base(message)
 			{
@@ -37,17 +36,20 @@ namespace stilt
 
 		public static string Preprocess(string code)
 		{
+			//changes to the preprocessor to keep the amount of lines
 			const string commentRegex1 = """#.*""";
 			const string commentRegex2 = """##(?:.*\s)*##""";
-			const string commentRegex3 = """\n{2,}""";
+			//const string commentRegex3 = """\n{2,}""";
 			const string commentRegex4 = """\r\n""";
 			const string linebreakRegex = """ ?\\\s+""";
-			return Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(
+			return Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(//Regex.Replace(
 				code + "\n", commentRegex4, "\n")
-				, commentRegex2, "")
+				, commentRegex2, m => { var lines = m.Value.Count(c => c == '\n'); return new String('\n', lines); })
 				, commentRegex1, "")
-				, linebreakRegex, " ")
-				, commentRegex3, "\n");
+				// will still ruin compilarion error reports, but its a crutch to deal with the lack of multiline expression support
+				// so ill remove once thats added
+				, linebreakRegex, " ");
+				//, commentRegex3, "\n");
 		}
 
 		protected List<Token> GetTokenMatches(string code, List<string[]> rules)
@@ -77,13 +79,18 @@ namespace stilt
 			return tokens;
 		}
 
+		public void SkipStmt()
+		{
+			while (Next()?.Which switch { null or TokenType.StmtSeparator or TokenType.CloseCurlyBracket => false, _ => true}) { }
+		}
+
 		public Token Prev()
 		{
 			CurrentPos--;
 			return CurrentToken;
 		}
 
-		public Token Next()
+		public Token? Next()
 		{
 			CurrentPos++;
 			return CurrentToken;
@@ -101,7 +108,7 @@ namespace stilt
 		{
 			var t = Tokens.FindIndex(t => ReferenceEquals(t, to));
 			if (t == -1)
-				throw new ArgumentException();
+				throw new ArgumentException($"Couldn't find token {to}");
 			CurrentPos = t;
 		}
 

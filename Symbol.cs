@@ -8,7 +8,10 @@ namespace stilt.AST
 	public class Symbol
 	{
 		public string Name;
+		//TODO (IMPORTANT VERY)
+		//stop using filepaths
 		public string Source;
+		//actually use this
 		public Stmt? Declaration;
 
 		public bool IsBuiltin => Source.StartsWith("<BUILTIN>");
@@ -16,7 +19,8 @@ namespace stilt.AST
 
 		public static bool operator ==(Symbol? left, Symbol? right)
 		{
-			if (left == null || right == null) return false;
+			if (left is null && right is null) return true;
+			if (left is null || right is null) return false;
 			return left.Name.Equals(right.Name) && left.Source.Equals(right.Source);
 		}
 
@@ -33,6 +37,14 @@ namespace stilt.AST
 		public override int GetHashCode()
 		{
 			return (Name + Source).GetHashCode();
+		}
+
+		public void Untemp(string src)
+		{
+			if (IsTemp)
+			{
+				Source = src;
+			}
 		}
 
 		protected Symbol(string name, string src)
@@ -70,7 +82,7 @@ namespace stilt.AST
 	{
 		public TypeSymbol? Base;
 		public TypeSymbol? Inherits => Base == null ? _inherits : Base.Inherits;
-		private TypeSymbol? _inherits;
+		private TypeSymbol? _inherits = null;
 
 		public int ArgumentCount = 0;
 		public TypeSymbol[]? Arguments;
@@ -80,7 +92,8 @@ namespace stilt.AST
 
 		public static bool operator ==(TypeSymbol? left, TypeSymbol? right)
 		{
-			if (left == null || right == null) return false;
+			if (left is null && right is null) return true;
+			if (left is null || right is null) return false;
 			if (left.ArgumentCount != right.ArgumentCount) return false;
 
 			for (int i = 0; i < left.ArgumentCount; i++)

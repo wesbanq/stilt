@@ -17,19 +17,20 @@ namespace stilt
 		public int Length => End - Start;
 		//bad
 		public string Text => Lexer.Preprocess(File.ReadAllText(Filename)).Substring(Start, Length);
-		public string[] TextLines 
+		public List<string> TextLines 
 		{
 			get
 			{
-				var text = Lexer.Preprocess(File.ReadAllText(Filename));
-				var newStart = Start;
-				var newEnd = End;
-				while (text[newStart] != '\n') newStart--;
-				newStart++;
-				while (text[newEnd] != '\n') newEnd++;
-				newEnd--;
+				//var text = Lexer.Preprocess(File.ReadAllText(Filename));
+				//var newStart = Start;
+				//var newEnd = End;
+				//while (text[newStart] != '\n') newStart--;
+				//newStart++;
+				//while (text[newEnd] != '\n') newEnd++;
+				//newEnd--;
 
-				return text.Substring(newStart, newEnd - newStart).Split("\n");
+				//return text.Substring(newStart, newEnd - newStart).Split("\n");
+				return ["", "", "", "", "", "", "", ""];
 			}
 		}
 
@@ -66,8 +67,14 @@ namespace stilt
 
 		public static FileRange? operator +(FileRange left, FileRange right)
 		{
-			if (left == null || right == null || !left.SameFile(right))
+			if (!left.SameFile(right))
 				throw new ArgumentException();
+
+			if (left == null)
+				return right;
+
+			if (right == null)
+				return left;
 
 			if (left.Before(right))
 				return new FileRange(left.Start, right.End, left.Filename);
@@ -150,12 +157,11 @@ namespace stilt
 
 	public interface IDescriptable
 	{
-		string GetDescription();
+		string Name { get; }
 	}
 
-	public class CompilationMessage
+	public abstract class CompilationMessage : Exception
 	{
-		public string Message;
 		public FileRange? Range;
 		public ErrorSeverity Severity = ErrorSeverity.Info;
 
@@ -170,8 +176,8 @@ namespace stilt
 				var res = "";
 				for (int line = lineS; line <= lineE; line++)
 				{
-					var part1 = $"\t{line}| ";
-					var part2 = text[lineS-line];
+					var part1 = $"\n\t{line}| ";
+					var part2 = text[line-lineS];
 					var part3 = "\n\t" + new String(' ', part1.Length-1);
 					var part4 = new String(' ', line == lineS ? columnS : 0)
 								+ new String('^', line == lineS ? columnS-part2.Length : (line == lineE ? columnE : part2.Length));
@@ -185,8 +191,8 @@ namespace stilt
 		}
 
 		public CompilationMessage(string message, FileRange? range = null, ErrorSeverity severity = ErrorSeverity.Info)
+			: base(message)
 		{
-			Message = message;
 			Range = range;
 			Severity = severity;
 		}
@@ -195,17 +201,38 @@ namespace stilt
 	public enum ErrorSeverity
 	{ Info, Warning, Error, Critical }
 
-	public abstract class Compiler
+	public static class Compiler
 	{
-		
-
 		public static A? GetAttributeFromEnum<T, A>(T value)
 			where T : Enum
 			where A : Attribute
 		{
-			return typeof(T)
+			try
+			{
+				return typeof(T)
 				.GetField(value.ToString())
-				?.GetCustomAttributes<A>().First();
+				?.GetCustomAttributes<A>()?.First();
+			}
+			catch (InvalidOperationException)
+			{
+				return null;
+			}
+		}
+
+		public static A[]? GetAttributesFromEnum<T, A>(T value)
+			where T : Enum
+			where A : Attribute
+		{
+			try
+			{
+				return typeof(T)
+				.GetField(value.ToString())
+				?.GetCustomAttributes<A>()?.ToArray();
+			}
+			catch (InvalidOperationException)
+			{
+				return null;
+			}
 		}
 
 		public static List<A?> GetAttributesFromType<A>(Type t)
@@ -225,7 +252,7 @@ namespace stilt
 		{
 			foreach (var field in typeof(T).GetFields())
 			{
-				if (field.GetCustomAttribute<A>()?.GetDescription() == toFind)
+				if (field.GetCustomAttribute<A>()?.Name == toFind)
 					return (T)field.GetValue(null);
 			}
 			//return default;
@@ -238,7 +265,7 @@ namespace stilt
 		{
 			foreach (var field in typeof(T).GetFields())
 			{
-				if (field.GetCustomAttribute<A>()?.GetDescription() == toFind)
+				if (field.GetCustomAttribute<A>()?.Name == toFind)
 					return field.GetCustomAttribute<A>();
 			}
 			return null;

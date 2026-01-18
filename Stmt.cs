@@ -5,14 +5,32 @@ using System.Text;
 
 namespace stilt.AST
 {
-	public abstract class Stmt
+	public abstract class Stmt : IRanged
 	{
 		public required Scope Scope;
+		public FileRange? InnerRange { private get; set; }
+		public FileRange? Range
+		{
+			get
+			{
+				var sum = InnerRange;
+				foreach (var fld in GetType().GetFields())
+				{
+					if (fld is IRanged ranged)
+					{
+						if (ranged.Range is null) continue;
+						sum = sum is null ? ranged.Range : sum + ranged.Range;
+					}
+				}
+
+				return sum;
+			}
+		}
 	}
 
-	public class CompoundStmt : Stmt 
+	public class CompoundStmt : Stmt
 	{
-		public LinkedList<Stmt> Statements = new();
+		public required LinkedList<Stmt> Statements = new();
 	}
 
 	public class IfStmt : Stmt
@@ -29,14 +47,14 @@ namespace stilt.AST
 
 	public class VarDeclStmt : Stmt
 	{
-		public Symbol Name;
+		public required List<Symbol> Name;
 		public bool IsConst = false;
 		public Expr? Value;
 	}
 
 	public class TypeDeclStmt : Stmt
 	{
-		public TypeSymbol Name;
+		public required Symbol Name;
 		public Stmt Value;
 	}
 
