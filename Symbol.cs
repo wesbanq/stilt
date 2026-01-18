@@ -11,7 +11,7 @@ namespace stilt.AST
 		//TODO (IMPORTANT VERY)
 		//stop using filepaths
 		public string Source;
-		//actually use this
+		//actually use this VVVV
 		public Stmt? Declaration;
 
 		public bool IsBuiltin => Source.StartsWith("<BUILTIN>");
@@ -87,8 +87,8 @@ namespace stilt.AST
 		public int ArgumentCount = 0;
 		public TypeSymbol[]? Arguments;
 
-		public bool IsComplete => Base == null ? true : ArgumentCount == Arguments?.Length;
-		public bool IsSimple => Base == null;
+		//public bool IsComplete => Base == null ? true : ArgumentCount == Arguments?.Length;
+		//public bool IsSimple => Base == null;
 
 		public static bool operator ==(TypeSymbol? left, TypeSymbol? right)
 		{

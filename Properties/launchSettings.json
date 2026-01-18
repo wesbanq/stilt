@@ -2,6 +2,10 @@
   "profiles": {
     "stilt": {
       "commandName": "Project",
+      "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example4.txt"
+    },
+    "throw": {
+      "commandName": "Project",
       "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example4.txt -t"
     }
   }

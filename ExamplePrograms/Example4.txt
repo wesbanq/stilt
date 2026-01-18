@@ -1,5 +1,6 @@
-(1+2)/((4+5)/3)
-var a
+a()+(2,2)
 
-var b
-var (a, b)
+
+
+ trait s
+trait ssds kl 
