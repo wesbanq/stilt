@@ -1,7 +1,7 @@
 var a = 2
 var b
 
-var c = a +  \
+var c: int = a +  \
 	b
 
 ##

@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace stilt
@@ -24,9 +25,8 @@ namespace stilt
 
 		public class OverlappingTokensException : Exception
 		{
-			Token Token1 { get; set; }
-			Token Token2 { get; set; }
-
+			[Required] Token Token1;
+			[Required] Token Token2;
 
 			public OverlappingTokensException(string message, Token token1, Token token2) : base(message)
 			{
