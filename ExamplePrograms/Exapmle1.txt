@@ -1,0 +1,8 @@
+var a = 2
+var b
+#comment
+func h() {
+	return 4
+}
+var c = h()
+var d = a + b + h()
