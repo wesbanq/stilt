@@ -194,7 +194,6 @@ namespace stilt
 		EmitSignal,
 
 		// Literals
-		//[Symbol("""[a-z0-9]*("(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
 		[Symbol("""(?:"(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
 		StringLiteral,
 
@@ -202,9 +201,23 @@ namespace stilt
 		[Symbol("""(?:\$|f)"(?:\\.|[^\\"])*"|(?:\$|f)'(?:\\.|[^\\'])*'""", true)]
 		FormatStringLiteral,
 
-		// [Symbol(r"\d\d*(?:\.\d*|[bsilfd])?")]
-		[Symbol("""\d\d*(?:\.\d*|[bsilfd])?""", true)]
-		NumericLiteral,
+		[Symbol("""[bsilfd]?(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)""", true)]
+		DecimalNumericLiteral,
+
+		[Symbol("""[bsilfd]?\d[\d_]*""", true)]
+		WholeNumericLiteral,
+
+		[Symbol("""[bsilfd]?0x[\da-fA-F]+[\da-fA-F_]*""", true)]
+		HexNumericLiteral,
+
+		[Symbol("""[bsilfd]?0o[0-8]+[0-8_]*""", true)]
+		OctalNumericLiteral,
+
+		[Symbol("""[bsilfd]?0b[01]+[01_]*""", true)]
+		ByteNumericLiteral,
+
+		[Symbol("""[bsilfd]?(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[e|E][-|+]\d+""", true)]
+		ScientificNumericLiteral,
 
 		// Delimiters
 		[Symbol("""[\r\n;]+""", true)]

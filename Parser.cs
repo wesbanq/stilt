@@ -1,6 +1,7 @@
 ﻿using stilt.AST;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Numerics;
 using System.Text.RegularExpressions;
 
 namespace stilt
@@ -92,6 +93,15 @@ namespace stilt
 			public UnexpectedEOF(Lexer lex)
 				: base(lex.Text.EOF, "File unexpectedly ended")
 			{ }
+		}
+
+		public class SyntaxWarning : SyntaxError
+		{
+			public SyntaxWarning(FileRange pos, string msg)
+				: base(pos, msg)
+			{
+				Severity = ErrorSeverity.Warning;
+			}
 		}
 
 		public void WriteErrors()
@@ -299,6 +309,17 @@ namespace stilt
 			return new(currentToken.Range, dict);
 		}
 
+		protected double ParseScientificLiteral(Token token)
+		{
+			var tokenText = token.Range.Text.Replace("_", "");
+			var splitIndex = tokenText.IndexOfAny(['e', 'E']);
+
+			var mantissa = Convert.ToDouble(tokenText[..splitIndex]);
+			var exponent = Convert.ToInt64(tokenText[(splitIndex+1)..]);
+
+			return mantissa * (Math.Pow(10, exponent));
+		}
+
 		protected void ParseExpr(ref Expr rootExpr, Token? currentToken)
 		{
 			if (currentToken == null) return;
@@ -324,9 +345,74 @@ namespace stilt
 					newExpr = new StringLiteralExpr(currentToken.Range.Text, currentToken.Range);
 					break;
 				}
-				case TokenType.NumericLiteral:
+				case TokenType.HexNumericLiteral:
+				case TokenType.ByteNumericLiteral:
+				case TokenType.OctalNumericLiteral:
+				case TokenType.WholeNumericLiteral:
+				case TokenType.DecimalNumericLiteral:
+				case TokenType.ScientificNumericLiteral:
 				{
-					newExpr = new NumLiteralExpr(int.Parse(currentToken.Range.Text), currentToken.Range);
+					var tokenText = currentToken.Range.Text.Replace("_", "");
+					var literalType = tokenText[0] switch 
+					{
+						'b' => Builtins.Byte,
+						's' => Builtins.Short,
+						'i' => Builtins.Int,
+						'l' => Builtins.Long,
+						'f' => Builtins.Float,
+						'd' => Builtins.Double,
+						//if it isnt a decimal number it can only be a whole number
+						_	=> currentToken.Which is (TokenType.DecimalNumericLiteral or TokenType.ScientificNumericLiteral) ? Builtins.Fractional : Builtins.Whole,
+					};
+					var numBase = currentToken.Which switch
+					{
+						TokenType.OctalNumericLiteral	=> 8,
+						TokenType.ByteNumericLiteral	=> 2,
+						TokenType.HexNumericLiteral		=> 16,
+						_								=> 10,
+					};
+
+					if (literalType != Builtins.Fractional && literalType != Builtins.Whole)
+					{
+						tokenText = tokenText.Substring(1);
+					}
+					if (numBase != 10)
+					{
+						tokenText = tokenText.Substring(2);
+					}
+
+					try
+					{
+						if (currentToken.Which is TokenType.ScientificNumericLiteral)
+						{
+							if (literalType.InheritsFrom(Builtins.Whole))
+								NewError(new SyntaxWarning(currentToken.Range, $"{literalType.Name} is not whole. Precision may be lost."));
+
+							var num = ParseScientificLiteral(currentToken);
+							newExpr = new NumLiteralExpr(num, currentToken.Range, literalType);
+						}
+						else if (literalType.InheritsFrom(Builtins.Fractional))
+						{
+							if (currentToken.Which is not TokenType.DecimalNumericLiteral)
+								NewError(new SyntaxWarning(currentToken.Range, $"{literalType.Name} is not whole. Precision may be lost."));	
+
+							var num = Convert.ToDouble(tokenText);
+							newExpr = new NumLiteralExpr(num, currentToken.Range, literalType);
+						}
+						else
+						{
+							if (currentToken.Which is TokenType.DecimalNumericLiteral)
+								NewError(new SyntaxWarning(currentToken.Range, $"{literalType.Name} is not fractional. Numbers after the decimal point will be lost."));
+
+							var num = Convert.ToInt64(tokenText, numBase);
+							newExpr = new NumLiteralExpr(num, currentToken.Range, literalType);
+						}
+					}
+					catch
+					{
+						throw new SyntaxError(currentToken.Range, "Could not parse numeric literal");
+					}
+
 					break;
 				}
 				case TokenType.Null:

@@ -361,11 +361,18 @@ namespace stilt.AST
 	public class NumLiteralExpr : LiteralExpr
 	{
 		[SetsRequiredMembers]
-		public NumLiteralExpr(int num, FileRange? r)
+		public NumLiteralExpr(long num, FileRange? r, TypeSymbol? t = null)
 			: base(r)
 		{
 			Value = num;
-			Type = Builtins.Num;
+			Type = t ?? Builtins.Num;
+		}
+		[SetsRequiredMembers]
+		public NumLiteralExpr(double num, FileRange? r, TypeSymbol? t = null)
+			: base(r)
+		{
+			Value = num;
+			Type = t ?? Builtins.Num;
 		}
 	}
 
