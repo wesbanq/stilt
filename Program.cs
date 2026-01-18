@@ -340,6 +340,12 @@ namespace stilt
 				}
 				case ProgramArgs.Command.Tree:
 				{
+					//string g = File.ReadAllText(arg.MainCodeFilepath);
+					//FileRange a = new(0, 1, arg.MainCodeFilepath);
+					//FileRange b = new(17, 18, arg.MainCodeFilepath);
+					//FileRange c = new(20, 23, arg.MainCodeFilepath);
+					//throw new Exception();
+
 					var lex = new Lexer(arg);
 					var parse = new Parser(lex, arg);
 					parse.ParseFile();

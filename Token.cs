@@ -45,15 +45,24 @@ namespace stilt
 	{
 		public TokenType Which;
 		public FileRange Range;
-		public string Text;
+
+		public bool IsUnimplemented => Compiler.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(Which) != null;
+
+		public Expr[]? GetOperators()
+		{
+			var l = Compiler.GetAttributesFromEnum<TokenType, OperatorAttribute>(Which);
+			return l != null ? [.. l.Select(static a => 
+				Activator.CreateInstance(a.AssociatedExpr, a.Precedence) as Expr ?? throw new Exception())] : null;
+		}
 
 		public static string[] GetRulesFromType(TokenType t)
 		{
 			var types = typeof(TokenType).GetFields();
 
-			Activator.CreateInstance(typeof(AdditionExpr));
+			Activator.CreateInstance(typeof(AdditionExpr), 0);
 			return types[(int)t + 1].GetCustomAttributes<SymbolAttribute>().Select(o => o.Symbol).ToArray();
 		}
+
 	}
 
 	public enum TokenType
@@ -192,7 +201,7 @@ namespace stilt
 		StringLiteral,
 
 		[Unimplemented]
-		[Symbol("""(?:\$"(?:\\.|[^\\"])*"|\$'(?:\\.|[^\\'])*')""", true)]
+		[Symbol("""(?:\$|f)"(?:\\.|[^\\"])*"|(?:\$|f)'(?:\\.|[^\\'])*'""", true)]
 		FormatStringLiteral,
 
 		// [Symbol(r"\d\d*(?:\.\d*|[bsilfd])?")]
@@ -234,6 +243,7 @@ namespace stilt
 
 		[Unimplemented]
 		[UnaryOperator(3, typeof(CloneExpr))]
+		[Symbol("copy")]
 		[Symbol("clone")]
 		Clone,
 
@@ -285,16 +295,23 @@ namespace stilt
 		[Symbol("func")]
 		FuncDecl,
 
+		[Symbol("macro")]
+		MacroDecl,
+
+		[Unimplemented]
+		[Symbol("enum")]
+		EnumDecl,
+
 		[Symbol("var")]
 		VarDecl,
+
+		[Symbol("const")]
+		ConstDecl,
 
 		[Symbol("prototype")]
 		[Symbol("type")]
 		[Symbol("class")]
-		TokenDecl,
-
-		[Symbol("const")]
-		ConstDecl,
+		TypeDecl,
 
 		[Unimplemented]
 		[Symbol("trait")]
@@ -302,15 +319,23 @@ namespace stilt
 
 		[Unimplemented]
 		[Symbol("target")]
-		Target,
+		TargetFuncDecl,
 
 		[Unimplemented]
 		[Symbol("signal")]
-		Signal,
+		SignalDecl,
 
 		// Keywords
 		[Symbol("internal")]
-		DudeItTotallyExistsTrustMe,
+		Internal,
+
+		[Symbol("priv")]
+		[Symbol("private")]
+		PrivateSpec,
+
+		[Symbol("pub")]
+		[Symbol("public")]
+		PublicSpec,
 
 		[TernaryOperator(13, typeof(ConditionalExpr))]
 		[Symbol("if")]
@@ -353,6 +378,7 @@ namespace stilt
 		[Symbol("for")]
 		For,
 
+		[Unimplemented]
 		[Symbol("in")]
 		In,
 

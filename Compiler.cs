@@ -15,22 +15,22 @@ namespace stilt
 		public string Filename;
 
 		public int Length => End - Start;
-		//bad
-		public string Text => Lexer.Preprocess(File.ReadAllText(Filename)).Substring(Start, Length);
-		public List<string> TextLines 
+		//remove Preprocess
+		public string Text => File.ReadAllText(Filename).ReplaceLineEndings("\n").Substring(Start, Length);
+		public string[] TextLines 
 		{
 			get
 			{
-				//var text = Lexer.Preprocess(File.ReadAllText(Filename));
-				//var newStart = Start;
-				//var newEnd = End;
-				//while (text[newStart] != '\n') newStart--;
-				//newStart++;
-				//while (text[newEnd] != '\n') newEnd++;
-				//newEnd--;
+				var text = File.ReadAllText(Filename).ReplaceLineEndings("\n");
+				var newStart = Start;
+				var newEnd = End-1;
+				while (newStart > 0 && text[--newStart] != '\n');
+				++newStart;
+				while (newEnd < text.Length && text[newEnd] != '\n') ++newEnd;
+				--newEnd;
 
-				//return text.Substring(newStart, newEnd - newStart).Split("\n");
-				return ["", "", "", "", "", "", "", ""];
+				return text.Substring(newStart, newEnd - newStart + 1).Split("\n");
+				//return [Text];
 			}
 		}
 
@@ -41,26 +41,30 @@ namespace stilt
 		}
 
 		public (int line, int column) StartLineAndColumn => ToLineAndColumn(Start, Filename);
-		public (int line, int column) EndLineAndColumn => ToLineAndColumn(End, Filename);
+		public (int line, int column) EndLineAndColumn => ToLineAndColumn(End-1, Filename);
 		public static (int line, int column) ToLineAndColumn(int charAt, string Filename)
 		{
 			if (!File.Exists(Filename))
 				throw new ArgumentException();
 
-			int line = 1;
-			int lastNewline = -1;
-			string text = File.ReadAllText(Filename);
+			var text = File.ReadAllText(Filename).ReplaceLineEndings("\n");
+			var line = 1;
+			var column = 1;
 
-			for (int i = 0; i < charAt; i++)
+			for (int i = 0; i < charAt; ++i) 
 			{
+				++column;
+				//if (text[i] == '\r')
+				//{
+				//	text = text.Remove(i, 1);
+				//	//++charAt;
+				//}
 				if (text[i] == '\n')
 				{
-					line++;
-					lastNewline = i;
+					++line;
+					column = 1;
 				}
 			}
-
-			int column = charAt - lastNewline;
 
 			return (line, column);
 		}
@@ -169,18 +173,23 @@ namespace stilt
 		{
 			if (Range != null)
 			{
+				//???????????????????????????????????
 				var (lineS, columnS) = Range.StartLineAndColumn;
 				var (lineE, columnE) = Range.EndLineAndColumn;
 				var text = Range.TextLines;
 
 				var res = "";
-				for (int line = lineS; line <= lineE; line++)
+				for (int line = lineS; line <= lineE; ++line)
 				{
+					//magic numbers found via trial and error
 					var part1 = $"\n\t{line}| ";
 					var part2 = text[line-lineS];
-					var part3 = "\n\t" + new String(' ', part1.Length-1);
-					var part4 = new String(' ', line == lineS ? columnS : 0)
-								+ new String('^', line == lineS ? columnS-part2.Length : (line == lineE ? columnE : part2.Length));
+					var part3 = "\n\t" + new String(' ', part1.Length-2);
+					var part4 = new String(' ', line == lineS ? columnS-1 : 0)
+								+ new String('^', 
+								Math.Max(0, line == lineS 
+									? (line == lineE ? Range.Length : part2.Length-(columnS-1)) 
+									: (line == lineE ? columnE-1 : part2.Length)));
 					res += part1+part2+part3+part4;
 				}
 
@@ -188,6 +197,11 @@ namespace stilt
 			}
 			else
 				return Message;
+		}
+
+		public void Print()
+		{
+			Console.WriteLine(ToString());
 		}
 
 		public CompilationMessage(string message, FileRange? range = null, ErrorSeverity severity = ErrorSeverity.Info)

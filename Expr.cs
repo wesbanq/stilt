@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text;
 
@@ -320,6 +321,37 @@ namespace stilt.AST
 	public class LiteralExpr : Expr
 	{
 		public required object Value;
+	}
+
+	public class NullLiteralExpr : LiteralExpr
+	{
+		[SetsRequiredMembers]
+		public NullLiteralExpr()
+		{
+			Value = null;
+			Type = Builtins.None;
+		}
+	}
+
+	//future new classes for different num types
+	public class NumLiteralExpr : LiteralExpr
+	{
+		[SetsRequiredMembers]
+		public NumLiteralExpr(int num)
+		{
+			Value = num;
+			Type = Builtins.Num;
+		}
+	}
+
+	public class StringLiteralExpr : LiteralExpr
+	{
+		[SetsRequiredMembers]
+		public StringLiteralExpr(string str)
+		{
+			Value = str;
+			Type = Builtins.String;
+		}
 	}
 
 	public class LambdaFuncExpr : Expr

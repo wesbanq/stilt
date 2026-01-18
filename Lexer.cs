@@ -68,9 +68,7 @@ namespace stilt
 
 						newToken.Range = new FileRange(match.Index, match.Index + match.Length, Filepath);
 						newToken.Which = (TokenType)i;
-						newToken.Text = match.Value;
 
-						//Program.Dump(newToken);
 						tokens.Add(newToken);
 					}
 				}
@@ -118,13 +116,12 @@ namespace stilt
 			var code = Preprocess(File.ReadAllText(args.MainCodeFilepath));
 
 			GetSymbolAttribute(out var symbols, out var regex);
-			Tokens = FileRange.RemoveOverlaps(
+			Tokens = [.. FileRange.RemoveOverlaps(
 				GetTokenMatches(code, symbols),
 				GetTokenMatches(code, regex)
 			)
 			.OrderBy(t => t.Range.Start)
-			.ThenBy(t => t.Range.End)
-			.ToList();
+			.ThenBy(t => t.Range.End)];
 		}
 	}
 }

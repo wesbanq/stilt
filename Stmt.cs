@@ -8,6 +8,8 @@ namespace stilt.AST
 	public abstract class Stmt : IRanged
 	{
 		public required Scope Scope;
+		//public List<> Decorators = [];
+
 		public FileRange? InnerRange { private get; set; }
 		public FileRange? Range
 		{
