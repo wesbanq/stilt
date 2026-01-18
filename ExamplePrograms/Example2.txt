@@ -1,0 +1,11 @@
+var a = 2
+var b = 4
+
+if a < b {
+	execute {
+		say dffdsf
+		tp @p ~2 ~1 ~2
+	}
+} else {
+	a++
+}
