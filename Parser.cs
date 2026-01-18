@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using stilt.AST;
 using System.ComponentModel.DataAnnotations;
-using System.Text;
-using stilt.AST;
 
 namespace stilt
 {
@@ -18,7 +15,7 @@ namespace stilt
 			[Required] FileRange Range;
 			
 			public RedeclaredSymbolException(Symbol symbol, FileRange range)
-				: base($"Redeclared '{symbol.Name}' in file {range.Filename}\n\t@ {range.ToLineAndColumnF()}")
+				: base($"Multiple declarations for symbol '{symbol.Name}'\n\t in {range.Filename} @ {range.ToLineAndColumnF()}")
 			{
 				Range = range;
 			}
@@ -80,12 +77,13 @@ namespace stilt
 			}
 		}
 
-		public Expr? ParseExpr(Expr? rootExpr = null)
+		public void ParseExpr(ref Expr rootExpr)
 		{
-			var firstToken = Lex.CurrentToken;
+			var firstToken = Lex.Next();
 
 			switch (firstToken?.Which)
 			{
+			//bracketed
 				case TokenType.Identifier:
 				{
 					VarSymbol newSym = new(firstToken.Text, Lex.Filepath);
@@ -93,21 +91,41 @@ namespace stilt
 						throw new UndefinedSymbolException(newSym, firstToken.Range);
 
 					IdentitiyExpr newExpr = new()
-					{ 
-						Identity = newSym
+					{
+						Identity = newSym	
 					};
 					rootExpr ??= newExpr;
 
-					return ParseExpr(rootExpr);
+					break;
 				}
+				case TokenType.FormatStringLiteral:
+				//for format strings turn into String.Format(string) in the future
+				case TokenType.StringLiteral:
+				case TokenType.NumericLiteral:
+				{
+					LiteralExpr newExpr = new()
+					{
+						Value = firstToken.Text
+					};
+
+					break;
+				}
+				case TokenType.OpenSquareBracket:
 				case TokenType.OpenBracket:
 				{
-					return ParseExpr(rootExpr?.FindFirstNull());
+					if (firstToken.Which == TokenType.OpenSquareBracket)
+					{
+						IndexExpr indexExpr = new();
+					}
+					ParseExpr(ref rootExpr);
+					break;
 				}
 				case TokenType.StmtSeparator:
 				case TokenType.CloseBracket:
+				case TokenType.OpenCurlyBracket:
+				case TokenType.CloseSquareBracket:
 				{
-					return rootExpr;
+					return;
 				}
 				default:
 				{
@@ -115,29 +133,8 @@ namespace stilt
 				}
 			}
 
-
+			ParseExpr(ref rootExpr);
 		}
-
-		//public Expr? ParseExpr()
-		//{
-		//	Expr? rootExpr = null;
-
-		//	for 
-		//	(;
-		//		Lex.Next().Which switch 
-		//		{ 
-		//			TokenType.StmtSeparator => false,
-		//			TokenType.OpenCurlyBracket => false,
-		//			TokenType.CloseCurlyBracket => false,
-		//			_ => true
-		//		}
-		//	;)
-		//	{
-		//		rootExpr = ParseExpr(rootExpr);
-		//	}
-
-		//	return rootExpr;
-		//}
 
 		public void ParseStmt()
 		{

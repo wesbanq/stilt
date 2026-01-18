@@ -1,5 +1,7 @@
-﻿using System;
+﻿using stilt.AST;
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace stilt
@@ -111,8 +113,58 @@ namespace stilt
 		}
 	}
 
+	public interface IDescriptable
+	{
+		string GetDescription();
+	}
+
 	public abstract class Compiler
 	{
+		public static A? GetAttributeFromEnum<T, A>(T value)
+			where T : Enum
+			where A : Attribute
+		{
+			return typeof(T)
+				.GetField(value.ToString())
+				?.GetCustomAttribute<A>();
+		}
+
+		public static List<A?> GetAttributesFromType<A>(Type t)
+			where A : Attribute
+		{
+			List<A?> res = [];
+			foreach (var field in t.GetFields())
+			{
+				res.Add(field.GetCustomAttribute<A>());
+			}
+			return res;
+		}
+
+		public static T GetEnumFromDescription<T, A>(string toFind)
+			where T : Enum
+			where A : Attribute, IDescriptable
+		{
+			foreach (var field in typeof(T).GetFields())
+			{
+				if (field.GetCustomAttribute<A>()?.GetDescription() == toFind)
+					return (T)field.GetValue(null);
+			}
+			//return default;
+			throw new ArgumentException($"Enum value with description '{toFind}' not found.");
+		}
+
+		public static A? GetAttrFromDescription<T, A>(string toFind)
+			where T : Enum
+			where A : Attribute, IDescriptable
+		{
+			foreach (var field in typeof(T).GetFields())
+			{
+				if (field.GetCustomAttribute<A>()?.GetDescription() == toFind)
+					return field.GetCustomAttribute<A>();
+			}
+			return null;
+		}
+
 		public static void Build(ProgramArgs args)
 		{
 			Console.WriteLine($"Currently building: {args.MainCodeFilepath}");

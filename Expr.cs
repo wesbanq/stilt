@@ -1,95 +1,75 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
+using System.Reflection;
 using System.Text;
 
 namespace stilt.AST
 {
-	public abstract class Expr 
+	public abstract class Expr
 	{
 		public bool Bracketed = false;
+		public int Precedence = 0;
 
-		public List<Expr> PostorderWalk(Predicate<Expr>? predicate = null, List<Expr>? sofar = null)
+		public Expr? FindFirstNull(out Expr? parent)
 		{
-			sofar ??= [];
-			predicate ??= (e => !e.Bracketed);
-			
+			parent = null;
+			return FindFirst(e => 
+			{
+				if (e is ISpreadable walkable)
+				{
+					return walkable.Spread().Any(c => c == null);
+				}
+				return false;
+				//return e == null;
+			}, out parent);
+		}
+
+		public Expr? FindFirstPrecedence(int precedence, out Expr? parent)
+		{
+			parent = null;
+			return FindFirst(e =>
+			{
+				return e.Precedence <= precedence;
+			}, out parent);
+		}
+
+		public Expr? FindFirst(Predicate<Expr> predicate, out Expr? parent, Expr? supposedParent = null)
+		{
+			parent = supposedParent;
 			if (predicate.Invoke(this))
 			{
-				switch (this)
+				return this;
+			}
+
+			if (supposedParent != null && Bracketed)
+			{
+				return null;
+			}
+
+			if (this is ISpreadable walkable)
+			{
+				foreach (var child in walkable.Spread())
 				{
-					case TertiaryExpr t:
+					var res = child?.FindFirst(predicate, out parent, this);
+					if (res != null)
 					{
-						sofar.AddRange(t.Left?.PostorderWalk(predicate, sofar));
-						sofar.AddRange(t.Middle?.PostorderWalk(predicate, sofar));
-						sofar.AddRange(t.Right?.PostorderWalk(predicate, sofar));
-						break;
-					}
-					case BinaryExpr b:
-					{
-						sofar.AddRange(b.Left?.PostorderWalk(predicate, sofar));
-						sofar.AddRange(b.Right?.PostorderWalk(predicate, sofar));
-						break;
-					}
-					case UnaryExpr u:
-					{
-						sofar.AddRange(u.Leaf?.PostorderWalk(predicate, sofar));
-						break;
-					}
-					default:
-					{
-						throw new Exception("very bad things just happened");
+						return res;
 					}
 				}
 			}
-			sofar.Add(this);
-			return sofar;
-		}
 
-		public Expr? FindFirstNull()
-		{
-			return FindFirst(e =>
-			{
-				return e switch
-				{
-					TertiaryExpr t => t.Right == null || t.Middle == null || t.Left == null,
-					BinaryExpr b => b.Right == null || b.Left == null,
-					UnaryExpr u => u.Leaf == null,
-					_ => throw new Exception("something bad just happened"),
-				};
-			});
-		}
-
-		public Expr? FindFirstPrecedence(int precedence)
-		{
-			return FindFirst(e =>
-			{
-				return true;
-			});
-		}
-
-		public Expr? FindFirst(Predicate<Expr> predicate)
-		{
-			if (predicate.Invoke(this))
-				return this;
-
-			if (!this.Bracketed)
-				return null;
-
-			switch (this)
-			{
-				case TertiaryExpr t:
-					return (t.Right?.FindFirst(predicate) ?? t.Middle?.FindFirst(predicate)) ?? t.Left?.FindFirst(predicate);
-				case BinaryExpr b:
-					return b.Right?.FindFirst(predicate) ?? b.Left?.FindFirst(predicate);
-				case UnaryExpr u:
-					return u.Leaf?.FindFirst(predicate);
-				default:
-					throw new Exception("very bad things just happened");
-			}
+			return null;
 		}
 	}
-	
+
+	public interface ISpreadable
+	{
+		Expr?[] Spread();
+		void Replace(Expr what, Expr with);
+	}
+
 	public class IdentitiyExpr : Expr 
 	{
 		public required Symbol Identity;
@@ -136,72 +116,133 @@ namespace stilt.AST
 	public class FuncSymbol(string n, string s) : Symbol(n, s) { }
 	public class TypeSymbol(string n, string s) : Symbol(n, s) { }
 
-	public abstract class TertiaryExpr : Expr
+	public abstract class TernaryExpr : Expr, ISpreadable
 	{
 		public Expr? Left;
 		public Expr? Middle;
 		public Expr? Right;
+
+		public Expr?[] Spread()
+		{
+			return [Right, Middle, Left];
+		}
+		public void Replace(Expr what, Expr with)
+		{
+			if (ReferenceEquals(Right, what))
+			{
+				Right = with;
+				return;
+			}
+			if (ReferenceEquals(Middle, what))
+			{
+				Middle = with;
+				return;
+			}
+			if (ReferenceEquals(Left, what))
+			{
+				Left = with;
+				return;
+			}
+
+			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
+		}
+
+		public TernaryExpr(Expr? left, Expr? middle, Expr? right) { Left = left; Middle = middle; Right = right; }
 	}
 
-	public abstract class BinaryExpr : Expr
+	public abstract class BinaryExpr : Expr, ISpreadable
 	{
 		public Expr? Left;
 		public Expr? Right;
+
+		public Expr?[] Spread()
+		{
+			return [Right, Left];
+		}
+		public void Replace(Expr what, Expr with)
+		{
+			if (ReferenceEquals(Right, what))
+			{
+				Right = with;
+				return;
+			}
+			if (ReferenceEquals(Left, what))
+			{
+				Left = with;
+				return;
+			}
+
+			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
+		}
+
+		public BinaryExpr(Expr? left, Expr? right) { Left = left; Right = right; }
 	}
 
 	public abstract class UnaryExpr : Expr
 	{
 		public Expr? Leaf;
+
+		public Expr?[] Spread()
+		{
+			return [Leaf];
+		}
+		public void Replace(Expr what, Expr with)
+		{
+			if (ReferenceEquals(Leaf, what))
+			{
+				Leaf = with;
+				return;
+			}
+
+			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
+		}
+
+		public UnaryExpr(Expr? leaf) { Leaf = leaf; }
 	}
 
-	public class IncrementExpr : UnaryExpr { }
-	public class DecrementExpr : UnaryExpr { }
-	public class NegationExpr : UnaryExpr { }
-	public class AdditionExpr : BinaryExpr { }
-	public class SubtractionExpr : BinaryExpr { }
-	public class DivisionExpr : BinaryExpr { }
-	public class MultiplicationExpr : BinaryExpr { }
-	public class ExponentExpr : BinaryExpr { }
-	public class RangeExpr : BinaryExpr { }
-	public class ModuloExpr : BinaryExpr { }
-	public class LAndExpr : BinaryExpr { }
-	public class LOrExpr : BinaryExpr { }
-	public class LXorExpr : BinaryExpr { }
-	public class LNotExpr : BinaryExpr { }
-	public class BAndExpr : BinaryExpr { }
-	public class BOrExpr : BinaryExpr { }
-	public class BXorExpr : BinaryExpr { }
-	public class BNotExpr : BinaryExpr { }
-	public class BSLExpr : BinaryExpr { }
-	public class BSRExpr : BinaryExpr { }
-	public class GreaterExpr : BinaryExpr { }
-	public class LesserExpr : BinaryExpr { }
-	public class EqualExpr : BinaryExpr { }
-	public class UnequalExpr : BinaryExpr { }
-	public class GreaterOrEqualExpr : BinaryExpr { }
-	public class LesserOrEqualExpr : BinaryExpr { }
-	public class SwapExpr : BinaryExpr { }
-	public class CopyExpr : BinaryExpr { }
-	public class SignalConnectExpr : BinaryExpr { }
-	public class SignalEmitExpr : BinaryExpr { }
-	public class UpdateExpr : BinaryExpr { }
-	public class IndexExpr : BinaryExpr { }
-	//left should be identityexpr
-	public class AssignExpr : BinaryExpr 
+	public class IncrementExpr(Expr? l) : UnaryExpr(l) { }
+	public class DecrementExpr(Expr? l) : UnaryExpr(l) { }
+	public class NegationExpr(Expr? l) : UnaryExpr(l) { }
+	public class AdditionExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class SubtractionExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class DivisionExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class MultiplicationExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class ExponentExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class RangeExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class ModuloExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class LAndExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class LOrExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class LXorExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class LNotExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class BAndExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class BOrExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class BXorExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class BNotExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class BSLExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class BSRExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class GreaterExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class LesserExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class EqualExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class UnequalExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class GreaterOrEqualExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class LesserOrEqualExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class SwapExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class CopyExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class SignalConnectExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class SignalEmitExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class UpdateExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+	public class IndexExpr(Expr? l, Expr? r) : BinaryExpr(l, r) { }
+
+	public class AssignExpr(IdentitiyExpr? l, Expr? r) : BinaryExpr(l, r) 
 	{
 		public Expr? Operation;
 	}
-
 	public class ArrayExpr : Expr
 	{
 		public List<Expr> Array = new List<Expr>();
 	}
 
-	public class CallExpr : Expr
-	{
-		[Required] public FuncSymbol Function;
-		public List<Expr> Arguments = new();
-	}
+	public class CallExpr(IdentitiyExpr? l, ArrayExpr? r) : BinaryExpr(l, r) { }
 
 	public class LiteralExpr : Expr
 	{

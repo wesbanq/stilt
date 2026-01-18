@@ -53,6 +53,11 @@ namespace stilt
 					MainCodeFilepath = value;
 					break;
 				}
+				default:
+				{
+					
+					break;
+				}
 			}
 		}
 
@@ -94,68 +99,67 @@ namespace stilt
 				throw new ArgumentParsingException("No action given.{0}{1}", "", "");
 			}
 
-			switch (args[0].ToLower()) 
-			{
-				case "build":
-					Action = Command.Build; break;
-				case "token":
-					Action = Command.Tokenize; break;
-				case "help":
-					Action = Command.Help; PrintHelp(); return;
-				case "preprocess":
-					Action = Command.Preprocess; break;
-				default:
-					throw new ArgumentParsingException("Invalid action given: {0}{1}", args[0], "");
-			}
+			Action = Compiler.GetEnumFromDescription<Command, ActionAttribute>(args[0].ToLower());
 
-			Lexer.GetSymbolAttribute(out var symbols, out var regex);
-			var optsa = typeof(Option).GetFields();
-			for (int i = 1; i < optsa.Length; i++)
+			//Lexer.GetSymbolAttribute(out var symbols, out var regex);
+			//var optsa = typeof(Option).GetFields();
+			//for (int i = 1; i < optsa.Length; i++)
+			//{
+			//	var sym = optsa[i].GetCustomAttribute<OptionAttribute>();
+			//	var idx = args.IndexOf(sym?.Name);
+			//	if (idx != -1)
+			//	{
+			//		if (sym.Kind != OptionType.Flag && (args.Length <= idx + 1 || 
+			//			WhichOption(args[idx + 1]) != Option.None))
+			//		{
+			//			throw new Exception($"No value given for option '{sym.Name}'");
+			//		}
+			//		GiveValueTo(sym.AssociatedPropertyName, sym.Kind == OptionType.Flag ? "" : args[idx + 1]);
+			//		UsedOptions.Add((Option)(i-1));
+			//	}
+			//}
+
+			for (int i = 1; i < args.Length; i++)
 			{
-				var sym = optsa[i].GetCustomAttribute<OptionAttribute>();
-				var idx = args.IndexOf(sym?.Name);
-				if (idx != -1)
+				var current = WhichOption(args[i]);
+				var currentAttribute = typeof(Option).GetField(current.ToString()).GetCustomAttribute<OptionAttribute>();
+				var nextAttribute = args.Length > i+1 ? Compiler.GetAttrFromDescription<Option, OptionAttribute>(args[i+1]) : null;
+
+				if (current != Option.None)
 				{
-					if (sym.Kind != OptionType.Flag && (args.Length <= idx + 1 || 
-						WhichOption(args[idx + 1]) != Option.None))
+					if (((currentAttribute?.Kind != OptionType.Flag
+						&& nextAttribute?.Kind == null)
+						|| currentAttribute?.Kind == OptionType.Flag)
+						&& !UsedOptions.Contains(current)
+						)
 					{
-						throw new Exception($"No value given for option '{sym.Name}'");
-					}
-					GiveValueTo(sym.AssociatedPropertyName, sym.Kind == OptionType.Flag ? "" : args[idx + 1]);
-					UsedOptions.Add((Option)(i-1));
-				}
-			}
-
-			var opts = typeof(Command).GetField(Action.ToString())
-				.GetCustomAttribute<ActionRequiredAttribute>()?.Required
-				.Where(o => !UsedOptions.Contains(o)).ToArray();
-			if (opts?.Length > 0)
-			{
-				for (int i = 1; i < args.Length && opts.Length > 0; i++)
-				{
-					if (WhichOption(args[i]) == Option.None && 
-						(WhichOption(args[i-1]) == Option.None || 
-						(GetEnumAttribute<Option, OptionAttribute>(WhichOption(args[i-1])).Kind == OptionType.Flag) //||
-						//(GetEnumAttribute<Option, OptionAttribute>(WhichOption(args[i-1])).Kind == OptionType.ValueOptional)
-						))
-					{
-						Console.WriteLine(args[i]);
-						Console.WriteLine(i);
-						Console.WriteLine(WhichOption(args[i]));
-
-						GiveValueTo(GetEnumAttribute<Option, OptionAttribute>(opts.First()).AssociatedPropertyName, args[i]);
-						opts = opts[1..];
+						GiveValueTo(currentAttribute.AssociatedPropertyName, nextAttribute == null ? args[i + 1] : "");
+						UsedOptions.Add(current);
 					}
 				}
-				if (opts.Length != 0)
+				else if (WhichOption(args[i - 1]) == Option.None)
 				{
-					throw new NotEnoughArgmunetsException();
+					//Console.WriteLine($"DASASDSAD {i}{WhichOption(args[i - 1]) == Option.None}");
+					var a = Compiler.GetAttributeFromEnum<Command, ActionAttribute>(Action);
+					if (a != null && a.Required != null)
+					{
+						foreach (var b in a.Required)
+						{
+							if (!UsedOptions.Contains(b))
+							{
+								GiveValueTo(
+									Compiler.GetAttributeFromEnum<Option, OptionAttribute>(b)?.AssociatedPropertyName ?? ""
+									, args[i]);
+								UsedOptions.Add(b);
+							}
+						}
+					}
 				}
 			}
 		}
 
 		[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-		public class OptionAttribute : Attribute
+		public class OptionAttribute : Attribute, IDescriptable
 		{
 			[Required]
 			public string Name { get; set; }
@@ -166,6 +170,11 @@ namespace stilt
 			[Required]
 			public string AssociatedPropertyName { get; set; }
 			public string HelpText { get; set; }
+
+			public string GetDescription()
+			{
+				return Name;
+			}
 			
 			public OptionAttribute(string optChar, string propName, string helpText, OptionType tpe = OptionType.ValueRequired)
 			{
@@ -184,15 +193,20 @@ namespace stilt
 		}
 
 		[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-		public class ActionRequiredAttribute : Attribute
+		public class ActionAttribute : Attribute, IDescriptable
 		{
-			[Required]
-			public Option[] Required { get; set; }
+			[Required] public Option[]? Required;
+			[Required] public string Name;
 
-			public ActionRequiredAttribute(Option[] required)
+			public string GetDescription()
+			{
+				return Name;
+			}
+
+			public ActionAttribute(string name, Option[]? required = null)
 			{
 				Required = required;
-
+				Name = name;
 			}
 		}
 
@@ -200,17 +214,18 @@ namespace stilt
 		{ ValueRequired, ValueOptional, Flag }
 
 		public enum Command 
-		{ 
-			[ActionRequired(new[] { Option.InputFile })]
+		{
+			[Action("help")]
+			Help,
+
+			[Action("build", [Option.InputFile])]
 			Build, 
 
-			[ActionRequired(new[] { Option.InputFile })]
+			[Action("token", [Option.InputFile])]
 			Tokenize,
 
-			[ActionRequired(new[] { Option.InputFile })]
+			[Action("preprocess", [Option.InputFile])]
 			Preprocess,
-
-			Help,
 		}
 
 		public enum Option
@@ -299,6 +314,11 @@ namespace stilt
 
 			switch (arg.Action)
 			{
+				case ProgramArgs.Command.Help:
+				{
+					ProgramArgs.PrintHelp();
+					break;
+				}
 				case ProgramArgs.Command.Build:
 				{
 					Compiler.Build(arg);

@@ -7,11 +7,16 @@ using System.Text;
 namespace stilt
 {
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
-	public class SymbolAttribute : Attribute
+	public class SymbolAttribute : Attribute, IDescriptable
 	{
 		public string Symbol { get; set; }
 		public bool IsRegex { get; set; }
-		
+
+		public string GetDescription()
+		{
+			return Symbol;
+		}
+
 		public SymbolAttribute(string symbol, bool regex = false) 
 		{
 			Symbol = symbol;
