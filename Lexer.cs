@@ -5,7 +5,7 @@ namespace stilt
 {
 	public abstract class Lexer
 	{
-		static void GetStringAttribute(out List<string[]> symbols, out List<string[]> regex)
+		public static void GetSymbolAttribute(out List<string[]> symbols, out List<string[]> regex)
 		{
 			symbols = new List<string[]>();
 			regex = new List<string[]>();
@@ -65,19 +65,21 @@ namespace stilt
 			return tokens;
 		}
 
-		public static List<Token> Tokenize(string filepath)
+		public static List<Token> Tokenize(ProgramArgs args)
 		{
-			var code = StripComments(File.ReadAllText(filepath));
+			var code = StripComments(File.ReadAllText(args.MainCodeFilepath));
 			var tokens = new List<Token>();
 
-			GetStringAttribute(out var symbols, out var regex);
+			GetSymbolAttribute(out var symbols, out var regex);
 			tokens = FileRange.RemoveOverlaps(
-				GetTokenMatches(code, symbols, filepath).OrderBy(t => t.Range.Start).ThenBy(t => t.Range.End).ToList(),
-				GetTokenMatches(code, regex, filepath).OrderBy(t => t.Range.Start).ThenBy(t => t.Range.End).ToList()
-			);
-			//tokens = GetTokenMatches(code, regex, filepath).OrderBy(t => t.Range.Start).ThenBy(t => t.Range.End).ToList();
+				GetTokenMatches(code, symbols, args.MainCodeFilepath),
+				GetTokenMatches(code, regex, args.MainCodeFilepath)
+			)
+			.OrderBy(t => t.Range.Start)
+			.ThenBy(t => t.Range.End)
+			.ToList();
 
-			tokens.ForEach(t => Program.Dump(t));
+			//tokens.ForEach(t => Program.Dump(t));
 
 			return tokens;
 		}

@@ -81,7 +81,7 @@ namespace stilt
 				}
 			}
 
-			return finalList.OrderBy(t => t.Range.Start).ThenBy(t => t.Range.End).ToList();
+			return finalList.ToList();
 		}
 	}
 
@@ -89,8 +89,9 @@ namespace stilt
 	{
 		public static void Build(ProgramArgs args)
 		{
-			Console.WriteLine(args.MainCodeFilepath);
-
+			Console.WriteLine($"Currently building: {args.MainCodeFilepath}");
+			Lexer.Tokenize(args);
+			// ...
 		}
 	}
 }

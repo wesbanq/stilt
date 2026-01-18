@@ -1,59 +1,221 @@
-﻿using System.Reflection;
+﻿using System.ComponentModel.DataAnnotations;
+using System.Reflection;
+using System.Runtime.InteropServices;
 
 namespace stilt
 {
 	public class ProgramArgs
 	{
-		public enum Command {Build,Help,}
-		public Command Action;
-		public string MainCodeFilepath;
+		[Required]
+		public Command Action { get; set; }
 
-		public void PrintHelp()
+		public int DebugLevel { get; set; }
+		public string MainCodeFilepath { get; set; }
+		public List<Option> UsedOptions { get; set; } = new List<Option>();
+		public static void PrintHelp()
 		{
 			Console.WriteLine("help text");
+		}
+
+		static Option WhichOption(string arg)
+		{
+			var fields = typeof(Option).GetFields();
+			for (int i = 1; i < fields.Length; i++)
+			{
+				var sym = fields[i].GetCustomAttributes<OptionAttribute>();
+				foreach (var s in sym)
+				{
+					if (String.Compare(s.Name, arg) == 0)
+					{
+						return (Option)(i-1);
+					}
+				}
+			}
+			return Option.None;
+		}
+
+		void GiveValueTo(string opt, string value)
+		{
+			switch (opt)
+			{
+				case "DebugLevel":
+				{
+					if (!int.TryParse(value, out var n))
+						throw new ArgumentParsingException(opt, value);
+					DebugLevel = n;
+					break;
+				}
+				case "MainCodeFilepath":
+				{
+					if (!File.Exists(value))
+						throw new ArgumentParsingException("Given a non-existing file for option {0}: {1}", opt, value);
+					MainCodeFilepath = value;
+					break;
+				}
+			}
+		}
+
+		public class NotEnoughArgmunetsException : Exception
+		{
+			public NotEnoughArgmunetsException() : base("Not enough arguments passed") { }
+		}
+		
+		public class ArgumentParsingException : Exception
+		{
+			public string OptionName { get; set; }
+			public string? GivenValue { get; set; }
+			
+			public ArgumentParsingException(string optName, string givenValue)
+				: base($"Invalid value given to option '{optName}': '{givenValue}'")
+			{
+				OptionName = optName;
+				GivenValue = givenValue;
+			}
+
+			public ArgumentParsingException(string optName)
+				: base($"No value given to option '{optName}'")
+			{
+				OptionName = optName;
+			}
+
+			public ArgumentParsingException(string customMessage, string optName, string givenValue)
+				: base(String.Format(customMessage, optName, givenValue))
+			{
+				OptionName = optName;
+				GivenValue = givenValue;
+			}
 		}
 
 		public ProgramArgs(string[] args)
 		{
 			if (args.Length == 0)
 			{
-				throw new Exception("No action given.");
+				throw new ArgumentParsingException("No action given.{0}{1}", "", "");
 			}
 
 			switch (args[0].ToLower()) 
 			{
 				case "build":
 					Action = Command.Build; break;
+				case "token":
+					Action = Command.Tokenize; break;
 				case "help":
 					Action = Command.Help; PrintHelp(); return;
 				default:
-					throw new Exception(String.Format("Invalid action given: {0}", args[0]));
+					throw new ArgumentParsingException("Invalid action given: {0}{1}", args[0], "");
 			}
 
-			if (Action == Command.Build)
+			Lexer.GetSymbolAttribute(out var symbols, out var regex);
+			var optsa = typeof(Option).GetFields();
+			for (int i = 1; i < optsa.Length; i++)
 			{
-				if (args.Length > 1)
+				var sym = optsa[i].GetCustomAttribute<OptionAttribute>();
+				var idx = args.IndexOf(sym?.Name);
+				if (idx != -1)
 				{
-					if (File.Exists(args[1]))
+					if (args.Length <= idx + 1 || 
+						(WhichOption(args[idx + 1]) != Option.None 
+						&& !sym.Flag))
 					{
-						MainCodeFilepath = args[1];
+						throw new Exception($"No value given for option '{sym.Name}'");
 					}
-					else
+					GiveValueTo(sym.AssociatedPropertyName, sym.Flag ? "" : args[idx + 1]);
+					UsedOptions.Add((Option)(i-1));
+				}
+			}
+
+			var opts = typeof(Command).GetField(Action.ToString())
+				.GetCustomAttribute<ActionRequiredAttribute>()?.Required
+				.Where(o => !UsedOptions.Contains(o)).ToArray();
+			if (opts?.Length > 0)
+			{
+				for (int i = 1; i < args.Length && opts.Length > 0; i++)
+				{
+					if (WhichOption(args[i]) == Option.None && 
+						(WhichOption(args[i-1]) == Option.None || 
+						(GetEnumAttribute<Option, OptionAttribute>(WhichOption(args[i-1])).Flag )
+						))
 					{
-						throw new Exception(String.Format("Given file does not exist: {0}", args[1]));
+						Console.WriteLine(args[i]);
+						Console.WriteLine(i);
+						Console.WriteLine(WhichOption(args[i]));
+
+						GiveValueTo(GetEnumAttribute<Option, OptionAttribute>(opts.First()).AssociatedPropertyName, args[i]);
+						opts = opts[1..];
 					}
 				}
-				else
+				if (opts.Length != 0)
 				{
-					throw new Exception("No filepath given to build.");
+					throw new NotEnoughArgmunetsException();
 				}
 			}
 		}
 
+		[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+		public class OptionAttribute : Attribute
+		{
+			[Required]
+			public string Name { get; set; }
+
+			[Required]
+			public bool Flag { get; set; }
+
+			[Required]
+			public string AssociatedPropertyName { get; set; }
+			public string HelpText { get; set; }
+			
+			public OptionAttribute(string optChar, string propName, string helpText, bool isFlag = false)
+			{
+				Name = optChar;
+				Flag = isFlag;
+				AssociatedPropertyName = propName;
+				HelpText = helpText;
+			}
+		}
+
+		public static A? GetEnumAttribute<T, A>(T opt) 
+			where T : Enum
+			where A : Attribute
+		{
+			return typeof(T).GetField(opt.ToString())?.GetCustomAttribute<A>();
+		}
+
+		[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+		public class ActionRequiredAttribute : Attribute
+		{
+			[Required]
+			public Option[] Required { get; set; }
+
+			public ActionRequiredAttribute(Option[] required)
+			{
+				Required = required;
+				
+			}
+		}
+
+		public enum Command 
+		{ 
+			[ActionRequired(new[] { Option.InputFile })]
+			Build, 
+
+			[ActionRequired(new[] { Option.InputFile })]
+			Tokenize,
+
+			Help,
+		}
+
+		public enum Option
+		{ 
+			None = 0,
+
+			[Option("-d", "DebugLevel", "Set debug level (for compiler developers)", true)]
+			DebugLvl,
+
+			[Option("-i", "MainCodeFilepath", "Sets the main code filepath to use")]
+			InputFile,
+		}
+
 	}
-
-
-	
 
 	internal class Program
 	{
@@ -92,28 +254,30 @@ namespace stilt
 		static int Main(string[] args)
 		{
 			ProgramArgs arg;
-			try
-			{
+			//try
+			//{
 				arg = new ProgramArgs(args);
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine($"Error: {e.Message}");
-				return 1;
-			}
+			//}
+			//catch (Exception e)
+			//{
+			//	Console.WriteLine($"Error: {e.Message}");
+			//	return 1;
+			//}
 
 			switch (arg.Action)
 			{
 				case ProgramArgs.Command.Build:
-					Compiler.Build(arg); break;
+				{
+					Compiler.Build(arg);
+					break;
+				}
+				case ProgramArgs.Command.Tokenize:
+				{
+					var tokens = Lexer.Tokenize(arg);
+					tokens.ForEach(t => Dump(t));
+					break;
+				}
 			}
-
-			Lexer.Tokenize(arg.MainCodeFilepath);
-
-			//var a = new FileRange(76, 78, "a");
-			//var b = new FileRange(74, 79, "a");
-
-			//Console.WriteLine("{0} {1} {2}", a.Before(b), a.After(b), a.Overlaps(b));
 
 			return 0;
 		}

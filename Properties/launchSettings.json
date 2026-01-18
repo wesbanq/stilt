@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "stilt": {
+      "commandName": "Project",
+      "commandLineArgs": "token -i .\\ExamplePrograms\\Example3.txt"
+    }
+  }
+}
