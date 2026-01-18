@@ -43,7 +43,7 @@ namespace stilt
 			const string commentRegex4 = """\r\n""";
 			const string linebreakRegex = """ ?\\\s+""";
 			return Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(
-				code, commentRegex4, "\n")
+				code + "\n", commentRegex4, "\n")
 				, commentRegex2, "")
 				, commentRegex1, "")
 				, linebreakRegex, " ")

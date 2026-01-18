@@ -83,14 +83,23 @@ namespace stilt
 			{
 				if (newExpr != null)
 				{
-					newExpr.Bracketed = true;
 					rootExpr = newExpr;
 				}
 				return;
 			}
 			var toReplace = rootExpr.FindFirstPrecedenceOrNull(newExpr.Precedence, out var parent);
 			if (toReplace == null && parent == null)
-				throw new Exception();
+			{
+				if (newExpr is ISpreadable exprSpreadable)
+				{
+					exprSpreadable.Shove(rootExpr);
+					rootExpr = newExpr;
+				}
+				else
+				{
+					throw new Exception();
+				}
+			}
 
 			if (newExpr is ISpreadable spreadable)
 			{
@@ -108,21 +117,17 @@ namespace stilt
 				}
 				else
 				{
-					rootExpr.Bracketed = false;
 					rootExpr = newExpr;
-					rootExpr.Bracketed = true;
 				}
 			}
 			else
 			{
 				if (parent is ISpreadable newSpreadable)
 				{
-					//Program.Dump(parent);
 					newSpreadable.Shove(newExpr);
 				}
 				else
 				{
-					//Program.Dump(parent);
 					throw new ArgumentException();
 				}
 			}
@@ -130,13 +135,11 @@ namespace stilt
 
 		public void ParseExpr(ref Expr rootExpr, Token? firstToken)
 		{
-			//var firstToken = Lex.Next();
 			if (firstToken == null) return;
 			Expr? newExpr = null;
 
-			switch (firstToken?.Which)
+			switch (firstToken.Which)
 			{
-			//bracketed
 				case TokenType.Identifier:
 				{
 					VarSymbol newSym = new(firstToken.Text, Lex.Filepath);
@@ -175,7 +178,10 @@ namespace stilt
 				case TokenType.StmtSeparator:
 				case TokenType.CloseBracket:
 				case TokenType.CloseSquareBracket:
+				case TokenType.OpenCurlyBracket:
+				case TokenType.CloseCurlyBracket:
 				{
+					rootExpr.Bracketed = true;
 					return;
 				}
 				default:
@@ -191,14 +197,12 @@ namespace stilt
 			}
 
 			InsertInto(ref rootExpr, newExpr);
-			Program.Dump(rootExpr);
+			//Program.Dump(rootExpr);
 			ParseExpr(ref rootExpr, Lex.Next());
 		}
 
 		public Stmt ParseStmt()
 		{
-			//var firstToken = Lex.Next();
-
 			Expr newExp = null;
 			ParseExpr(ref newExp, Lex.CurrentToken);
 			ExpressionStmt newStmt = new(LastStmt)
