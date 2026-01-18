@@ -55,17 +55,21 @@ namespace stilt.AST
 
 	public class VarDeclStmt(Stmt? prev = null) : Stmt(prev)
 	{
-		[Required]
-		public Symbol Name;
-		[Required]
-		public bool IsConst;
+		[Required] public Symbol Name;
+		public bool IsConst = false;
 		public Expr? Value;
 	}
 
-	public class FuncDeclStmt(Stmt? prev = null) : Stmt(prev)
+	public class ClassDeclStmt(Stmt? prev = null) : Stmt(prev)
 	{
-		public Symbol Name;
-		public List<Symbol> Arguments;
-		public Stmt Value;
+		[Required] public Symbol Name;
+		[Required] public Stmt Value;
+	}
+
+		public class FuncDeclStmt(Stmt? prev = null) : Stmt(prev)
+	{
+		[Required] public Symbol Name;
+		public List<Symbol> Arguments = [];
+		[Required] public Stmt Value;
 	}
 }
