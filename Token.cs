@@ -257,6 +257,11 @@ namespace stilt
 			[Symbol("execute")]
 			Execute,
 
+			//[Symbol("""execute *{(?:.*\s*)*}""", true)]
+			//[Symbol("""execute *{[^}]*}""", true)]
+			//[Symbol("""\|\|(?:[^\|]*)\|\|""", true)]
+			//ExecuteStmt,
+
 			[Symbol("func")]
 			FuncDecl,
 

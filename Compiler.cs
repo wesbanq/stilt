@@ -90,7 +90,7 @@ namespace stilt
 		public static void Build(ProgramArgs args)
 		{
 			Console.WriteLine($"Currently building: {args.MainCodeFilepath}");
-			Lexer.Tokenize(args);
+			var lex = new Lexer(args);
 			// ...
 		}
 	}
