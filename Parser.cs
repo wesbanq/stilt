@@ -57,6 +57,17 @@ namespace stilt
 			}
 		}
 
+		public class MalformedExprException : Exception
+		{
+			public FileRange Start;
+
+			public MalformedExprException(FileRange start)
+				: base($"Malformed expression starting:\n\t@ {start.ToLineAndColumnF()}")
+			{
+				Start = start;
+			}
+		}
+
 		public class UnexpectedTokenException : Exception
 		{
 			public TokenType Expected;
@@ -136,6 +147,72 @@ namespace stilt
 			return newExpr ?? throw new Exception();
 		}
 
+		protected List<VarSymbol> ParsePattern(Scope scope, Token? firstToken, bool ignoreType = false)
+		{
+			Token varToken;
+			List<VarSymbol> res = [];
+
+			//while ((varToken = Lex.Next())?.Which == TokenType.Identifier)
+			while (true)
+			{
+				varToken = Lex.Next();
+				if (varToken.Which == TokenType.OpenBracket) continue;
+				var nextToken = Lex.Next();
+				if (nextToken.Which == TokenType.OpenBracket) break;
+				switch (nextToken.Which)
+				{
+					case TokenType.Type:
+					{
+						if (ignoreType) 
+							throw new UnexpectedTokenException(nextToken, nextToken.Range);
+
+						nextToken = Lex.Next()
+						?? throw new Exception();
+
+						if (nextToken.Which != TokenType.Identifier)
+							throw new UnexpectedTokenException(TokenType.Identifier, nextToken, nextToken.Range);
+
+						var typeToken = Lex.Next();
+						if (typeToken.Which != TokenType.Identifier)
+							throw new UnexpectedTokenException(TokenType.Identifier, typeToken, typeToken.Range);
+
+						res.Append(new VarSymbol(varToken.Text, new TypeSymbol(typeToken.Text)));
+						break;
+					}
+					case TokenType.Comma:
+					{
+						res.Append(new VarSymbol(varToken.Text));
+						continue;
+					}
+					case TokenType.CloseBracket:
+					case TokenType.Assign:
+					{
+						res.Append(new VarSymbol(varToken.Text));
+						break;
+					}
+					default:
+						throw new UnexpectedTokenException(TokenType.CloseBracket, nextToken, nextToken.Range);
+				}
+			}
+
+			if (firstToken != null) Lex.Goto(firstToken);
+			return res;
+		}
+
+		//protected List<VarSymbol> ParseVarPattern(Scope scope, Token? firstToken)
+		//{
+		//	return ParsePattern(scope, firstToken);
+		//}
+
+		//protected List<TypeSymbol> ParseTypePattern(Scope scope, Token? firstToken)
+		//{
+		//	var a = ParsePattern(scope, firstToken).Select(static v => v.Type);
+		//	if (a.Any(l => l.Count > 1))
+		//		throw new Exception();
+
+		//	return [.. a.Select(l => l)];
+		//}
+
 		protected void ParseExpr(ref Expr rootExpr, Token? currentToken, Scope scope)
 		{
 			if (currentToken == null) return;
@@ -145,39 +222,32 @@ namespace stilt
 			{
 				case TokenType.Identifier:
 				{
-					var newSym = scope.FindSymbolByName<VarSymbol>(currentToken.Text);
-					if (newSym == null)
-						throw new UndefinedSymbolException(newSym, currentToken.Range);
-
+					var newSym = new VarSymbol(currentToken.Text);
 					newExpr = new IdentityExpr()
 					{
 						Identity = newSym
 					};
-
-					//if (Lex.PeekNext()?.Which == TokenType.Type)
-					//{
-					//	Lex.Next();
-					//	var typeName = Lex.Next();
-					//	if (typeName == null || typeName.Which != TokenType.Identifier)
-					//		throw new UnexpectedTokenException(typeName, typeName?.Range);
-					//	var typeSym = scope.FindSymbolByName<TypeSymbol>(typeName.Text) 
-					//	?? throw new UndefinedSymbolException(new TypeSymbol(typeName.Text, Lex.Filepath), typeName.Range);
-
-					//	if (newExpr is IdentityExpr i) i.Type = typeSym;
-					//	else throw new Exception();
-					//}
 					
 					break;
 				}
-				case TokenType.FormatStringLiteral:
 				//for format strings turn into String.Format(string) in the future
+				case TokenType.FormatStringLiteral:
 				case TokenType.StringLiteral:
-				case TokenType.NumericLiteral:
 				{
 					newExpr = new LiteralExpr()
 					{
 						Value = currentToken.Text
 					};
+
+					break;
+				}
+				case TokenType.NumericLiteral:
+				{
+					newExpr = new LiteralExpr()
+					{
+						Value = int.Parse(currentToken.Text)
+					};
+
 					break;
 				}
 				case TokenType.OpenSquareBracket:
@@ -188,6 +258,11 @@ namespace stilt
 				}
 				case TokenType.OpenBracket:
 				{
+					newExpr = CreateOperatorExpr(currentToken);
+					var a = rootExpr.FindFirstPrecedenceOrNull(newExpr.Precedence, out var parent);
+					if (a == null && parent != null)
+						newExpr = null;
+
 					ParseExpr(ref newExpr, Lex.Next(), scope);
 					break;
 				}
@@ -195,40 +270,50 @@ namespace stilt
 				case TokenType.CloseBracket:
 				case TokenType.CloseSquareBracket:
 				case TokenType.OpenCurlyBracket:
-				case TokenType.CloseCurlyBracket:
 				{
 					rootExpr.Bracketed = true;
 					return;
 				}
-				//case TokenType.Type:
-				//{
-				//	var typeToken = Lex.Next()
-				//	?? throw new Exception();
-				//	if (typeToken.Which != TokenType.Identifier)
-				//		throw new UnexpectedTokenException(TokenType.Identifier, typeToken, typeToken.Range);
+				case TokenType.Type:
+				{
+					var typeToken = Lex.Next()
+						?? throw new Exception();
+					if (typeToken.Which != TokenType.Identifier && typeToken.Which != TokenType.OpenBracket)
+						throw new UnexpectedTokenException(TokenType.Identifier, typeToken, typeToken.Range);
 
-				//	var typeSymbol = scope.FindSymbolByName<TypeSymbol>(typeToken.Text)
-				//	?? throw new UndefinedSymbolException(typeToken.Text, typeToken.Range);
-				//	rootExpr.Type = typeSymbol;
+					List<TypeSymbol> typeSymbol;
+					if (typeToken.Which == TokenType.OpenBracket)
+					{
+						var a = ParsePattern(scope, typeToken, true).Select(t => t.SingletonType).ToList()
+						?? throw new UnexpectedTokenException(typeToken, typeToken.Range);
+						if (a.Any(t => t == null) || a == null)
+							throw new Exception();
 
-				//	if (rootExpr is IdentityExpr sym && sym.Identity == TypeSymbol.Any)
-				//	{
-				//		switch (sym.Identity)
-				//		{
-				//			case VarSymbol var:
-				//			{
-				//				if (var.Type == TypeSymbol.Any)
-				//					var.Type = typeSymbol;
-				//				else
-				//					//
-				//					throw new Exception();
-				//				break;
-				//			}
-				//		}
-				//	}
+						typeSymbol = a;
+					}
+					else
+					{
+						typeSymbol = [new TypeSymbol(typeToken.Text)];
+					}
+					rootExpr.Type = typeSymbol;
 
-				//	break;
-				//}
+					if (rootExpr is IdentityExpr sym)
+					{
+						switch (sym.Identity)
+						{
+							case VarSymbol var:
+							{
+								if (var.Type == null || var.Type.Count == 1 && var.Type[0] == TypeSymbol.Any)
+									var.Type = typeSymbol;
+								else
+									throw new Exception();
+								break;
+							}
+						}
+					}
+
+					break;
+				}
 				default:
 				{
 					newExpr = CreateOperatorExpr(currentToken);
@@ -249,65 +334,34 @@ namespace stilt
 			}
 
 			InsertIntoExprTree(ref rootExpr, newExpr);
-			//Program.Dump(rootExpr);
 			ParseExpr(ref rootExpr, Lex.Next(), scope);
 		}
 
-		protected List<VarSymbol> ParsePattern(Scope scope, Token? firstToken)
+		protected List<IdentityExpr> GetIdentities(Expr expr)
 		{
-			Token varToken;
-			List<VarSymbol> res = [];
-
-			//while ((varToken = Lex.Next())?.Which == TokenType.Identifier)
-			while (true)
+			List<IdentityExpr> res = [];
+			switch (expr) 
 			{
-				varToken = Lex.Next();
-				if (varToken.Which == TokenType.OpenBracket) continue;
-				var nextToken = Lex.Next();
-				if (nextToken.Which == TokenType.OpenBracket) break;
-				switch (nextToken.Which)
+				case IOperator op:
 				{
-					case TokenType.Type:
+					foreach (var child in op.GetChildren())
 					{
-						nextToken = Lex.Next()
-						?? throw new Exception();
-
-						if (nextToken.Which != TokenType.Identifier)
-							throw new UnexpectedTokenException(TokenType.Identifier, nextToken, nextToken.Range);
-						TypeSymbol? newType;
-						if ((newType = scope.FindSymbolByName<TypeSymbol>(nextToken.Text)) == null)
-							throw new UndefinedSymbolException(nextToken.Text, nextToken.Range);
-
-						res.Append(new VarSymbol(varToken.Text, Lex.Filepath, newType));
-						//scope.AddSymbol(new VarSymbol(varToken.Text, Lex.Filepath, newType));
-						break;
+						if (child != null)
+							res.AddRange(GetIdentities(child));
 					}
-					case TokenType.Comma:
-					case TokenType.CloseBracket:
-					case TokenType.Assign:
-					{
-						res.Append(new VarSymbol(varToken.Text, Lex.Filepath));
-						//scope.AddSymbol(new VarSymbol(varToken.Text, Lex.Filepath));
-						if (nextToken.Which == TokenType.Comma) continue;
-						break;
-					}
-					default:
-						throw new UnexpectedTokenException(TokenType.CloseBracket, nextToken, nextToken.Range);
+					break;
+				}
+				case IdentityExpr id:
+				{
+					res.Add(id);
+					break;
+				}
+				default:
+				{
+					throw new ArgumentException();
 				}
 			}
-
-			if (firstToken != null) Lex.Goto(firstToken);
 			return res;
-		}
-
-		protected List<VarSymbol> ParseVarPattern(Scope scope, Token? firstToken)
-		{
-			return ParsePattern(scope, firstToken);
-		}
-
-		protected List<TypeSymbol> ParseTypePattern(Scope scope, Token? firstToken)
-		{
-			return [.. ParsePattern(scope, firstToken).Select(v => v.Type)];
 		}
 
 		protected bool ParseStmt(ref Stmt newStmt)
@@ -324,44 +378,74 @@ namespace stilt
 					var varToken = Lex.Next();
 					if (varToken.Which != TokenType.Identifier || varToken.Which != TokenType.OpenBracket)
 						throw new UnexpectedTokenException(TokenType.Identifier, varToken, varToken.Range);
-					
-					var pattern = ParseVarPattern(newScope, varToken);
-					pattern.ForEach(v =>
-					{
-						if (!newScope.IsInScope(v))
-							newScope.AddSymbol(v);
-						else
-							throw new RedeclaredSymbolException(v, varToken.Range);
-					});
 
 					ParseExpr(ref newExpr, varToken, newScope);
+
 					if (newExpr == null && firstToken.Which == TokenType.ConstDecl)
 						throw new SyntaxErrorException("No value given to initialize constant '{0}'",
 							varToken.Range, varToken.Text);
+
+					if (newExpr is AssignExpr assign)
+					{
+						if (assign.Left == null || assign.Right == null)
+							throw new MalformedExprException(firstToken.Range);
+
+						//ReplaceIdentities
+						var left = GetIdentities(assign.Left);
+						var right = GetIdentities(assign.Right);
+
+						Dictionary<Symbol, Symbol> vars = [];
+						foreach (var id in left)
+						{
+							if (id.Identity is VarSymbol var)
+								vars.Add(id.Identity, new VarSymbol(var.Name, var.Source, var.Type));
+							else
+								throw new Exception();
+						}
+
+						foreach (var id in right)
+						{
+							id.Identity = vars[id.Identity];
+						}
+					}
+					else
+						throw new Exception();
 
 					break;
 				}
 				case TokenType.FuncDecl:
 				{
-					var funcName = Lex.Next();
-					if (funcName.Which != TokenType.Identifier)
-						throw new UnexpectedTokenException(TokenType.Identifier, funcName, funcName.Range);
+					ParseExpr(ref newExpr, Lex.Next(), newScope);
 
-					FuncSymbol funcSymbol = new(funcName.Text, Lex.Filepath);
-					newScope.AddSymbol(funcSymbol);
-					var arguments = ParseVarPattern(newScope, null);
-
-					if (!ParseStmt(ref newStmt))
-						throw new Exception();
-
-					newStmt = new FuncDeclStmt()
+					if (newExpr is CallExpr funcCall && funcCall.Left is IdentityExpr id)
 					{
-						Scope = newScope,
-						Name = funcSymbol,
-						Arguments = arguments,
-						Value = newStmt
-					};
-					funcSymbol.Declaration = newStmt as FuncDeclStmt;
+						FuncSymbol funcSymbol = new(id.Identity.Name, Lex.Filepath);
+						newScope.AddSymbol(funcSymbol);
+						id.Identity = funcSymbol;
+
+						if (!ParseStmt(ref newStmt))
+							throw new Exception();
+
+						var arguments = GetIdentities(funcCall.Right).Select(e => 
+						{
+							if (e.Identity is VarSymbol v)
+								return v;
+							else
+								throw new MalformedExprException(firstToken.Range);
+						}).ToList();
+
+						newStmt = new FuncDeclStmt()
+						{
+							Scope = newScope,
+							Name = funcSymbol,
+							Value = newStmt
+						};
+						funcSymbol.Declaration = newStmt as FuncDeclStmt;
+						funcSymbol.Arguments = arguments;
+						funcSymbol.Return = funcCall.Type;
+					}
+					else
+						throw new MalformedExprException(firstToken.Range);
 
 					break;
 				}
