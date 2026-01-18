@@ -49,25 +49,25 @@ namespace stilt.AST
 			}, out parent);
 		}
 
-		protected Expr? FindFirst(Predicate<Expr> predicate, out Expr? parent, bool ignoreBrackets = false, Expr? supposedParent = null)
+		protected Expr? FindFirst(Predicate<Expr> predicate, out Expr? parent, Expr? supposedParent = null)
 		{
 			parent = supposedParent;
-
-			if (supposedParent != null && Bracketed && !ignoreBrackets)
-			{
-				return null;
-			}
 
 			if (predicate.Invoke(this))
 			{
 				return this;
 			}
 
+			if (Bracketed)
+			{
+				return null;
+			}
+
 			if (this is ISpreadable spreadable)
 			{
 				foreach (var child in spreadable.Spread())
 				{
-					var res = child?.FindFirst(predicate, out parent, ignoreBrackets, this);
+					var res = child?.FindFirst(predicate, out parent, this);
 					if (res != null)
 					{
 						return res;
