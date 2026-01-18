@@ -5,20 +5,20 @@ namespace stilt
 {
 	public class Lexer
 	{
-		public readonly List<Token> Tokens = new List<Token>();
+		protected readonly List<Token> Tokens = new List<Token>();
 		protected int CurrentPos = 0;
-		public readonly string Filepath = "No file";
-		public Token CurrentToken => Tokens[CurrentPos];
+		public readonly string Filepath = "If you see this message, please report it as a bug.";
+		public Token? CurrentToken => Tokens.Count > CurrentPos ? Tokens[CurrentPos] : null;
 
 		public static void GetSymbolAttribute(out List<string[]> symbols, out List<string[]> regex)
 		{
 			symbols = new List<string[]>();
 			regex = new List<string[]>();
 
-			foreach (var name in typeof(Token.Tokens).GetEnumNames())
+			foreach (var name in typeof(TokenType).GetEnumNames())
 			{
-				symbols.Add(typeof(Token.Tokens).GetField(name).GetCustomAttributes<SymbolAttribute>()?.Where(a => !a.IsRegex).Select(a => Regex.Escape(a.Symbol)).ToArray());
-				regex.Add(typeof(Token.Tokens).GetField(name).GetCustomAttributes<SymbolAttribute>()?.Where(a => a.IsRegex).Select(a => a.Symbol).ToArray());
+				symbols.Add(typeof(TokenType).GetField(name).GetCustomAttributes<SymbolAttribute>()?.Where(a => !a.IsRegex).Select(a => Regex.Escape(a.Symbol)).ToArray());
+				regex.Add(typeof(TokenType).GetField(name).GetCustomAttributes<SymbolAttribute>()?.Where(a => a.IsRegex).Select(a => a.Symbol).ToArray());
 			}
 		}
 
@@ -35,22 +35,24 @@ namespace stilt
 			}
 		}
 
-		static string Preprocess(string code)
+		public static string Preprocess(string code)
 		{
 			const string commentRegex1 = """#.*""";
 			const string commentRegex2 = """##(?:.*\s)*##""";
-			const string commentRegex3 = """\n\n+""";
+			const string commentRegex3 = """\n{2,}""";
+			const string commentRegex4 = """\r\n""";
 			const string linebreakRegex = """ ?\\\s+""";
-			return Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(
-				code, commentRegex2, "")
+			return Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(
+				code, commentRegex4, "\n")
+				, commentRegex2, "")
 				, commentRegex1, "")
-				, linebreakRegex, "")
+				, linebreakRegex, " ")
 				, commentRegex3, "\n");
 		}
 
 		protected List<Token> GetTokenMatches(string code, List<string[]> rules)
 		{
-			var tokens = new List<Token>();
+			List<Token> tokens = new();
 
 			for (int i = 0; i < rules.Count; ++i)
 			{
@@ -63,7 +65,7 @@ namespace stilt
 						var newToken = new Token();
 
 						newToken.Range = new FileRange(match.Index, match.Index + match.Length, Filepath);
-						newToken.Which = (Token.Tokens)i;
+						newToken.Which = (TokenType)i;
 						newToken.Text = match.Value;
 
 						//Program.Dump(newToken);
@@ -81,15 +83,13 @@ namespace stilt
 			return CurrentToken;
 		}
 
-		public Token PeekNext()
+		public Token PeekNext(int n = 1)
 		{
-			CurrentPos++;
+			CurrentPos += n;
 			var nextToken = CurrentToken;
-			CurrentPos--;
+			CurrentPos -= n;
 			return nextToken;
 		}
-
-
 
 		public Lexer(ProgramArgs args)
 		{

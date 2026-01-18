@@ -1,6 +1,7 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 
 namespace stilt
 {
@@ -101,6 +102,8 @@ namespace stilt
 					Action = Command.Tokenize; break;
 				case "help":
 					Action = Command.Help; PrintHelp(); return;
+				case "preprocess":
+					Action = Command.Preprocess; break;
 				default:
 					throw new ArgumentParsingException("Invalid action given: {0}{1}", args[0], "");
 			}
@@ -204,6 +207,9 @@ namespace stilt
 			[ActionRequired(new[] { Option.InputFile })]
 			Tokenize,
 
+			[ActionRequired(new[] { Option.InputFile })]
+			Preprocess,
+
 			Help,
 		}
 
@@ -233,7 +239,8 @@ namespace stilt
 				var value = prop.GetValue(obj);
 				if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
 				{
-					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = '{value}'");
+					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = " +
+					$"'{(value is string ? $"\"{Escape((string)value)}\"" : value)}'");
 				}
 				else
 				{
@@ -254,11 +261,31 @@ namespace stilt
 			}
 		}
 
+		public static string Escape(string s)
+		{
+			var sb = new StringBuilder(s.Length);
+			foreach (char c in s)
+			{
+				sb.Append(c switch
+				{
+					'\n' => "\\n",
+					'\r' => "\\r",
+					'\t' => "\\t",
+					'\\' => "\\\\",
+					'"' => "\\\"",
+					_ when char.IsControl(c) => $"\\x{(int)c:X2}",
+					_ => c.ToString()
+				});
+			}
+			return sb.ToString();
+		}
+
 		static int Main(string[] args)
 		{
 			ProgramArgs arg;
 
-			//TODO implement ValueOptional
+			//TODO
+			//implement ValueOptional
 
 			try
 			{
@@ -280,7 +307,14 @@ namespace stilt
 				case ProgramArgs.Command.Tokenize:
 				{
 					var lex = new Lexer(arg);
-					lex.Tokens.ForEach(t => Dump(t));
+					Token t;
+					while ((t = lex.Next()) != null) Dump(t);
+					break;
+				}
+				case ProgramArgs.Command.Preprocess:
+				{
+					var code = File.ReadAllText(arg.MainCodeFilepath);
+					Console.Write(Lexer.Preprocess(code));
 					break;
 				}
 			}

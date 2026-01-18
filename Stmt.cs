@@ -1,25 +1,71 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 
 namespace stilt.AST
 {
+	public class Scope
+	{
+		public Scope? Parent;
+		public List<Symbol> Symbols = new();
+		
+		public bool IsInScope(Symbol sym)
+		{
+			var currentScope = this;
+			while (currentScope != null)
+			{
+				if(currentScope.Symbols.Find(s => s == sym) != null)
+					return true;
+				currentScope = currentScope.Parent;
+			}
+			return false;
+		}
+	}
+
 	public abstract class Stmt
 	{
+		public Scope Scope = new();
 		public Stmt? Next;
-	}
-	
-	public class CompoundStmt : Stmt { }
+		public Stmt? Prev;
 
-	public class IfStmt : Stmt
+		protected Stmt(Stmt? prev = null)
+		{
+			if (prev != null)
+			{
+				Scope.Parent = prev.Scope;
+				Prev = prev;
+			}
+		}
+	}
+
+	public class CompoundStmt(Stmt? prev = null) : Stmt(prev) { }
+
+	public class IfStmt(Stmt? prev = null) : Stmt(prev)
 	{
 		public Expr Condition;
-		public Stmt NextIfTrue;
+		public Stmt NextIf;
 		public Stmt? NextElse;
 	}
 
-	public class ExpressionStmt : Stmt
+	public class ExpressionStmt(Stmt? prev = null) : Stmt(prev)
 	{
 		public Expr Expression;
+	}
+
+	public class VarDeclStmt(Stmt? prev = null) : Stmt(prev)
+	{
+		[Required]
+		public Symbol Name;
+		[Required]
+		public bool IsConst;
+		public Expr? Value;
+	}
+
+	public class FuncDeclStmt(Stmt? prev = null) : Stmt(prev)
+	{
+		public Symbol Name;
+		public List<Symbol> Arguments;
+		public Stmt Value;
 	}
 }

@@ -1,8 +1,18 @@
 var a = 2
 var b
 
-var c = a + b
+var c = a +  \
+	b
 
-print(c)
+##
+
+
+gdfgf
+##
+
+
+
+
+print(c)\
 
 #comment
