@@ -68,7 +68,7 @@ namespace stilt
 				var value = prop.GetValue(obj);
 				if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
 				{
-					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = {value}");
+					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = '{value}'");
 				}
 				else
 				{
@@ -80,7 +80,7 @@ namespace stilt
 				var value = prop.GetValue(obj);
 				if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
 				{
-					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = {value}");
+					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = '{value}'");
 				}
 				else
 				{

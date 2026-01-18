@@ -54,8 +54,9 @@ namespace stilt
 
 						newToken.Range = new FileRange(match.Index, match.Index + match.Length, filepath);
 						newToken.Which = (Token.Tokens)i;
+						newToken.Text = match.Value;
 
-						Program.Dump(newToken);
+						//Program.Dump(newToken);
 						tokens.Add(newToken);
 					}
 				}
