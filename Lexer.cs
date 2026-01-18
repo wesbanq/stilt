@@ -97,6 +97,14 @@ namespace stilt
 			return nextToken;
 		}
 
+		public void Goto(Token to)
+		{
+			var t = Tokens.FindIndex(t => ReferenceEquals(t, to));
+			if (t == -1)
+				throw new ArgumentException();
+			CurrentPos = t;
+		}
+
 		public Lexer(ProgramArgs args)
 		{
 			Filepath = args.MainCodeFilepath;
