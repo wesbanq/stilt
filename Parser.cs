@@ -7,8 +7,9 @@ namespace stilt
 	{
 		[Required]
 		public Lexer Lex;
-		public Stmt? RootStmt;
-		public Stmt? LastStmt;
+		public LinkedList<Stmt> Statements = new();
+		//public Stmt? RootStmt;
+		//public Stmt? LastStmt;
 
 		public class RedeclaredSymbolException : Exception
 		{
@@ -77,80 +78,91 @@ namespace stilt
 			}
 		}
 
-		public void InsertInto(ref Expr rootExpr, Expr? newExpr)
+		public void InsertIntoExprTree(ref Expr rootExpr, Expr? newExpr)
 		{
 			if (rootExpr == null || newExpr == null)
 			{
 				if (newExpr != null)
-				{
 					rootExpr = newExpr;
-				}
 				return;
 			}
 			var toReplace = rootExpr.FindFirstPrecedenceOrNull(newExpr.Precedence, out var parent);
 			if (toReplace == null && parent == null)
 			{
-				if (newExpr is ISpreadable exprSpreadable)
+				if (newExpr is IOperator exprSpreadable)
 				{
-					exprSpreadable.Shove(rootExpr);
+					exprSpreadable.InsertChild(rootExpr);
 					rootExpr = newExpr;
 				}
 				else
-				{
 					throw new Exception();
-				}
 			}
 
-			if (newExpr is ISpreadable spreadable)
+			if (newExpr is IOperator spreadable)
 			{
 				if (toReplace != null)
-				{
-					spreadable.Shove(toReplace);
-				}
+					spreadable.InsertChild(toReplace);
 				
 				if (parent != null)
 				{
-					if (parent is ISpreadable sParent)
-						sParent.Replace(toReplace, newExpr);
+					if (parent is IOperator sParent)
+						sParent.ReplaceChild(toReplace, newExpr);
 					else
 						throw new Exception();
 				}
 				else
-				{
 					rootExpr = newExpr;
-				}
 			}
 			else
 			{
-				if (parent is ISpreadable newSpreadable)
-				{
-					newSpreadable.Shove(newExpr);
-				}
+				if (parent is IOperator newSpreadable)
+					newSpreadable.InsertChild(newExpr);
 				else
-				{
 					throw new ArgumentException();
-				}
 			}
 		}
 
-		public void ParseExpr(ref Expr rootExpr, Token? firstToken)
+		protected Expr? CreateOperatorExpr(Token token)
 		{
-			if (firstToken == null) return;
-			Expr? newExpr = null;
+			var operatorAttr = Compiler.GetAttributeFromEnum<TokenType, OperatorAttribute>(token.Which);
+			if (operatorAttr == null)
+				throw new UnexpectedTokenException(token, token.Range);
 
-			switch (firstToken.Which)
+			var newExpr = Activator.CreateInstance(operatorAttr.AssociatedExpr, operatorAttr.Precedence) as Expr;
+			return newExpr ?? throw new Exception();
+		}
+
+		public void ParseExpr(ref Expr rootExpr, Token? currentToken, Scope scope)
+		{
+			if (currentToken == null) return;
+			Expr newExpr = null;
+
+			switch (currentToken.Which)
 			{
 				case TokenType.Identifier:
 				{
-					VarSymbol newSym = new(firstToken.Text, Lex.Filepath);
-					//if (!LastStmt?.Scope.IsInScope(newSym) ?? true)
-					//	throw new UndefinedSymbolException(newSym, firstToken.Range);
+					var newSym = scope.FindSymbolByName<VarSymbol>(currentToken.Text);
+					if (newSym == null)
+						throw new UndefinedSymbolException(newSym, currentToken.Range);
 
-					newExpr = new IdentitiyExpr()
+					newExpr = new IdentityExpr()
 					{
-						Identity = newSym	
+						Identity = newSym
 					};
 
+					if (Lex.PeekNext()?.Which == TokenType.Colon)
+					{
+						Lex.Next();
+						var typeName = Lex.Next();
+						if (typeName == null || typeName.Which != TokenType.Identifier)
+							throw new UnexpectedTokenException(typeName, typeName?.Range);
+						var typeSym = scope.FindSymbolByName<TypeSymbol>(typeName.Text) 
+						?? throw new UndefinedSymbolException(new TypeSymbol(typeName.Text, Lex.Filepath), typeName.Range);
+
+						if (newExpr is IdentityExpr i) i.Type = typeSym;
+						else throw new Exception();
+					}
+					
 					break;
 				}
 				case TokenType.FormatStringLiteral:
@@ -160,19 +172,19 @@ namespace stilt
 				{
 					newExpr = new LiteralExpr()
 					{
-						Value = firstToken.Text
+						Value = currentToken.Text
 					};
-
 					break;
 				}
 				case TokenType.OpenSquareBracket:
+				{
+					newExpr = CreateOperatorExpr(currentToken);
+					ParseExpr(ref newExpr, Lex.Next(), scope);
+					break;
+				}
 				case TokenType.OpenBracket:
 				{
-					//if (firstToken.Which == TokenType.OpenSquareBracket)
-					//{
-					//	IndexExpr indexExpr = new();
-					//}
-					ParseExpr(ref newExpr, Lex.Next());
+					ParseExpr(ref newExpr, Lex.Next(), scope);
 					break;
 				}
 				case TokenType.StmtSeparator:
@@ -184,86 +196,98 @@ namespace stilt
 					rootExpr.Bracketed = true;
 					return;
 				}
+				//case TokenType.Colon:
+				//{
+				//	break;
+				//}
 				default:
 				{
-					var operatorAttr = Compiler.GetAttributeFromEnum<TokenType, OperatorAttribute>(firstToken.Which);
-					if (operatorAttr == null)
-						throw new UnexpectedTokenException(firstToken, firstToken?.Range);
+					newExpr = CreateOperatorExpr(currentToken);
+					if (Lex.PeekNext()?.Which == TokenType.Assign
+						&& newExpr is BinaryExpr)
+					{
+						Lex.Next();
+						var precedence = Compiler.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign).Precedence;
+						newExpr = new AssignExpr(precedence)
+						{
+							Operation = newExpr as BinaryExpr
+						};
+					}
+					//TODO unary & ternary
+					//func calls, arrays, index
+					break;
+				}
+			}
+
+			InsertIntoExprTree(ref rootExpr, newExpr);
+			//Program.Dump(rootExpr);
+			ParseExpr(ref rootExpr, Lex.Next(), scope);
+		}
+
+		public void ParseStmt()
+		{
+			var firstToken = Lex.CurrentToken;
+			Expr newExpr = null;
+			Stmt newStmt = null;
+			Scope newScope = new(Statements.Last?.Value.Scope);
+
+			switch (firstToken?.Which)
+			{
+				case TokenType.ConstDecl:
+				case TokenType.VarDecl:
+				{
+					var varToken = Lex.Next();
+					if (varToken.Which != TokenType.Identifier)
+						throw new UnexpectedTokenException(TokenType.Identifier, varToken, varToken.Range);
+
+					var newSymbol = new VarSymbol(varToken.Text, Lex.Filepath);
+					if (Statements.Last?.Value.Scope.IsInScope(newSymbol) ?? false)
+						throw new RedeclaredSymbolException(newSymbol, varToken.Range);
+					newScope.AddSymbol(newSymbol);
+
+					ParseExpr(ref newExpr, varToken, newScope);
+					if (newExpr == null && firstToken.Which == TokenType.ConstDecl)
+						throw new SyntaxErrorException("No value given to initialize constant '{0}'",
+							varToken.Range, varToken.Text);
+
+					newStmt = new VarDeclStmt()
+					{
+						Name = newSymbol,
+						IsConst = firstToken.Which == TokenType.ConstDecl,
+						Scope = newScope,
+						Value = newExpr
+					};
+
+					break;
+				}
+				case TokenType.FuncDecl:
+				{
+					break;
+				}
+				case TokenType.If:
+				{
 					
-					newExpr = Activator.CreateInstance(operatorAttr.AssociatedExpr, operatorAttr.Precedence) as Expr;
+
+					break;
+				}
+				default:
+				{
+					if (firstToken == null)
+						throw new Exception();
+					ParseExpr(ref newExpr, firstToken, newScope);
+					if (newExpr == null)
+						throw new SyntaxErrorException("Unknown statement '{0}'", firstToken.Range, firstToken.Text);
+					ExpressionStmt stmt = new()
+					{
+						Expression = newExpr,
+						Scope = newScope,
+					};
 
 					break;
 				}
 			}
 
-			InsertInto(ref rootExpr, newExpr);
-			//Program.Dump(rootExpr);
-			ParseExpr(ref rootExpr, Lex.Next());
-		}
-
-		public Stmt ParseStmt()
-		{
-			Expr newExp = null;
-			ParseExpr(ref newExp, Lex.CurrentToken);
-			ExpressionStmt newStmt = new(LastStmt)
-			{
-				Expression = newExp,
-			};
-			return newStmt;
-
-			//switch (firstToken.Which)
-			//{
-			//	case TokenType.ConstDecl:
-			//	case TokenType.VarDecl:
-			//	{
-			//		if (Lex.Next().Which != TokenType.Identifier)
-			//			//throw new UnexpectedTokenException();
-			//			throw new Exception();
-			//		Expr newExpr = null;
-			//		ParseExpr(ref newExpr);
-			//		if (newExpr == null && firstToken.Which == TokenType.ConstDecl)
-			//			throw new SyntaxErrorException("No value given to initialize constant '{0}'", 
-			//				Lex.CurrentToken.Range, Lex.CurrentToken.Text);
-			//		var declStmt = new VarDeclStmt()
-			//		{
-			//			Name = new VarSymbol(Lex.Next().Text, Lex.Filepath),
-			//			IsConst = firstToken.Which == TokenType.ConstDecl,
-			//			Value = newExpr,
-			//			Scope = LastStmt?.Scope ?? new(),
-			//			Prev = LastStmt
-			//		};
-			//		if (LastStmt != null)
-			//		{
-			//			if (LastStmt.Scope.IsInScope(declStmt.Name) == true)
-			//				throw new RedeclaredSymbolException(declStmt.Name, firstToken.Range);
-			//			LastStmt.Scope.Symbols.Add(declStmt.Name);
-			//			LastStmt.Next = declStmt;
-			//		}
-			//		LastStmt = declStmt;
-			//		break;
-			//	}
-			//	case TokenType.If:
-			//	{
-			//		break;
-			//	}
-			//	default:
-			//	{
-			//		Expr newExpr = null;
-			//		ParseExpr(ref newExpr);
-			//		if (newExpr == null)
-			//			throw new SyntaxErrorException("Unknown statement '{0}'", Lex.CurrentToken.Range, Lex.CurrentToken.Text);
-			//		ExpressionStmt stmt = new()
-			//		{
-			//			Expression = newExpr,
-			//			Scope = LastStmt?.Scope ?? new(),
-			//			Prev = LastStmt
-			//		};
-			//		if (LastStmt != null)
-			//			LastStmt.Next = stmt;
-			//		LastStmt = stmt;
-			//		break;
-			//	}
-			//}
+			if (newStmt != null) Statements.AddLast(newStmt);
 		}
 
 		public Parser(Lexer lex)

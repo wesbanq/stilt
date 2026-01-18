@@ -371,7 +371,7 @@ namespace stilt
 				{
 					//AdditionExpr test = new(2)
 					//{
-					//	Left = new IdentitiyExpr()
+					//	Left = new IdentityExpr()
 					//	{
 					//		Identity = new VarSymbol("a", "")
 					//	},
@@ -379,7 +379,7 @@ namespace stilt
 
 					//Dump(test.FindFirstPrecedenceOrNull(2, out var parent));
 
-					//test.Right = new IdentitiyExpr() {Identity = new VarSymbol("b", "")};
+					//test.Right = new IdentityExpr() {Identity = new VarSymbol("b", "")};
 
 					//Dump(test.FindFirstPrecedenceOrNull(2, out parent));
 

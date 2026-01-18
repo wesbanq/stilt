@@ -9,6 +9,7 @@ namespace stilt.AST
 {
 	public abstract class Expr
 	{
+		public TypeSymbol Type = TypeSymbol.Any;
 		public bool Bracketed = false;
 		public int Precedence = 0;
 
@@ -26,9 +27,9 @@ namespace stilt.AST
 			parent = null;
 			var firstNull = FindFirst(e =>
 			{
-				if (e is ISpreadable spreadable)
+				if (e is IOperator spreadable)
 				{
-					return spreadable.Spread().Any(c => c == null);
+					return spreadable.GetChildren().Any(c => c == null);
 				}
 				return false;
 			}, out parent);
@@ -63,9 +64,9 @@ namespace stilt.AST
 				return null;
 			}
 
-			if (this is ISpreadable spreadable)
+			if (this is IOperator spreadable)
 			{
-				foreach (var child in spreadable.Spread())
+				foreach (var child in spreadable.GetChildren())
 				{
 					var res = child?.FindFirst(predicate, out parent, this);
 					if (res != null)
@@ -79,20 +80,21 @@ namespace stilt.AST
 		}
 	}
 
-	public interface ISpreadable
+	//ISpreadable sounds better
+	public interface IOperator
 	{
-		Expr?[] Spread();
-		void Replace(Expr? what, Expr with);
-		void Shove(Expr what);
+		Expr?[] GetChildren();
+		void ReplaceChild(Expr what, Expr with);
+		void InsertChild(Expr what);
 	}
 
-	public class IdentitiyExpr : Expr
+	public class IdentityExpr : Expr
 	{
 		public required Symbol Identity;
 	}
-	//public class AccessExpr : IdentitiyExpr
+	//public class AccessExpr : IdentityExpr
 	//{
-	//	public IdentitiyExpr? From;
+	//	public IdentityExpr? From;
 	//}
 
 	public abstract class Symbol
@@ -100,14 +102,15 @@ namespace stilt.AST
 		[Required] public string Name;
 		[Required] public string Source;
 
-		public static bool operator ==(Symbol left, Symbol right)
+		public static bool operator ==(Symbol? left, Symbol? right)
 		{
+			if (left == null || right == null) return false;
 			return left.Name.Equals(right.Name) && left.Source.Equals(right.Source);
 		}
 
-		public override bool Equals(object other)
+		public override bool Equals(object? other)
 		{
-			return other is Symbol && this == other;
+			return other is Symbol && this == other as Symbol;
 		}
 
 		public override int GetHashCode()
@@ -115,7 +118,7 @@ namespace stilt.AST
 			return base.GetHashCode();
 		}
 
-		public static bool operator !=(Symbol left, Symbol right)
+		public static bool operator !=(Symbol? left, Symbol? right)
 		{
 			return !(left == right);
 		}
@@ -127,21 +130,32 @@ namespace stilt.AST
 		}
 	}
 
-	public class VarSymbol(string n, string s) : Symbol(n, s) { }
-	public class FuncSymbol(string n, string s) : Symbol(n, s) { }
-	public class TypeSymbol(string n, string s) : Symbol(n, s) { }
+	public class VarSymbol(string n, string s) : Symbol(n, s) 
+	{
+		public TypeSymbol Type = TypeSymbol.Any;
+	}
+	public class FuncSymbol(string n, string s) : Symbol(n, s)
+	{
+		//return type
+		public TypeSymbol Type = TypeSymbol.Any;
+	}
+	public class TypeSymbol(string n, string s) : Symbol(n, s) 
+	{
+		public static readonly TypeSymbol Any = new("Any", "<BUILTIN>");
+		public bool IsBuiltin => Source.StartsWith("<BUILTIN>");
+	}
 
-	public abstract class TernaryExpr : Expr, ISpreadable
+	public abstract class TernaryExpr : Expr, IOperator
 	{
 		public Expr? Left;
 		public Expr? Middle;
 		public Expr? Right;
 
-		public Expr?[] Spread()
+		public Expr?[] GetChildren()
 		{
 			return [Right, Middle, Left];
 		}
-		public void Replace(Expr? what, Expr with)
+		public void ReplaceChild(Expr what, Expr with)
 		{
 			if (ReferenceEquals(Right, what))
 			{
@@ -162,7 +176,7 @@ namespace stilt.AST
 			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
 
-		public void Shove(Expr what)
+		public void InsertChild(Expr what)
 		{
 			if (Left == null)
 			{
@@ -186,16 +200,16 @@ namespace stilt.AST
 		public TernaryExpr(int precedence) { Precedence = precedence; }
 	}
 
-	public abstract class BinaryExpr : Expr, ISpreadable
+	public abstract class BinaryExpr : Expr, IOperator
 	{
 		public Expr? Left;
 		public Expr? Right;
 
-		public Expr?[] Spread()
+		public Expr?[] GetChildren()
 		{
 			return [Right, Left];
 		}
-		public void Replace(Expr? what, Expr with)
+		public void ReplaceChild(Expr what, Expr with)
 		{
 			if (ReferenceEquals(Right, what))
 			{
@@ -210,7 +224,7 @@ namespace stilt.AST
 
 			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
-		public void Shove(Expr what)
+		public void InsertChild(Expr what)
 		{
 			if (Left == null)
 			{
@@ -229,15 +243,15 @@ namespace stilt.AST
 		public BinaryExpr(int precedence) { Precedence = precedence; }
 	}
 
-	public abstract class UnaryExpr : Expr, ISpreadable
+	public abstract class UnaryExpr : Expr, IOperator
 	{
 		public Expr? Leaf;
 
-		public Expr?[] Spread()
+		public Expr?[] GetChildren()
 		{
 			return [Leaf];
 		}
-		public void Replace(Expr? what, Expr with)
+		public void ReplaceChild(Expr what, Expr with)
 		{
 			if (ReferenceEquals(Leaf, what))
 			{
@@ -247,7 +261,7 @@ namespace stilt.AST
 
 			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
-		public void Shove(Expr what)
+		public void InsertChild(Expr what)
 		{
 			if (Leaf == null)
 			{
@@ -293,6 +307,7 @@ namespace stilt.AST
 	public class UpdateExpr(int p) : BinaryExpr(p) { }
 	public class IndexExpr(int p) : BinaryExpr(p) { }
 	public class AccessExpr(int p) : BinaryExpr(p) { }
+	public class CommaExpr(int p) : BinaryExpr(p) { }
 
 	public class AssignExpr(int p) : BinaryExpr(p)
 	{
@@ -310,7 +325,7 @@ namespace stilt.AST
 
 	public class LiteralExpr : Expr
 	{
-		[Required] public object Value;
+		public required object Value;
 	}
 
 
