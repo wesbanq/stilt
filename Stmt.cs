@@ -8,10 +8,10 @@ namespace stilt.AST
 	public abstract class Stmt : IRanged
 	{
 		public required Scope Scope;
-		//public List<> Decorators = [];
+		//public List<TypeSymbol> Decorators = [];
 
-		public FileRange? InnerRange { private get; set; }
-		public FileRange? Range
+		public FileRange? InnerRange { get; set; }
+		public FileRange? FullRange
 		{
 			get
 			{
@@ -20,8 +20,8 @@ namespace stilt.AST
 				{
 					if (fld is IRanged ranged)
 					{
-						if (ranged.Range is null) continue;
-						sum = sum is null ? ranged.Range : sum + ranged.Range;
+						if (ranged.FullRange is null) continue;
+						sum = sum is null ? ranged.FullRange : sum + ranged.FullRange;
 					}
 				}
 
@@ -42,7 +42,7 @@ namespace stilt.AST
 		public Stmt? NextElse;
 	}
 
-	public class ExpressionStmt : Stmt
+	public class ExprStmt : Stmt
 	{
 		public required Expr Expression;
 	}

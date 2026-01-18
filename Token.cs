@@ -9,8 +9,8 @@ namespace stilt
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
 	public class SymbolAttribute : Attribute, IDescriptable
 	{
-		public string Symbol { get; set; }
-		public bool IsRegex { get; set; }
+		public string Symbol;
+		public bool IsRegex;
 		public string Name => Symbol;
 
 		public SymbolAttribute(string symbol, bool regex = false) 
@@ -23,7 +23,7 @@ namespace stilt
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
 	public class OperatorAttribute : Attribute
 	{
-		public int Precedence { get; set; }
+		public int Precedence;
 		public Type AssociatedExpr;
 
 		public OperatorAttribute(int precedence, Type associatedExpr)
@@ -32,14 +32,12 @@ namespace stilt
 			AssociatedExpr = associatedExpr;
 		}
 	}
+	public class UnaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
+	public class BinaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
+	public class TernaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
 
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-	public class UnimplementedAttribute : Attribute
-	{ }
-
-	public class TernaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
-	public class BinaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
-	public class UnaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
+	public class UnimplementedAttribute : Attribute { }
 
 	public class Token
 	{
@@ -109,7 +107,7 @@ namespace stilt
 		Decrement,
 
 		// Assignment Operators
-		[BinaryOperator(14, typeof(AssignExpr))]
+		[BinaryOperator(15, typeof(AssignExpr))]
 		[Symbol("=")]
 		Assign,
 
@@ -212,7 +210,7 @@ namespace stilt
 		[Symbol("""[\r\n;]+""", true)]
 		StmtSeparator,
 
-		[BinaryOperator(15, typeof(CommaExpr))]
+		[BinaryOperator(14, typeof(CommaExpr))]
 		[Symbol(",")]
 		Comma,
 
@@ -270,17 +268,17 @@ namespace stilt
 		Conditional,
 
 		[Unimplemented]
-		[BinaryOperator(14, typeof(UpdateExpr))]
+		[BinaryOperator(15, typeof(UpdateExpr))]
 		[Symbol("|>")]
 		Update,
 
 		[Unimplemented]
-		[BinaryOperator(14, typeof(SwapExpr))]
+		[BinaryOperator(15, typeof(SwapExpr))]
 		[Symbol("><")]
 		SwapValue,
 
 		[Unimplemented]
-		[BinaryOperator(14, typeof(CopyExpr))]
+		[BinaryOperator(15, typeof(CopyExpr))]
 		[Symbol("=>")]
 		CopyTo,
 
@@ -337,7 +335,7 @@ namespace stilt
 		[Symbol("public")]
 		PublicSpec,
 
-		[TernaryOperator(13, typeof(ConditionalExpr))]
+		[TernaryOperator(12, typeof(ConditionalExpr))]
 		[Symbol("if")]
 		If,
 

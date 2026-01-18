@@ -8,6 +8,8 @@ namespace stilt
 		protected readonly List<Token> Tokens = new List<Token>();
 		protected int CurrentPos = 0;
 		public readonly string Filepath;
+		public FileText Text;
+
 		public Token? CurrentToken => Tokens.Count > CurrentPos ? Tokens[CurrentPos] : null;
 
 		public static void GetSymbolAttribute(out List<string[]> symbols, out List<string[]> regex)
@@ -66,7 +68,7 @@ namespace stilt
 					{
 						var newToken = new Token();
 
-						newToken.Range = new FileRange(match.Index, match.Index + match.Length, Filepath);
+						newToken.Range = new FileRange(match.Index, match.Index + match.Length, Filepath, Text);
 						newToken.Which = (TokenType)i;
 
 						tokens.Add(newToken);
@@ -79,6 +81,7 @@ namespace stilt
 
 		public void SkipStmt()
 		{
+			//TODO actually skip
 			while (Next()?.Which switch { null or TokenType.StmtSeparator or TokenType.CloseCurlyBracket => false, _ => true}) { }
 		}
 
@@ -113,12 +116,12 @@ namespace stilt
 		public Lexer(ProgramArgs args)
 		{
 			Filepath = args.MainCodeFilepath;
-			var code = Preprocess(File.ReadAllText(args.MainCodeFilepath));
+			Text = new(Filepath);
 
 			GetSymbolAttribute(out var symbols, out var regex);
 			Tokens = [.. FileRange.RemoveOverlaps(
-				GetTokenMatches(code, symbols),
-				GetTokenMatches(code, regex)
+				GetTokenMatches(Text.ToString(), symbols),
+				GetTokenMatches(Text.ToString(), regex)
 			)
 			.OrderBy(t => t.Range.Start)
 			.ThenBy(t => t.Range.End)];
