@@ -110,6 +110,11 @@ namespace stilt
 
 			Lexer.Tokenize(arg.MainCodeFilepath);
 
+			//var a = new FileRange(76, 78, "a");
+			//var b = new FileRange(74, 79, "a");
+
+			//Console.WriteLine("{0} {1} {2}", a.Before(b), a.After(b), a.Overlaps(b));
+
 			return 0;
 		}
 	}

@@ -18,89 +18,66 @@ namespace stilt
 			Filename = filename;
 		}
 
+		public bool SameFile (FileRange other)
+		{
+			if (other is null)
+				return false;
+
+			return string.Equals(Filename, other.Filename, StringComparison.Ordinal);
+		}
+
+		public bool Before(FileRange other)
+		{
+			if (other is null)
+				return false;
+
+			return SameFile(other) && Start <= other.Start && End <= other.Start;
+		}
+
+		public bool After(FileRange other)
+		{
+			if (other is null)
+				return false;
+
+			return SameFile(other) && Start >= other.End && End >= other.End;
+		}
+
 		public bool Overlaps(FileRange other)
 		{
 			if (other is null)
-			{
 				return false;
-			}
 
-			if (!string.Equals(Filename, other.Filename, StringComparison.Ordinal))
-			{
-				return false;
-			}
-
-			return Start < other.End && End > other.Start;
+			return SameFile(other) && Start < other.End && End > other.Start;
 		}
 
 		public static List<Token> RemoveOverlaps(List<Token> priorityRanges, List<Token> ranges)
 		{
 			// precedence - longest > shortest : symbol > regex
 			// assume both ranges are sorted
-			var finalList = new List<Token>();
+			// ts sucks pls fix
+			var finalList = ranges.Concat(priorityRanges);
 
-			// Add tokens from `ranges` that don't overlap any token in `priorityRanges`
-			foreach (Token otherToken in ranges)
+			foreach (Token token in finalList)
 			{
-				bool overlapsAnyPriority = false;
-				foreach (Token p in priorityRanges)
+				Token longestOverlap = token;
+				foreach (Token otherToken in finalList)
 				{
-					if (p.Range.Overlaps(otherToken.Range))
-					{
-						overlapsAnyPriority = true;
-						break;
-					}
-				}
-
-				if (!overlapsAnyPriority && !finalList.Contains(otherToken))
-				{
-					finalList.Add(otherToken);
-				}
-			}
-
-			// Process priority ranges, resolving overlaps within priorityRanges by selecting the longest
-			foreach (Token token in priorityRanges)
-			{
-				Token? maxOverlappingToken = null;
-				foreach (Token candidate in priorityRanges)
-				{
-					if (ReferenceEquals(candidate, token))
+					if (ReferenceEquals(token, otherToken))
 					{
 						continue;
 					}
-
-					if (candidate.Range.Overlaps(token.Range))
+					if (token.Range.Overlaps(otherToken.Range))
 					{
-						if (maxOverlappingToken == null || candidate.Range.Length > maxOverlappingToken.Range.Length)
+						if (otherToken.Range.Length >= longestOverlap.Range.Length)
 						{
-							maxOverlappingToken = candidate;
+							//finalList = finalList.Where(t => !ReferenceEquals(longestOverlap, t)).ToList();
+							longestOverlap = otherToken;
 						}
 					}
 				}
-
-				if (maxOverlappingToken != null)
+				if (!ReferenceEquals(token, longestOverlap))
 				{
-					if (maxOverlappingToken.Range.Length == token.Range.Length)
-					{
-						Program.Dump(maxOverlappingToken);
-						Program.Dump(token);
-						throw new Lexer.OverlappingTokensException("Overlapping tokens", token, maxOverlappingToken);
-					}
-					else
-					{
-						Token winner = maxOverlappingToken.Range.Length > token.Range.Length ? maxOverlappingToken : token;
-						if (!finalList.Contains(winner))
-						{
-							finalList.Add(winner);
-						}
-					}
-				}
-				else
-				{
-					if (!finalList.Contains(token))
-					{
-						finalList.Add(token);
-					}
+					finalList = finalList.Where(t => !ReferenceEquals(token, t)).ToList();
 				}
 			}
 
