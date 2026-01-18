@@ -57,26 +57,58 @@ namespace stilt
 
 	internal class Program
 	{
+		public static void Dump(object obj, int l = 0)
+		{
+			if (l == 0) Console.WriteLine();
+			var type = obj.GetType();
+			Console.WriteLine($"{new string('\t', l)}{type.Name}");
+
+			foreach (var prop in type.GetProperties())
+			{
+				var value = prop.GetValue(obj);
+				if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
+				{
+					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = {value}");
+				}
+				else
+				{
+					Dump(value, l + 1);
+				}
+			}
+			foreach (var prop in type.GetFields())
+			{
+				var value = prop.GetValue(obj);
+				if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
+				{
+					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = {value}");
+				}
+				else
+				{
+					Dump(value, l + 1);
+				}
+			}
+		}
+
 		static int Main(string[] args)
 		{
-			ProgramArgs a;
+			ProgramArgs arg;
 			try
 			{
-				a = new ProgramArgs(args);
+				arg = new ProgramArgs(args);
 			}
 			catch (Exception e)
 			{
-				Console.WriteLine($"Error: \n\t{e.Message}");
+				Console.WriteLine($"Error: {e.Message}");
 				return 1;
 			}
 
-			switch (a.Action)
+			switch (arg.Action)
 			{
 				case ProgramArgs.Command.Build:
-					Compiler.Build(a); break;
+					Compiler.Build(arg); break;
 			}
 
-			Assembly.GetExecutingAssembly().GetTypes().Whe
+			Lexer.Tokenize(arg.MainCodeFilepath);
 
 			return 0;
 		}

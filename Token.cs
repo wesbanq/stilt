@@ -8,262 +8,273 @@ namespace stilt
 	public class SymbolAttribute : Attribute
 	{
 		public string Symbol { get; set; }
+		public bool IsRegex { get; set; }
 		
-		public SymbolAttribute(string symbol) 
+		public SymbolAttribute(string symbol, bool regex) 
 		{
 			Symbol = symbol;
+			IsRegex = regex;
 		}
 	}
 
-	[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
-	public class RegexAttribute : Attribute
-	{
-		public string Regex { get; set; }
+	//[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
+	//public class RegexAttribute : Attribute
+	//{
+	//	public string Symbol { get; set; }
 
-		public RegexAttribute(string regex)
-		{
-			Regex = regex;
-		}
-	}
+	//	public RegexAttribute(string regex)
+	//	{
+	//		Symbol = regex;
+	//	}
+	//}
 
 	public class Token
 	{
+		public Tokens Which { get; set; }
+		public FileRange Range { get; set; }
+
 		public enum Tokens
 		{
-			[Symbol("+")]
+			None = 0,
+
+			[Symbol("+", false)]
 			Add,
 
-			[Symbol("-")]
+			[Symbol("-", false)]
 			Subtract,
 
-			[Symbol("/")]
+			[Symbol("/", false)]
 			Divide,
 
-			[Symbol("*")]
+			[Symbol("*", false)]
 			Multiply,
 
-			[Symbol("%")]
+			[Symbol("%", false)]
 			Modulo,
 
-			[Symbol("**")]
+			[Symbol("**", false)]
 			Exponent,
 
-			[Symbol("..")]
+			[Symbol("..", false)]
 			Range,
 
-			[Symbol("++")]
+			[Symbol("++", false)]
 			Increment,
 
-			[Symbol("--")]
+			[Symbol("--", false)]
 			Decrement,
 
 			// Assignment Operators
-			[Symbol("=")]
+			[Symbol("=", false)]
 			Assign,
 
-			[Symbol(":=")]
-			TypedAssignment,
+			//[Symbol(":=", false)]
+			//TypedAssign,
 
-			[Symbol("+=")]
-			AddAssign,
+			//[Symbol("+=", false)]
+			//AddAssign,
 
-			[Symbol("-=")]
-			SubtractAssign,
+			//[Symbol("-=", false)]
+			//SubtractAssign,
 
-			[Symbol("*=")]
-			MultiplyAssign,
+			//[Symbol("*=", false)]
+			//MultiplyAssign,
 
-			[Symbol("/=")]
-			DivideAssign,
+			//[Symbol("/=", false)]
+			//DivideAssign,
 
-			[Symbol("%=")]
-			ModuloAssign,
+			//[Symbol("%=", false)]
+			//ModuloAssign,
 
-			[Symbol("**=")]
-			ExponentAssign,
+			//[Symbol("**=", false)]
+			//ExponentAssign,
 
-			[Symbol("&=")]
-			BitwiseAndAssign,
+			//[Symbol("&=", false)]
+			//BitwiseAndAssign,
 
-			[Symbol("|=")]
-			BitwiseOrAssign,
+			//[Symbol("|=", false)]
+			//BitwiseOrAssign,
 
-			[Symbol("^=")]
-			BitwiseXorAssign,
+			//[Symbol("^=", false)]
+			//BitwiseXorAssign,
 
 			// Comparison Operators
-			[Symbol(">")]
+			[Symbol(">", false)]
 			Greater,
 
-			[Symbol("<")]
+			[Symbol("<", false)]
 			Lesser,
 
-			[Symbol(">=")]
+			[Symbol(">=", false)]
 			GreaterOrEqual,
 
-			[Symbol("<=")]
+			[Symbol("<=", false)]
 			LesserOrEqual,
 
-			[Symbol("==")]
+			[Symbol("==", false)]
 			EqualTo,
 
-			[Symbol("!=")]
+			[Symbol("!!=", false)]
 			NotEqualTo,
 
 			// Logical Operators
-			[Symbol("!")]
-			[Symbol("not")]
+			[Symbol("!!", false)]
+			[Symbol("not", false)]
 			LogicalNot,
 
-			[Symbol("||")]
-			[Symbol("or")]
+			[Symbol("||", false)]
+			[Symbol("or", false)]
 			LogicalOr,
 
-			[Symbol("&&")]
-			[Symbol("and")]
+			[Symbol("&&", false)]
+			[Symbol("and", false)]
 			LogicalAnd,
 
-			[Symbol("^^")]
-			[Symbol("xor")]
+			[Symbol("^^", false)]
+			[Symbol("xor", false)]
 			LogicalXor,
 
 			// Bitwise Operators
-			[Symbol("!!")]
+			[Symbol("!", false)]
 			BitwiseNot,
 
-			[Symbol("&")]
+			[Symbol("&", false)]
 			BitwiseAnd,
 
-			[Symbol("|")]
+			[Symbol("|", false)]
 			BitwiseOr,
 
-			[Symbol("^")]
+			[Symbol("^", false)]
 			BitwiseXor,
 
 			// Signal Operators
-			[Symbol("->")]
+			[Symbol("->", false)]
 			ConnectSignal,
 
-			[Symbol("<-")]
+			[Symbol("<-", false)]
 			EmitSignal,
 
 			// Literals
-			[Regex("""[a-z0-9]*("(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""")]
+			[Symbol("""[a-z0-9]*("(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
 			StringLiteral,
 
-			// [Regex(r"\d\d*(?:\.\d*|[bsilfd])?")]
-			[Regex("""\d\d*(?:\.\d*|[bsilfd])?""")]
+			// [Symbol(r"\d\d*(?:\.\d*|[bsilfd])?", false)]
+			[Symbol("""\d\d*(?:\.\d*|[bsilfd])?""", true)]
 			NumericLiteral,
 
-			// [Regex(r"\d+b")]
+			// [Symbol(r"\d+b", false)]
 			// ByteLiteral,
 
-			// [Regex(r"\d+i")]
+			// [Symbol(r"\d+i", false)]
 			// IntLiteral,
 
-			// [Regex(r"\d+l")]
+			// [Symbol(r"\d+l", false)]
 			// LongLiteral,
 
-			// [Regex(r"\d+.\d+f")]
+			// [Symbol(r"\d+.\d+f", false)]
 			// FloatLiteral,
 
-			// [Regex(r"\d+.\d+d")]
+			// [Symbol(r"\d+.\d+d", false)]
 			// DoubleLiteral,
 
 			// Delimiters
-			[Regex("""[\r\n;]+""")]
+			[Symbol("""[\r\n;]+""", true)]
 			StmtSeparator,
 
-			[Symbol(",")]
+			[Symbol(",", false)]
 			Comma,
 
-			[Symbol("{")]
+			[Symbol("{", false)]
 			OpenCurlyBracket,
 
-			[Symbol("}")]
+			[Symbol("}", false)]
 			CloseCurlyBracket,
 
-			[Symbol("[")]
+			[Symbol("[", false)]
 			OpenSquareBracket,
 
-			[Symbol("]")]
+			[Symbol("]", false)]
 			CloseSquareBracket,
 
-			[Symbol("(")]
+			[Symbol("(", false)]
 			OpenBracket,
 
-			[Symbol(")")]
+			[Symbol(")", false)]
 			CloseBracket,
 
 			// Special
-			[Symbol("@")]
+			[Symbol("@", false)]
 			CurrentExecutor,
 
-			[Symbol("$")]
+			[Symbol("$", false)]
 			Server,
 
-			[Symbol(".")]
+			[Symbol(".", false)]
 			Access,
 
-			[Symbol(":")]
+			[Symbol(":", false)]
 			Type,
 
-			[Symbol("|>")]
+			[Symbol("|>", false)]
 			Update,
 
-			[Regex("""(?:[a-zA-Z_]\w*)""")]
+			[Symbol("""(?:[a-zA-Z_]\w*)""", true)]
 			Indentifier,
 
-			[Regex("""\[.*\]""")]
+			[Symbol("""\[.*\]""", true)]
 			Attribute,
 
+			[Symbol("""#.*""", true)]
+			[Symbol("""##(?:.*\s)*##""", true)]
+			Comment,
+
 			// Keywords
-			[Symbol("if")]
+			[Symbol("if", false)]
 			If,
 
-			[Symbol("else")]
+			[Symbol("else", false)]
 			Else,
 
-			[Symbol("elif")]
+			[Symbol("elif", false)]
 			Elif,
 
-			[Symbol("signal")]
+			[Symbol("signal", false)]
 			Signal,
 
-			[Symbol("execute")]
+			[Symbol("execute", false)]
 			Execute,
 
-			[Symbol("var")]
+			[Symbol("var", false)]
 			Variable,
 
-			[Symbol("const")]
+			[Symbol("const", false)]
 			Constant,
 
-			[Symbol("return")]
+			[Symbol("return", false)]
 			Return,
 
-			[Symbol("import")]
+			[Symbol("import", false)]
 			Import,
 
-			[Symbol("while")]
+			[Symbol("while", false)]
 			While,
 
-			[Symbol("for")]
+			[Symbol("for", false)]
 			For,
 
-			[Symbol("in")]
+			[Symbol("in", false)]
 			In,
 
-			[Symbol("match")]
+			[Symbol("match", false)]
 			Match,
 
-			[Symbol("case")]
+			[Symbol("case", false)]
 			Case,
 
-			[Symbol("null")]
+			[Symbol("null", false)]
 			Null,
 
-			[Symbol("target")]
+			[Symbol("target", false)]
 			Target,
 		}
 	}
