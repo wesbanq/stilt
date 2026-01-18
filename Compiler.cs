@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.Metrics;
 using System.Reflection;
 using System.Text;
 
@@ -177,7 +178,7 @@ namespace stilt
 					res += part1+part2+part3+part4;
 				}
 
-				return Message+res;
+				return Message + $"\n @ {Range.FormatLineAndColumn()}, in file: {Range.Filename}\n" + res;
 			}
 			else
 				return Message;

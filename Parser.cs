@@ -1,4 +1,5 @@
-﻿using stilt.AST;
+﻿using Newtonsoft.Json.Linq;
+using stilt.AST;
 using System;
 using System.ComponentModel.DataAnnotations;
 
@@ -10,56 +11,48 @@ namespace stilt
 		public LinkedList<Stmt> Statements = new();
 		public Scope RootScope = new();
 
-		public List<CompilationMessage> CompilationMessages = [];
-		public bool ErrorsEncoutered => CompilationMessages.Any(m => m.Severity >= ErrorSeverity.Error);
-		public CompilationMessage? CritcalError => CompilationMessages.Find(m => m.Severity == ErrorSeverity.Critical);
+		public List<CompilationMessage> CompilationErrors = [];
+		public bool ErrorsEncoutered => CompilationErrors.Any(m => m.Severity >= ErrorSeverity.Error);
+		public CompilationMessage? CritcalError => CompilationErrors.Find(m => m.Severity == ErrorSeverity.Critical);
 
-		public class SyntaxError : Exception
+		public class SyntaxError : CompilationMessage
 		{
-			public FileRange Position;
-
 			public SyntaxError(FileRange range)
-				: base($"Syntax error @ {range.FormatLineAndColumn()}, in file: {range.Filename}")
-			{
-				Position = range;
-			}
+				: base("Syntax error", range, ErrorSeverity.Error)
+			{ }
 			public SyntaxError(FileRange range, string msg)
-				: base(msg + $" @ {range.FormatLineAndColumn()}, in file: {range.Filename}")
-			{
-				Position = range;
-			}
+				: base(msg, range, ErrorSeverity.Error)
+			{ }
 			public SyntaxError(FileRange range, string msg, params string[] strings)
-				: base(string.Format(msg, strings) + $" @ {range.FormatLineAndColumn()}, in file: {range.Filename}")
-			{
-				Position = range;
-			}
+				: base(string.Format(msg, strings), range, ErrorSeverity.Error)
+			{ }
 		}
 
-		public class RedeclaredSymbolException : SyntaxError
+		public class RedeclaredSymbolError : SyntaxError
 		{	
-			public RedeclaredSymbolException(FileRange range, Symbol symbol)
-				: base(range, $"Multiple declarations for symbol '{symbol.Name}'")
+			public RedeclaredSymbolError(FileRange range, Symbol symbol)
+				: base(range, $"Multiple definitions for symbol: '{symbol.Name}'")
 			{ }
 		}
 
-		public class UnimplementedException : SyntaxError
+		public class UnimplementedError : SyntaxError
 		{
-			public UnimplementedException(Token token)
-				: base(token.Range, $"{token.Which} is unimplemented.")
+			public UnimplementedError(Token token)
+				: base(token.Range, $"{token.Which} is not implemented yet.")
 			{ }
 		}
 
-		public class UndefinedSymbolException : SyntaxError
+		public class UndefinedSymbolError : SyntaxError
 		{
 			public string Got;
 
-			public UndefinedSymbolException(FileRange pos, Symbol symbol)
-				: base(pos, $"Unknown symbol: '{symbol.Name}'")
+			public UndefinedSymbolError(FileRange pos, Symbol symbol)
+				: base(pos, $"Use of undefined symbol: '{symbol.Name}'")
 			{
 				Got = symbol.Name;
 			}
-			public UndefinedSymbolException(FileRange pos, string symbolName)
-				: base(pos, $"Unknown symbol: '{symbolName}'")
+			public UndefinedSymbolError(FileRange pos, string symbolName)
+				: base(pos, $"Use of undefined symbol: '{symbolName}'")
 			{
 				Got = symbolName;
 			}
@@ -68,7 +61,7 @@ namespace stilt
 		public class MalformedExprError : SyntaxError
 		{
 			public MalformedExprError(FileRange start)
-				: base(start, $"Malformed expression starting")
+				: base(start, $"Malformed expression")
 			{ }
 		}
 
@@ -92,6 +85,12 @@ namespace stilt
 					Got = got;
 				}
 			}
+		}
+
+		protected void NewError(SyntaxError err)
+		{
+			CompilationErrors.Add(err);
+			//oerr = err;
 		}
 
 		protected void InsertIntoExprTree(ref Expr rootExpr, Expr? newExpr)
@@ -145,7 +144,10 @@ namespace stilt
 		{
 			var operatorAttr = Compiler.GetAttributeFromEnum<TokenType, OperatorAttribute>(token.Which);
 			if (operatorAttr == null)
-				throw new UnexpectedToken(token.Range, token);
+			{
+				NewError(new UnexpectedToken(token.Range, token));
+				return null;
+			}
 
 			var newExpr = Activator.CreateInstance(operatorAttr.AssociatedExpr, operatorAttr.Precedence) as Expr;
 			return newExpr ?? throw new Exception();
@@ -224,7 +226,10 @@ namespace stilt
 					//change error
 					?? throw new Exception();
 					if (typeToken.Which != TokenType.Identifier && typeToken.Which != TokenType.OpenBracket)
-						throw new UnexpectedToken(typeToken.Range, TokenType.Identifier, typeToken);
+					{
+						NewError(new UnexpectedToken(typeToken.Range, TokenType.Identifier, typeToken));
+						break;
+					}
 
 					var typeSymbol = new TypeSymbol(typeToken.Text);
 					rootExpr.Type = typeSymbol;
@@ -250,7 +255,10 @@ namespace stilt
 				default:
 				{
 					if (Compiler.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(currentToken.Which) != null)
-						throw new UnimplementedException(currentToken);
+					{
+						NewError(new UnimplementedError(currentToken));
+						return;
+					}
 
 					newExpr = CreateOperatorExpr(currentToken)
 					//change error
@@ -316,18 +324,27 @@ namespace stilt
 				{
 					var varToken = Lex.Next();
 					if (varToken.Which != TokenType.Identifier || varToken.Which != TokenType.OpenBracket)
-						throw new UnexpectedToken(varToken.Range, TokenType.Identifier, varToken);
+					{
+						NewError(new UnexpectedToken(varToken.Range, TokenType.Identifier, varToken));
+						return true;
+					}
 
 					ParseExpr(ref newExpr, varToken);
 
 					if (newExpr == null && firstToken.Which == TokenType.ConstDecl)
-						throw new SyntaxError(varToken.Range, 
-							"No value given to initialize constant '{0}'", varToken.Text);
+					{
+						NewError(new SyntaxError(varToken.Range,
+							"No value given to initialize constant '{0}'", varToken.Text));
+						return true;
+					}
 
 					if (newExpr is AssignExpr assign)
 					{
 						if (assign.Left == null || assign.Right == null)
-							throw new MalformedExprError(firstToken.Range);
+						{
+							NewError(new MalformedExprError(firstToken.Range));
+							return true;
+						}
 
 						//ReplaceIdentities
 						var left = GetIdentities(assign.Left);
@@ -367,7 +384,8 @@ namespace stilt
 							if (e.Identity is VarSymbol v)
 								return v;
 							else
-								throw new MalformedExprError(firstToken.Range);
+								//change error
+								throw new Exception();
 						}).ToList();
 
 						newStmt = new FuncDeclStmt(id.Identity.Name, Lex.Filepath, newStmt)
@@ -378,7 +396,10 @@ namespace stilt
 						id.Identity = (newStmt as FuncDeclStmt).Name;
 					}
 					else
-						throw new MalformedExprError(firstToken.Range);
+					{
+						NewError(new MalformedExprError(firstToken.Range));
+						return true;
+					}
 
 					break;
 				}
@@ -412,7 +433,10 @@ namespace stilt
 							return true;
 						}
 						else
-							throw new UnexpectedToken(firstToken.Range, firstToken);
+						{
+							NewError(new UnexpectedToken(firstToken.Range, firstToken));
+							return true;
+						}
 					}
 
 					break;
@@ -430,7 +454,10 @@ namespace stilt
 						return true;
 					}
 					else
-						throw new UnexpectedToken(firstToken.Range, firstToken);
+					{
+						NewError(new UnexpectedToken(firstToken.Range, firstToken));
+						return true;
+					}
 				}
 				case TokenType.OpenCurlyBracket:
 				{
@@ -452,11 +479,17 @@ namespace stilt
 				default:
 				{
 					if (Compiler.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(firstToken.Which) != null)
-						throw new UnimplementedException(firstToken);
+					{
+						NewError(new UnimplementedError(firstToken));
+						return true;
+					}
 					ParseExpr(ref newExpr, firstToken);
 					if (newExpr == null)
-						throw new SyntaxError(firstToken.Range, "Unknown statement '{0}'", firstToken.Text);
-					
+					{
+						NewError(new SyntaxError(firstToken.Range, "Unknown statement '{0}'", firstToken.Text));
+						return true;
+					}
+
 					newStmt = new ExpressionStmt()
 					{
 						Scope = newScope,
@@ -467,13 +500,7 @@ namespace stilt
 				}
 			}
 
-			if (newStmt != null)
-			{
-				Statements.AddLast(newStmt);
-				return true;
-			}
-			else
-				return false;
+			return newStmt != null;
 		}
 
 		public LinkedList<Stmt> ParseBranch()
