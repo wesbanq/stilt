@@ -10,7 +10,7 @@ namespace stilt
 		public string Symbol { get; set; }
 		public bool IsRegex { get; set; }
 		
-		public SymbolAttribute(string symbol, bool regex) 
+		public SymbolAttribute(string symbol, bool regex = false) 
 		{
 			Symbol = symbol;
 			IsRegex = regex;
@@ -38,197 +38,197 @@ namespace stilt
 		{
 			None = 0,
 
-			[Symbol("+", false)]
+			[Symbol("+")]
 			Plus,
 
-			[Symbol("-", false)]
+			[Symbol("-")]
 			Minus,
 
-			[Symbol("/", false)]
+			[Symbol("/")]
 			Divide,
 
-			[Symbol("*", false)]
+			[Symbol("*")]
 			Star,
 
-			[Symbol("%", false)]
+			[Symbol("%")]
 			Modulo,
 
-			[Symbol("**", false)]
+			[Symbol("**")]
 			Exponent,
 
-			[Symbol("..", false)]
+			[Symbol("..")]
 			Range,
 
-			[Symbol("++", false)]
+			[Symbol("++")]
 			Increment,
 
-			[Symbol("--", false)]
+			[Symbol("--")]
 			Decrement,
 
 			// Assignment Operators
-			[Symbol("=", false)]
+			[Symbol("=")]
 			Assign,
 
-			//[Symbol(":=", false)]
+			//[Symbol(":=")]
 			//TypedAssign,
 
-			//[Symbol("+=", false)]
+			//[Symbol("+=")]
 			//AddAssign,
 
-			//[Symbol("-=", false)]
+			//[Symbol("-=")]
 			//SubtractAssign,
 
-			//[Symbol("*=", false)]
+			//[Symbol("*=")]
 			//MultiplyAssign,
 
-			//[Symbol("/=", false)]
+			//[Symbol("/=")]
 			//DivideAssign,
 
-			//[Symbol("%=", false)]
+			//[Symbol("%=")]
 			//ModuloAssign,
 
-			//[Symbol("**=", false)]
+			//[Symbol("**=")]
 			//ExponentAssign,
 
-			//[Symbol("&=", false)]
+			//[Symbol("&=")]
 			//BitwiseAndAssign,
 
-			//[Symbol("|=", false)]
+			//[Symbol("|=")]
 			//BitwiseOrAssign,
 
-			//[Symbol("^=", false)]
+			//[Symbol("^=")]
 			//BitwiseXorAssign,
 
 			// Comparison Operators
-			[Symbol(">", false)]
+			[Symbol(">")]
 			Greater,
 
-			[Symbol("<", false)]
+			[Symbol("<")]
 			Lesser,
 
-			[Symbol(">=", false)]
+			[Symbol(">=")]
 			GreaterOrEqual,
 
-			[Symbol("<=", false)]
+			[Symbol("<=")]
 			LesserOrEqual,
 
-			[Symbol("==", false)]
+			[Symbol("==")]
 			EqualTo,
 
-			[Symbol("!=", false)]
+			[Symbol("!=")]
 			NotEqualTo,
 
 			// Logical Operators
-			[Symbol("!", false)]
-			[Symbol("not", false)]
+			[Symbol("!")]
+			[Symbol("not")]
 			LogicalNot,
 
-			[Symbol("|", false)]
-			[Symbol("or", false)]
+			[Symbol("|")]
+			[Symbol("or")]
 			LogicalOr,
 
-			[Symbol("&", false)]
-			[Symbol("and", false)]
+			[Symbol("&")]
+			[Symbol("and")]
 			LogicalAnd,
 
-			[Symbol("^", false)]
-			[Symbol("xor", false)]
+			[Symbol("^")]
+			[Symbol("xor")]
 			LogicalXor,
 
 			// Bitwise Operators
-			[Symbol("!!", false)]
+			[Symbol("!!")]
 			BitwiseNot,
 
-			[Symbol("&&", false)]
+			[Symbol("&&")]
 			BitwiseAnd,
 
-			[Symbol("||", false)]
+			[Symbol("||")]
 			BitwiseOr,
 
-			[Symbol("^^", false)]
+			[Symbol("^^")]
 			BitwiseXor,
 
-			[Symbol("<<", false)]
+			[Symbol("<<")]
 			BitShiftLeft,
 
-			[Symbol(">>", false)]
+			[Symbol(">>")]
 			BitShiftRight,
 
 			// Signal Operators
-			[Symbol("->", false)]
+			[Symbol("->")]
 			ConnectSignal,
 
-			[Symbol("<-", false)]
+			[Symbol("<-")]
 			EmitSignal,
 
 			// Literals
 			[Symbol("""[a-z0-9]*("(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
 			StringLiteral,
 
-			// [Symbol(r"\d\d*(?:\.\d*|[bsilfd])?", false)]
+			// [Symbol(r"\d\d*(?:\.\d*|[bsilfd])?")]
 			[Symbol("""\d\d*(?:\.\d*|[bsilfd])?""", true)]
 			NumericLiteral,
 
-			// [Symbol(r"\d+b", false)]
+			// [Symbol(r"\d+b")]
 			// ByteLiteral,
 
-			// [Symbol(r"\d+i", false)]
+			// [Symbol(r"\d+i")]
 			// IntLiteral,
 
-			// [Symbol(r"\d+l", false)]
+			// [Symbol(r"\d+l")]
 			// LongLiteral,
 
-			// [Symbol(r"\d+.\d+f", false)]
+			// [Symbol(r"\d+.\d+f")]
 			// FloatLiteral,
 
-			// [Symbol(r"\d+.\d+d", false)]
+			// [Symbol(r"\d+.\d+d")]
 			// DoubleLiteral,
 
 			// Delimiters
 			[Symbol("""[\r\n;]+""", true)]
 			StmtSeparator,
 
-			[Symbol(",", false)]
+			[Symbol(",")]
 			Comma,
 
-			[Symbol("{", false)]
+			[Symbol("{")]
 			OpenCurlyBracket,
 
-			[Symbol("}", false)]
+			[Symbol("}")]
 			CloseCurlyBracket,
 
-			[Symbol("[", false)]
+			[Symbol("[")]
 			OpenSquareBracket,
 
-			[Symbol("]", false)]
+			[Symbol("]")]
 			CloseSquareBracket,
 
-			[Symbol("(", false)]
+			[Symbol("(")]
 			OpenBracket,
 
-			[Symbol(")", false)]
+			[Symbol(")")]
 			CloseBracket,
 
 			// Special
-			[Symbol("@", false)]
+			[Symbol("@")]
 			CurrentExecutor,
 
-			[Symbol("$", false)]
+			[Symbol("$")]
 			Server,
 
-			[Symbol(".", false)]
+			[Symbol(".")]
 			Access,
 
-			[Symbol(":", false)]
+			[Symbol(":")]
 			Type,
 
-			[Symbol("|>", false)]
+			[Symbol("|>")]
 			Update,
 
-			[Symbol("><", false)]
+			[Symbol("><")]
 			SwapMemory,
 
-			[Symbol("=>", false)]
+			[Symbol("=>")]
 			CopyTo,
 
 			[Symbol("""(?:[a-zA-Z_]\w*)""", true)]
@@ -242,55 +242,55 @@ namespace stilt
 			//Comment,
 
 			// Keywords
-			[Symbol("if", false)]
+			[Symbol("if")]
 			If,
 
-			[Symbol("else", false)]
+			[Symbol("else")]
 			Else,
 
-			[Symbol("elif", false)]
+			[Symbol("elif")]
 			Elif,
 
-			[Symbol("signal", false)]
+			[Symbol("signal")]
 			Signal,
 
-			[Symbol("execute", false)]
+			[Symbol("execute")]
 			Execute,
 
-			[Symbol("func", false)]
+			[Symbol("func")]
 			FuncDecl,
 
-			[Symbol("var", false)]
+			[Symbol("var")]
 			VarDecl,
 
-			[Symbol("const", false)]
+			[Symbol("const")]
 			ConstDecl,
 
-			[Symbol("return", false)]
+			[Symbol("return")]
 			Return,
 
-			[Symbol("import", false)]
+			[Symbol("import")]
 			Import,
 
-			[Symbol("while", false)]
+			[Symbol("while")]
 			While,
 
-			[Symbol("for", false)]
+			[Symbol("for")]
 			For,
 
-			[Symbol("in", false)]
+			[Symbol("in")]
 			In,
 
-			[Symbol("match", false)]
+			[Symbol("match")]
 			Match,
 
-			[Symbol("case", false)]
+			[Symbol("case")]
 			Case,
 
-			[Symbol("null", false)]
+			[Symbol("null")]
 			Null,
 
-			[Symbol("target", false)]
+			[Symbol("target")]
 			Target,
 		}
 	}
