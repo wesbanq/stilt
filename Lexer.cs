@@ -3,8 +3,13 @@ using System.Text.RegularExpressions;
 
 namespace stilt
 {
-	public abstract class Lexer
+	public class Lexer
 	{
+		public readonly List<Token> Tokens = new List<Token>();
+		protected int CurrentPos = 0;
+		public readonly string Filepath = "No file";
+		public Token CurrentToken => Tokens[CurrentPos];
+
 		public static void GetSymbolAttribute(out List<string[]> symbols, out List<string[]> regex)
 		{
 			symbols = new List<string[]>();
@@ -30,15 +35,20 @@ namespace stilt
 			}
 		}
 
-		static string StripComments(string code)
+		static string Preprocess(string code)
 		{
 			const string commentRegex1 = """#.*""";
 			const string commentRegex2 = """##(?:.*\s)*##""";
 			const string commentRegex3 = """\n\n+""";
-			return Regex.Replace(Regex.Replace(Regex.Replace(code, commentRegex2, ""), commentRegex1, ""), commentRegex3, "\n");
+			const string linebreakRegex = """ ?\\\s+""";
+			return Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(
+				code, commentRegex2, "")
+				, commentRegex1, "")
+				, linebreakRegex, "")
+				, commentRegex3, "\n");
 		}
 
-		static List<Token> GetTokenMatches(string code, List<string[]> rules, string filepath)
+		protected List<Token> GetTokenMatches(string code, List<string[]> rules)
 		{
 			var tokens = new List<Token>();
 
@@ -52,7 +62,7 @@ namespace stilt
 					{
 						var newToken = new Token();
 
-						newToken.Range = new FileRange(match.Index, match.Index + match.Length, filepath);
+						newToken.Range = new FileRange(match.Index, match.Index + match.Length, Filepath);
 						newToken.Which = (Token.Tokens)i;
 						newToken.Text = match.Value;
 
@@ -65,23 +75,35 @@ namespace stilt
 			return tokens;
 		}
 
-		public static List<Token> Tokenize(ProgramArgs args)
+		public Token Next()
 		{
-			var code = StripComments(File.ReadAllText(args.MainCodeFilepath));
-			var tokens = new List<Token>();
+			CurrentPos++;
+			return CurrentToken;
+		}
+
+		public Token PeekNext()
+		{
+			CurrentPos++;
+			var nextToken = CurrentToken;
+			CurrentPos--;
+			return nextToken;
+		}
+
+
+
+		public Lexer(ProgramArgs args)
+		{
+			Filepath = args.MainCodeFilepath;
+			var code = Preprocess(File.ReadAllText(args.MainCodeFilepath));
 
 			GetSymbolAttribute(out var symbols, out var regex);
-			tokens = FileRange.RemoveOverlaps(
-				GetTokenMatches(code, symbols, args.MainCodeFilepath),
-				GetTokenMatches(code, regex, args.MainCodeFilepath)
+			Tokens = FileRange.RemoveOverlaps(
+				GetTokenMatches(code, symbols),
+				GetTokenMatches(code, regex)
 			)
 			.OrderBy(t => t.Range.Start)
 			.ThenBy(t => t.Range.End)
 			.ToList();
-
-			//tokens.ForEach(t => Program.Dump(t));
-
-			return tokens;
 		}
 	}
 }

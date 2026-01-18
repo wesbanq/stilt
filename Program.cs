@@ -113,13 +113,12 @@ namespace stilt
 				var idx = args.IndexOf(sym?.Name);
 				if (idx != -1)
 				{
-					if (args.Length <= idx + 1 || 
-						(WhichOption(args[idx + 1]) != Option.None 
-						&& !sym.Flag))
+					if (sym.Kind != OptionType.Flag && (args.Length <= idx + 1 || 
+						WhichOption(args[idx + 1]) != Option.None))
 					{
 						throw new Exception($"No value given for option '{sym.Name}'");
 					}
-					GiveValueTo(sym.AssociatedPropertyName, sym.Flag ? "" : args[idx + 1]);
+					GiveValueTo(sym.AssociatedPropertyName, sym.Kind == OptionType.Flag ? "" : args[idx + 1]);
 					UsedOptions.Add((Option)(i-1));
 				}
 			}
@@ -133,7 +132,8 @@ namespace stilt
 				{
 					if (WhichOption(args[i]) == Option.None && 
 						(WhichOption(args[i-1]) == Option.None || 
-						(GetEnumAttribute<Option, OptionAttribute>(WhichOption(args[i-1])).Flag )
+						(GetEnumAttribute<Option, OptionAttribute>(WhichOption(args[i-1])).Kind == OptionType.Flag) //||
+						//(GetEnumAttribute<Option, OptionAttribute>(WhichOption(args[i-1])).Kind == OptionType.ValueOptional)
 						))
 					{
 						Console.WriteLine(args[i]);
@@ -158,16 +158,16 @@ namespace stilt
 			public string Name { get; set; }
 
 			[Required]
-			public bool Flag { get; set; }
+			public OptionType Kind { get; set; }
 
 			[Required]
 			public string AssociatedPropertyName { get; set; }
 			public string HelpText { get; set; }
 			
-			public OptionAttribute(string optChar, string propName, string helpText, bool isFlag = false)
+			public OptionAttribute(string optChar, string propName, string helpText, OptionType tpe = OptionType.ValueRequired)
 			{
 				Name = optChar;
-				Flag = isFlag;
+				Kind = tpe;
 				AssociatedPropertyName = propName;
 				HelpText = helpText;
 			}
@@ -189,9 +189,12 @@ namespace stilt
 			public ActionRequiredAttribute(Option[] required)
 			{
 				Required = required;
-				
+
 			}
 		}
+
+		public enum OptionType
+		{ ValueRequired, ValueOptional, Flag }
 
 		public enum Command 
 		{ 
@@ -208,7 +211,7 @@ namespace stilt
 		{ 
 			None = 0,
 
-			[Option("-d", "DebugLevel", "Set debug level (for compiler developers)", true)]
+			[Option("-d", "DebugLevel", "Set debug level (for compiler developers)"/*, OptionType.ValueOptional*/)]
 			DebugLvl,
 
 			[Option("-i", "MainCodeFilepath", "Sets the main code filepath to use")]
@@ -254,15 +257,18 @@ namespace stilt
 		static int Main(string[] args)
 		{
 			ProgramArgs arg;
-			//try
-			//{
+
+			//TODO implement ValueOptional
+
+			try
+			{
 				arg = new ProgramArgs(args);
-			//}
-			//catch (Exception e)
-			//{
-			//	Console.WriteLine($"Error: {e.Message}");
-			//	return 1;
-			//}
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e.Message);
+				return 1;
+			}
 
 			switch (arg.Action)
 			{
@@ -273,8 +279,8 @@ namespace stilt
 				}
 				case ProgramArgs.Command.Tokenize:
 				{
-					var tokens = Lexer.Tokenize(arg);
-					tokens.ForEach(t => Dump(t));
+					var lex = new Lexer(arg);
+					lex.Tokens.ForEach(t => Dump(t));
 					break;
 				}
 			}

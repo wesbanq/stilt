@@ -1,8 +1,8 @@
 var a = 2
 var b
+
+var c = a + b
+
+print(c)
+
 #comment
-func h() {
-	return 4
-}
-var c = h()
-var d = a + b + h()
