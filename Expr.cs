@@ -7,14 +7,38 @@ using System.Text;
 
 namespace stilt.AST
 {
-	public abstract class Expr
+	public abstract class Expr : IRanged
 	{
 		public TypeSymbol Type = Builtins.Any;
 		public bool Bracketed = false;
+		public bool Explicit = false;
 		public int Precedence = 0;
+
+		public FileRange? InnerRange { private get; set; }
+		public FileRange? Range
+		{
+			get
+			{
+				if (this is IOperator op)
+				{
+					var children = op.GetChildren().Select(c => c?.Range);
+					FileRange? sum = null;
+
+					foreach (var child in children.Skip(1))
+					{
+						if (child is null) continue;
+						sum = sum is null ? child : sum + child;
+					}
+					return sum;
+				}
+				
+				return InnerRange;
+			}
+		}
 
 		public Expr? FindFirstPrecedenceOrNull(int precedence, out Expr? parent)
 		{
+			//first find any null children and only then check 4 precedence
 			parent = null;
 			FindFirstNull(out parent);
 			if (parent != null)
@@ -22,6 +46,7 @@ namespace stilt.AST
 			else 
 				return FindFirstPrecedence(precedence, out parent);
 		}
+
 		protected Expr? FindFirstNull(out Expr? parent)
 		{
 			parent = null;
@@ -41,6 +66,7 @@ namespace stilt.AST
 			parent = null;
 			return null;
 		}
+
 		protected Expr? FindFirstPrecedence(int precedence, out Expr? parent)
 		{
 			parent = null;
@@ -52,6 +78,7 @@ namespace stilt.AST
 
 		protected Expr? FindFirst(Predicate<Expr> predicate, out Expr? parent, Expr? supposedParent = null)
 		{
+			//reverse preorder walk
 			parent = supposedParent;
 
 			if (predicate.Invoke(this))
@@ -59,6 +86,7 @@ namespace stilt.AST
 				return this;
 			}
 
+			//check root of bracketed expr but not its children
 			if (Bracketed)
 			{
 				return null;
@@ -80,7 +108,6 @@ namespace stilt.AST
 		}
 	}
 
-	//ISpreadable sounds better
 	public interface IOperator
 	{
 		Expr?[] GetChildren();
@@ -88,9 +115,15 @@ namespace stilt.AST
 		void InsertChild(Expr what);
 	}
 
+	public interface IRanged
+	{
+		FileRange? InnerRange { set; }
+		FileRange? Range { get; }
+	}
+
 	public class IdentityExpr : Expr
 	{
-		public required Symbol Identity;
+		public Symbol Identity;
 	}
 
 	public abstract class TernaryExpr : Expr, IOperator
@@ -148,6 +181,7 @@ namespace stilt.AST
 		}
 
 		public TernaryExpr(int precedence) { Precedence = precedence; }
+		public TernaryExpr(int precedence, FileRange range) { Precedence = precedence; InnerRange = range; }
 	}
 
 	public abstract class BinaryExpr : Expr, IOperator
@@ -228,10 +262,12 @@ namespace stilt.AST
 		public UnaryExpr(int precedence) { Precedence = precedence; }
 	}
 
-	public class IncrementExpr(int p) : UnaryExpr(p) { }
-	public class DecrementExpr(int p) : UnaryExpr(p) { }
+	public class IncrementExpr(int p) : UnaryExpr(p) { public bool Prefix = true; }
+	public class DecrementExpr(int p) : UnaryExpr(p) { public bool Prefix = true; }
+	public class PlusExpr(int p) : UnaryExpr(p) { }
 	public class NegationExpr(int p) : UnaryExpr(p) { }
 	public class NewExpr(int p) : UnaryExpr(p) { }
+	public class CloneExpr(int p) : UnaryExpr(p) { }
 	public class LNotExpr(int p) : UnaryExpr(p) { }
 	public class BNotExpr(int p) : UnaryExpr(p) { }
 
@@ -270,6 +306,7 @@ namespace stilt.AST
 
 	public class AssignExpr(int p) : BinaryExpr(p)
 	{
+		//	   TokenType?
 		public BinaryExpr? Operation;
 	}
 

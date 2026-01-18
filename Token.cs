@@ -11,11 +11,7 @@ namespace stilt
 	{
 		public string Symbol { get; set; }
 		public bool IsRegex { get; set; }
-
-		public string GetDescription()
-		{
-			return Symbol;
-		}
+		public string Name => Symbol;
 
 		public SymbolAttribute(string symbol, bool regex = false) 
 		{
@@ -47,9 +43,9 @@ namespace stilt
 
 	public class Token
 	{
-		public TokenType Which { get; set; }
-		public FileRange Range { get; set; }
-		public string Text { get; set; }
+		public TokenType Which;
+		public FileRange Range;
+		public string Text;
 
 		public static string[] GetRulesFromType(TokenType t)
 		{
@@ -64,6 +60,7 @@ namespace stilt
 	{
 		//None = 0,
 
+		[UnaryOperator(2, typeof(PlusExpr))]
 		[BinaryOperator(4, typeof(AdditionExpr))]
 		[Symbol("+")]
 		Plus,
@@ -89,6 +86,7 @@ namespace stilt
 		[Symbol("**")]
 		Exponent,
 
+		[Unimplemented]
 		[BinaryOperator(5, typeof(RangeExpr))]
 		[Symbol("..")]
 		Range,
@@ -235,6 +233,11 @@ namespace stilt
 		New,
 
 		[Unimplemented]
+		[UnaryOperator(3, typeof(CloneExpr))]
+		[Symbol("clone")]
+		Clone,
+
+		[Unimplemented]
 		[Symbol("@")]
 		CurrentExecutor,
 
@@ -253,9 +256,7 @@ namespace stilt
 		[Symbol("::")]
 		Type,
 
-		[Unimplemented]
-		[TernaryOperator(13, typeof(ConditionalExpr))]
-		[Symbol("?")]
+		[Symbol("then")]
 		Conditional,
 
 		[Unimplemented]
@@ -277,7 +278,7 @@ namespace stilt
 		Identifier,
 
 		[Unimplemented]
-		[Symbol("""\[.*\]""", true)]
+		[Symbol("""\[\[.*\]\]""", true)]
 		Decorator,
 
 		// Declarations
@@ -311,6 +312,7 @@ namespace stilt
 		[Symbol("internal")]
 		DudeItTotallyExistsTrustMe,
 
+		[TernaryOperator(13, typeof(ConditionalExpr))]
 		[Symbol("if")]
 		If,
 
@@ -328,6 +330,18 @@ namespace stilt
 
 		[Symbol("import")]
 		Import,
+
+		[Unimplemented]
+		[Symbol("where")]
+		Where,
+
+		[Unimplemented]
+		[Symbol("with")]
+		With,
+
+		[Unimplemented]
+		[Symbol("as")]
+		As,
 
 		[Unimplemented]
 		[Symbol("use")]
