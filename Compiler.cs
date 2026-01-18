@@ -10,6 +10,25 @@ namespace stilt
 		public int End;
 		public int Length => End - Start;
 		public string Filename;
+		public (int line, int column) ToLineAndColumn()
+		{
+			int line = 1;
+			int lastNewline = -1;
+			string text = File.ReadAllText(Filename);
+
+			for (int i = 0; i < Start; i++)
+			{
+				if (text[i] == '\n')
+				{
+					line++;
+					lastNewline = i;
+				}
+			}
+
+			int column = Start - lastNewline;
+
+			return (line, column);
+		}
 
 		public FileRange(int start, int end, string filename)
 		{

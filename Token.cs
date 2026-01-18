@@ -1,5 +1,7 @@
-﻿using System;
+﻿using stilt.AST;
+using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 
 namespace stilt
@@ -17,286 +19,344 @@ namespace stilt
 		}
 	}
 
-	//[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
-	//public class RegexAttribute : Attribute
-	//{
-	//	public string Symbol { get; set; }
+	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+	public class OperatorAttribute : Attribute
+	{
+		public int Precedence { get; set; }
+		public Type AssociatedExpr;
 
-	//	public RegexAttribute(string regex)
-	//	{
-	//		Symbol = regex;
-	//	}
-	//}
+		public OperatorAttribute(int precedence, Type associatedExpr)
+		{
+			Precedence = precedence;
+			AssociatedExpr = associatedExpr;
+		}
+	}
+
+	public class BinaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e)
+	{ }
+
+	public class UnaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e)
+	{ }
 
 	public class Token
 	{
-		public Tokens Which { get; set; }
+		public TokenType Which { get; set; }
 		public FileRange Range { get; set; }
 		public string Text { get; set; }
 
-		public enum Tokens
+		public static string[] GetRulesFromType(TokenType t)
 		{
-			None = 0,
+			var types = typeof(TokenType).GetFields();
 
-			[Symbol("+")]
-			Plus,
-
-			[Symbol("-")]
-			Minus,
-
-			[Symbol("/")]
-			Divide,
-
-			[Symbol("*")]
-			Star,
-
-			[Symbol("%")]
-			Modulo,
-
-			[Symbol("**")]
-			Exponent,
-
-			[Symbol("..")]
-			Range,
-
-			[Symbol("++")]
-			Increment,
-
-			[Symbol("--")]
-			Decrement,
-
-			// Assignment Operators
-			[Symbol("=")]
-			Assign,
-
-			//[Symbol(":=")]
-			//TypedAssign,
-
-			//[Symbol("+=")]
-			//AddAssign,
-
-			//[Symbol("-=")]
-			//SubtractAssign,
-
-			//[Symbol("*=")]
-			//MultiplyAssign,
-
-			//[Symbol("/=")]
-			//DivideAssign,
-
-			//[Symbol("%=")]
-			//ModuloAssign,
-
-			//[Symbol("**=")]
-			//ExponentAssign,
-
-			//[Symbol("&=")]
-			//BitwiseAndAssign,
-
-			//[Symbol("|=")]
-			//BitwiseOrAssign,
-
-			//[Symbol("^=")]
-			//BitwiseXorAssign,
-
-			// Comparison Operators
-			[Symbol(">")]
-			Greater,
-
-			[Symbol("<")]
-			Lesser,
-
-			[Symbol(">=")]
-			GreaterOrEqual,
-
-			[Symbol("<=")]
-			LesserOrEqual,
-
-			[Symbol("==")]
-			EqualTo,
-
-			[Symbol("!=")]
-			NotEqualTo,
-
-			// Logical Operators
-			[Symbol("!")]
-			[Symbol("not")]
-			LogicalNot,
-
-			[Symbol("|")]
-			[Symbol("or")]
-			LogicalOr,
-
-			[Symbol("&")]
-			[Symbol("and")]
-			LogicalAnd,
-
-			[Symbol("^")]
-			[Symbol("xor")]
-			LogicalXor,
-
-			// Bitwise Operators
-			[Symbol("!!")]
-			BitwiseNot,
-
-			[Symbol("&&")]
-			BitwiseAnd,
-
-			[Symbol("||")]
-			BitwiseOr,
-
-			[Symbol("^^")]
-			BitwiseXor,
-
-			[Symbol("<<")]
-			BitShiftLeft,
-
-			[Symbol(">>")]
-			BitShiftRight,
-
-			// Signal Operators
-			[Symbol("->")]
-			ConnectSignal,
-
-			[Symbol("<-")]
-			EmitSignal,
-
-			// Literals
-			[Symbol("""[a-z0-9]*("(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
-			StringLiteral,
-
-			// [Symbol(r"\d\d*(?:\.\d*|[bsilfd])?")]
-			[Symbol("""\d\d*(?:\.\d*|[bsilfd])?""", true)]
-			NumericLiteral,
-
-			// [Symbol(r"\d+b")]
-			// ByteLiteral,
-
-			// [Symbol(r"\d+i")]
-			// IntLiteral,
-
-			// [Symbol(r"\d+l")]
-			// LongLiteral,
-
-			// [Symbol(r"\d+.\d+f")]
-			// FloatLiteral,
-
-			// [Symbol(r"\d+.\d+d")]
-			// DoubleLiteral,
-
-			// Delimiters
-			[Symbol("""[\r\n;]+""", true)]
-			StmtSeparator,
-
-			[Symbol(",")]
-			Comma,
-
-			[Symbol("{")]
-			OpenCurlyBracket,
-
-			[Symbol("}")]
-			CloseCurlyBracket,
-
-			[Symbol("[")]
-			OpenSquareBracket,
-
-			[Symbol("]")]
-			CloseSquareBracket,
-
-			[Symbol("(")]
-			OpenBracket,
-
-			[Symbol(")")]
-			CloseBracket,
-
-			// Special
-			[Symbol("@")]
-			CurrentExecutor,
-
-			[Symbol("$")]
-			Server,
-
-			[Symbol(".")]
-			Access,
-
-			[Symbol(":")]
-			Type,
-
-			[Symbol("|>")]
-			Update,
-
-			[Symbol("><")]
-			SwapMemory,
-
-			[Symbol("=>")]
-			CopyTo,
-
-			[Symbol("""(?:[a-zA-Z_]\w*)""", true)]
-			Indentifier,
-
-			[Symbol("""\[.*\]""", true)]
-			Attribute,
-
-			//[Symbol("""#.*""", true)]
-			//[Symbol("""##(?:.*\s)*##""", true)]
-			//Comment,
-
-			// Keywords
-			[Symbol("if")]
-			If,
-
-			[Symbol("else")]
-			Else,
-
-			[Symbol("elif")]
-			Elif,
-
-			[Symbol("signal")]
-			Signal,
-
-			[Symbol("execute")]
-			Execute,
-
-			//[Symbol("""execute *{(?:.*\s*)*}""", true)]
-			//[Symbol("""execute *{[^}]*}""", true)]
-			//[Symbol("""\|\|(?:[^\|]*)\|\|""", true)]
-			//ExecuteStmt,
-
-			[Symbol("func")]
-			FuncDecl,
-
-			[Symbol("var")]
-			VarDecl,
-
-			[Symbol("const")]
-			ConstDecl,
-
-			[Symbol("return")]
-			Return,
-
-			[Symbol("import")]
-			Import,
-
-			[Symbol("while")]
-			While,
-
-			[Symbol("for")]
-			For,
-
-			[Symbol("in")]
-			In,
-
-			[Symbol("match")]
-			Match,
-
-			[Symbol("case")]
-			Case,
-
-			[Symbol("null")]
-			Null,
-
-			[Symbol("target")]
-			Target,
+			Activator.CreateInstance(typeof(AdditionExpr));
+			return types[(int)t + 1].GetCustomAttributes<SymbolAttribute>().Select(o => o.Symbol).ToArray();
 		}
 	}
+
+	public enum TokenType
+	{
+		None = 0,
+
+		[BinaryOperator(4, typeof(AdditionExpr))]
+		[Symbol("+")]
+		Plus,
+
+		[UnaryOperator(2, typeof(NegationExpr))]
+		[BinaryOperator(4, typeof(SubtractionExpr))]
+		[Symbol("-")]
+		Minus,
+
+		[BinaryOperator(3, typeof(DivisionExpr))]
+		[Symbol("/")]
+		Divide,
+
+		[BinaryOperator(3, typeof(MultiplicationExpr))]
+		[Symbol("*")]
+		Star,
+
+		[BinaryOperator(3, typeof(ModuloExpr))]
+		[Symbol("%")]
+		Modulo,
+
+		[BinaryOperator(1, typeof(ExponentExpr))]
+		[Symbol("**")]
+		Exponent,
+
+		[BinaryOperator(5, typeof(RangeExpr))]
+		[Symbol("..")]
+		Range,
+
+		[BinaryOperator(1, typeof(IncrementExpr))]
+		[Symbol("++")]
+		Increment,
+
+		[BinaryOperator(1, typeof(DecrementExpr))]
+		[Symbol("--")]
+		Decrement,
+
+		// Assignment Operators
+		[BinaryOperator(14, typeof(AssignExpr))]
+		[Symbol("=")]
+		Assign,
+
+		//[Symbol(":=")]
+		//TypedAssign,
+
+		//[Symbol("+=")]
+		//AddAssign,
+
+		//[Symbol("-=")]
+		//SubtractAssign,
+
+		//[Symbol("*=")]
+		//MultiplyAssign,
+
+		//[Symbol("/=")]
+		//DivideAssign,
+
+		//[Symbol("%=")]
+		//ModuloAssign,
+
+		//[Symbol("**=")]
+		//ExponentAssign,
+
+		//[Symbol("&=")]
+		//BitwiseAndAssign,
+
+		//[Symbol("|=")]
+		//BitwiseOrAssign,
+
+		//[Symbol("^=")]
+		//BitwiseXorAssign,
+
+		// Comparison Operators
+		[BinaryOperator(6, typeof(GreaterExpr))]
+		[Symbol(">")]
+		Greater,
+
+		[BinaryOperator(6, typeof(LesserExpr))]
+		[Symbol("<")]
+		Lesser,
+
+		[BinaryOperator(6, typeof(GreaterOrEqualExpr))]
+		[Symbol(">=")]
+		GreaterOrEqual,
+
+		[BinaryOperator(6, typeof(LesserOrEqualExpr))]
+		[Symbol("<=")]
+		LesserOrEqual,
+
+		[BinaryOperator(6, typeof(EqualExpr))]
+		[Symbol("==")]
+		EqualTo,
+
+		[BinaryOperator(6, typeof(UnequalExpr))]
+		[Symbol("!=")]
+		NotEqualTo,
+
+		// Logical Operators
+		[BinaryOperator(2, typeof(BNotExpr))]
+		[Symbol("!")]
+		[Symbol("not")]
+		LogicalNot,
+
+		[BinaryOperator(2, typeof(LOrExpr))]
+		[Symbol("|")]
+		[Symbol("or")]
+		LogicalOr,
+
+		[BinaryOperator(2, typeof(LAndExpr))]
+		[Symbol("&")]
+		[Symbol("and")]
+		LogicalAnd,
+
+		[BinaryOperator(2, typeof(LXorExpr))]
+		[Symbol("^")]
+		[Symbol("xor")]
+		LogicalXor,
+
+		// Bitwise Operators
+		[BinaryOperator(8, typeof(BNotExpr))]
+		[Symbol("!!")]
+		BitwiseNot,
+
+		[BinaryOperator(8, typeof(BAndExpr))]
+		[Symbol("&&")]
+		BitwiseAnd,
+
+		[BinaryOperator(8, typeof(BOrExpr))]
+		[Symbol("||")]
+		BitwiseOr,
+
+		[BinaryOperator(8, typeof(BXorExpr))]
+		[Symbol("^^")]
+		BitwiseXor,
+
+		[BinaryOperator(5, typeof(BSLExpr))]
+		[Symbol("<<")]
+		BitShiftLeft,
+
+		[BinaryOperator(5, typeof(BSRExpr))]
+		[Symbol(">>")]
+		BitShiftRight,
+
+		// Signal Operators
+		[BinaryOperator(15, typeof(SignalConnectExpr))]
+		[Symbol("->")]
+		ConnectSignal,
+
+		[BinaryOperator(15, typeof(SignalEmitExpr))]
+		[Symbol("<-")]
+		EmitSignal,
+
+		// Literals
+		//[Symbol("""[a-z0-9]*("(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
+		[Symbol("""(?:"(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
+		StringLiteral,
+
+		[Symbol("""(?:\$"(?:\\.|[^\\"])*"|\$'(?:\\.|[^\\'])*')""", true)]
+		FormatStringLiteral,
+
+		// [Symbol(r"\d\d*(?:\.\d*|[bsilfd])?")]
+		[Symbol("""\d\d*(?:\.\d*|[bsilfd])?""", true)]
+		NumericLiteral,
+
+		// [Symbol(r"\d+b")]
+		// ByteLiteral,
+
+		// [Symbol(r"\d+i")]
+		// IntLiteral,
+
+		// [Symbol(r"\d+l")]
+		// LongLiteral,
+
+		// [Symbol(r"\d+.\d+f")]
+		// FloatLiteral,
+
+		// [Symbol(r"\d+.\d+d")]
+		// DoubleLiteral,
+
+		// Delimiters
+		[Symbol("""[\r\n;]+""", true)]
+		StmtSeparator,
+
+		[Symbol(",")]
+		Comma,
+
+		[Symbol("{")]
+		OpenCurlyBracket,
+
+		[Symbol("}")]
+		CloseCurlyBracket,
+
+		[Symbol("[")]
+		OpenSquareBracket,
+
+		[Symbol("]")]
+		CloseSquareBracket,
+
+		[Symbol("(")]
+		OpenBracket,
+
+		[Symbol(")")]
+		CloseBracket,
+
+		// Special
+		[Symbol("@")]
+		CurrentExecutor,
+
+		[Symbol("$")]
+		Server,
+
+		[BinaryOperator(1, typeof(AccessExpr))]
+		[Symbol(".")]
+		Access,
+
+		[Symbol(":")]
+		Type,
+
+		[BinaryOperator(14, typeof(UpdateExpr))]
+		[Symbol("|>")]
+		Update,
+
+		[BinaryOperator(14, typeof(SwapExpr))]
+		[Symbol("><")]
+		SwapValue,
+
+		[BinaryOperator(14, typeof(CopyExpr))]
+		[Symbol("=>")]
+		CopyTo,
+
+		[Symbol("""[a-zA-Z_]\w*""", true)]
+		Identifier,
+
+		[Symbol("""\[.*\s*\]""", true)]
+		Decorator,
+
+		//[Symbol("""#.*""", true)]
+		//[Symbol("""##(?:.*\s)*##""", true)]
+		//Comment,
+
+		// Keywords
+		[Symbol("if")]
+		If,
+
+		[Symbol("else")]
+		Else,
+
+		[Symbol("elif")]
+		Elif,
+
+		[Symbol("signal")]
+		Signal,
+
+		//[Symbol("execute")]
+		//Execute,
+
+		//[Symbol("""execute *{[^}]*}""", true)]
+		//[Symbol("""\|\|(?:[^\|]*)\|\|""", true)]
+		[Symbol("""execute *{(?:.*\s*)*}""", true)]
+		ExecuteStmt,
+
+		[Symbol("func")]
+		FuncDecl,
+
+		[Symbol("var")]
+		VarDecl,
+
+		//class is the same thing as type
+		[Symbol("class")]
+		ClassDecl,
+
+		[Symbol("const")]
+		ConstDecl,
+
+		[Symbol("return")]
+		Return,
+
+		[Symbol("import")]
+		Import,
+
+		[Symbol("while")]
+		While,
+
+		[Symbol("for")]
+		For,
+
+		[Symbol("in")]
+		In,
+
+		[Symbol("match")]
+		Match,
+
+		[Symbol("case")]
+		Case,
+
+		[Symbol("null")]
+		Null,
+
+		[Symbol("target")]
+		Target,
+	}
+
 }
