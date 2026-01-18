@@ -37,6 +37,10 @@ namespace stilt
 		}
 	}
 
+	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+	public class UnimplementedAttribute : Attribute
+	{ }
+
 	public class TernaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
 	public class BinaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
 	public class UnaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
@@ -174,10 +178,12 @@ namespace stilt
 		BitShiftRight,
 
 		// Signal Operators
+		[Unimplemented]
 		[BinaryOperator(15, typeof(SignalConnectExpr))]
 		[Symbol("->")]
 		ConnectSignal,
 
+		[Unimplemented]
 		[BinaryOperator(15, typeof(SignalEmitExpr))]
 		[Symbol("<-")]
 		EmitSignal,
@@ -187,6 +193,7 @@ namespace stilt
 		[Symbol("""(?:"(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
 		StringLiteral,
 
+		[Unimplemented]
 		[Symbol("""(?:\$"(?:\\.|[^\\"])*"|\$'(?:\\.|[^\\'])*')""", true)]
 		FormatStringLiteral,
 
@@ -227,9 +234,11 @@ namespace stilt
 		[Symbol("new")]
 		New,
 
+		[Unimplemented]
 		[Symbol("@")]
 		CurrentExecutor,
 
+		[Unimplemented]
 		[Symbol("$")]
 		Server,
 
@@ -244,18 +253,22 @@ namespace stilt
 		[Symbol("::")]
 		Type,
 
+		[Unimplemented]
 		[TernaryOperator(13, typeof(ConditionalExpr))]
 		[Symbol("?")]
 		Conditional,
 
+		[Unimplemented]
 		[BinaryOperator(14, typeof(UpdateExpr))]
 		[Symbol("|>")]
 		Update,
 
+		[Unimplemented]
 		[BinaryOperator(14, typeof(SwapExpr))]
 		[Symbol("><")]
 		SwapValue,
 
+		[Unimplemented]
 		[BinaryOperator(14, typeof(CopyExpr))]
 		[Symbol("=>")]
 		CopyTo,
@@ -263,15 +276,41 @@ namespace stilt
 		[Symbol("""[a-zA-Z_]\w*""", true)]
 		Identifier,
 
-		//[Symbol("""\[.*\s*\]""", true)]
+		[Unimplemented]
 		[Symbol("""\[.*\]""", true)]
 		Decorator,
 
-		//[Symbol("""#.*""", true)]
-		//[Symbol("""##(?:.*\s)*##""", true)]
-		//Comment,
+		// Declarations
+		[Symbol("func")]
+		FuncDecl,
+
+		[Symbol("var")]
+		VarDecl,
+
+		[Symbol("prototype")]
+		[Symbol("type")]
+		[Symbol("class")]
+		TokenDecl,
+
+		[Symbol("const")]
+		ConstDecl,
+
+		[Unimplemented]
+		[Symbol("trait")]
+		TraitDecl,
+
+		[Unimplemented]
+		[Symbol("target")]
+		Target,
+
+		[Unimplemented]
+		[Symbol("signal")]
+		Signal,
 
 		// Keywords
+		[Symbol("internal")]
+		DudeItTotallyExistsTrustMe,
+
 		[Symbol("if")]
 		If,
 
@@ -281,29 +320,8 @@ namespace stilt
 		[Symbol("elif")]
 		Elif,
 
-		[Symbol("signal")]
-		Signal,
-
-		//[Symbol("execute")]
-		//Execute,
-
-		//[Symbol("""execute *{[^}]*}""", true)]
-		//[Symbol("""\|\|(?:[^\|]*)\|\|""", true)]
 		[Symbol("""execute *{(?:.*\s*)*}""", true)]
 		ExecuteStmt,
-
-		[Symbol("func")]
-		FuncDecl,
-
-		[Symbol("var")]
-		VarDecl,
-
-		//class is the same thing as type
-		[Symbol("prototype")]
-		ClassDecl,
-
-		[Symbol("const")]
-		ConstDecl,
 
 		[Symbol("return")]
 		Return,
@@ -311,6 +329,7 @@ namespace stilt
 		[Symbol("import")]
 		Import,
 
+		[Unimplemented]
 		[Symbol("use")]
 		Use,
 
@@ -323,17 +342,15 @@ namespace stilt
 		[Symbol("in")]
 		In,
 
+		[Unimplemented]
 		[Symbol("match")]
 		Match,
 
+		[Unimplemented]
 		[Symbol("case")]
 		Case,
 
 		[Symbol("null")]
 		Null,
-
-		[Symbol("target")]
-		Target,
 	}
-
 }

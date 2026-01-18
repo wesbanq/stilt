@@ -9,10 +9,9 @@ namespace stilt.AST
 {
 	public abstract class Expr
 	{
-		public List<TypeSymbol> Type = [TypeSymbol.Any];
+		public TypeSymbol Type = Builtins.Any;
 		public bool Bracketed = false;
 		public int Precedence = 0;
-		public TypeSymbol? SingletonType => Type.Count == 1 ? Type.First() : null;
 
 		public Expr? FindFirstPrecedenceOrNull(int precedence, out Expr? parent)
 		{
@@ -122,6 +121,7 @@ namespace stilt.AST
 				return;
 			}
 
+			//change error
 			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
 
@@ -143,6 +143,7 @@ namespace stilt.AST
 				return;
 			}
 
+			//change error
 			throw new ArgumentException();
 		}
 
@@ -171,6 +172,7 @@ namespace stilt.AST
 				return;
 			}
 
+			//change error
 			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
 		public void InsertChild(Expr what)
@@ -186,6 +188,7 @@ namespace stilt.AST
 				return;
 			}
 			
+			//change error
 			throw new ArgumentException();
 		}
 
@@ -208,6 +211,7 @@ namespace stilt.AST
 				return;
 			}
 
+			//change error
 			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
 		public void InsertChild(Expr what)
@@ -217,6 +221,7 @@ namespace stilt.AST
 				Leaf = what;
 				return;
 			}
+			//change error
 			throw new ArgumentException();
 		}
 

@@ -42,7 +42,13 @@ namespace stilt.AST
 
 	public class FuncDeclStmt : Stmt
 	{
-		public required Symbol Name;
+		public Symbol Name;
 		public Stmt Value;
+
+		public FuncDeclStmt(string name, string source, Stmt v, TypeSymbol? args = null, TypeSymbol? returns = null)
+		{
+			Value = v;
+			Name = new VarSymbol(name, source, new(Builtins.Callable, [args ?? Builtins.Any, returns ?? Builtins.Any]));
+		}
 	}
 }

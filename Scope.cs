@@ -11,34 +11,25 @@ namespace stilt.AST
 
 		public bool IsInScope(Symbol sym)
 		{
-			var currentScope = this;
-			while (currentScope != null)
-			{
-				if (currentScope.Symbols.Find(s => s == sym /*&& sym.GetType() == s.GetType()*/) != null)
-					return true;
-				currentScope = currentScope.Parent;
-			}
-			return false;
+			return FindSymbolByName(sym.Name) != null;
 		}
 
-		public T? FindSymbolByName<T>(string name)
-			where T : Symbol
+		public Symbol? FindSymbolByName(string name)
 		{
 			var currentScope = this;
 			while (currentScope != null)
 			{
-				var found = currentScope.Symbols.Find(s => s.Name == name && s is T);
-				if (found != null) return found as T;
+				var found = currentScope.Symbols.Find(s => s.Name == name);
+				if (found != null) return found;
 				currentScope = currentScope.Parent;
 			}
 
-			//throw new Parser.UndefinedSymbolException(name, );
 			return null;
 		}
 
 		public void AddSymbol(Symbol? sym)
 		{
-			if (sym != null) Symbols.Add(sym);
+			if (sym != null && !IsInScope(sym)) Symbols.Add(sym);
 		}
 
 		public Scope(Scope parent)
