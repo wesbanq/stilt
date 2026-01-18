@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using stilt.AST;
+using System.Reflection;
 using System.Text;
 
 namespace stilt
@@ -10,6 +11,7 @@ namespace stilt
 		public string MainCodeFilepath;
 		public List<Option> UsedOptions = [];
 		public bool Throw = false;
+		public bool ExpandedDump = false;
 
 		public static void PrintHelp()
 		{
@@ -35,6 +37,12 @@ namespace stilt
 
 		void GiveValueTo(string opt, string value)
 		{
+			//var fields = GetType().GetFields();
+			//var a = Array.Find(fields, f => f.Name == opt);
+			//if (a == null)
+			//	throw new ArgumentException($"Non-existent argument: {opt}");
+
+			//a.SetValue(this, a.FieldType.);
 			switch (opt)
 			{
 				case "DebugLevel":
@@ -54,6 +62,11 @@ namespace stilt
 				case "Throw":
 				{
 					Throw = true;
+					break;
+				}
+				case "ExpandedDump":
+				{
+					ExpandedDump = true;
 					break;
 				}
 				default:
@@ -124,7 +137,6 @@ namespace stilt
 				}
 				else if (WhichOption(args[i - 1]) == Option.None)
 				{
-					//Console.WriteLine($"DASASDSAD {i}{WhichOption(args[i - 1]) == Option.None}");
 					var a = Compiler.GetAttributeFromEnum<Command, ActionAttribute>(Action);
 					if (a != null && a.Required != null)
 					{
@@ -213,14 +225,19 @@ namespace stilt
 
 			[Option("-t", "Throw", "Crash the program instead of printing the error (for debugging)", OptionType.Flag)]
 			Throw,
+
+			[Option("-ex", "ExpandedDump", "Additional info in dumps", OptionType.Flag)]
+			Expanded,
 		}
 
 	}
 
 	internal class Program
 	{
-		public static void Dump(object? obj, int l = 0)
+		public static void Dump(object? obj, int l = 0, bool expanded = false)
 		{
+			//TODO
+			//turn into json file
 			if (obj == null)
 			{
 				Console.WriteLine("null");
@@ -240,15 +257,20 @@ namespace stilt
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = null");
 						continue;
 					}
-					if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
+					if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string || value is string[])
 					{
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
-						$"{(value is string ? $"\"{Escape((string)value)}\"" : value)}");
+						$"{(value is string ? $"\"{Escape(value.ToString())}\"" : value)}");
 					}
 					else
 					{
+						if (!expanded && (value is (FileRange or TypeSymbol or FileText or Scope)))
+						{
+							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}: <HIDDEN>");
+							continue;
+						}
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
-						Dump(value, l + 1);
+						Dump(value, l + 1, expanded);
 					}
 				}
 				catch { }
@@ -266,12 +288,17 @@ namespace stilt
 					if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
 					{
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
-						$"{(value is string ? $"\"{Escape((string)value)}\"" : value)}");
+						$"{(value is string ? $"\"{Escape(value.ToString())}\"" : value)}");
 					}
 					else
 					{
+						if (!expanded && (value is (FileRange or TypeSymbol or FileText or Scope)))
+						{
+							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}: <HIDDEN>");
+							continue;
+						}
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
-						Dump(value, l + 1);
+						Dump(value, l + 1, expanded);
 					}
 				}
 				catch { }
@@ -289,8 +316,8 @@ namespace stilt
 					'\n' => "\\n",
 					'\r' => "\\r",
 					'\t' => "\\t",
-					//'\\' => "\\\\",
-					//'"' => "\\\"",
+					'\\' => "\\\\",
+					'"' => "\\\"",
 					_ when char.IsControl(c) => $"\\x{(int)c:X2}",
 					_ => c.ToString()
 				});
@@ -352,7 +379,7 @@ namespace stilt
 
 					foreach (var stmt in parse.Statements)
 					{
-						Dump(stmt);
+						Dump(stmt, expanded: arg.ExpandedDump);
 					}
 
 					parse.WriteErrors();

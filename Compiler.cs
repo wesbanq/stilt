@@ -8,24 +8,48 @@ using System.Text;
 
 namespace stilt
 {
+	public class FileText
+	{
+		private string Text;
+		public string Filepath;
+
+		public string Slice(int start, int len) => Text.Substring(start, len);
+		public FileRange EOF => new(Text.Length-1, Text.Length, Filepath, this);
+
+		public override string ToString()
+		{
+			return Text;
+		}
+
+		public FileText(string filename)
+		{
+			if (!File.Exists(filename))
+				throw new ArgumentException($"File '{filename} doesn't exist.'");
+			Filepath = filename;
+			Text = Lexer.Preprocess(File.ReadAllText(filename))
+				?? throw new Exception();
+		}
+	}
+
 	public class FileRange
 	{
 		public int Start;
 		public int End;
 		public string Filename;
 
+		private FileText _text;
+
 		public int Length => End - Start;
-		//remove Preprocess
-		public string Text => File.ReadAllText(Filename).ReplaceLineEndings("\n").Substring(Start, Length);
+		public string Text => _text.Slice(Start, Length);
 		public string[] TextLines 
 		{
 			get
 			{
-				var text = File.ReadAllText(Filename).ReplaceLineEndings("\n");
+				var text = _text.ToString();
 				var newStart = Start;
 				var newEnd = End-1;
 				while (newStart > 0 && text[--newStart] != '\n');
-				++newStart;
+				if (text[newStart] == '\n') ++newStart;
 				while (newEnd < text.Length && text[newEnd] != '\n') ++newEnd;
 				--newEnd;
 
@@ -81,16 +105,17 @@ namespace stilt
 				return left;
 
 			if (left.Before(right))
-				return new FileRange(left.Start, right.End, left.Filename);
+				return new FileRange(left.Start, right.End, left.Filename, left._text);
 			else
-				return new FileRange(right.Start, left.End, left.Filename);
+				return new FileRange(right.Start, left.End, left.Filename, left._text);
 		}
 
-		public FileRange(int start, int end, string filename)
+		public FileRange(int start, int end, string filename, FileText file)
 		{
 			Start = start;
 			End = end;
 			Filename = filename;
+			_text = file;
 		}
 
 		public bool SameFile (FileRange other)
@@ -193,10 +218,10 @@ namespace stilt
 					res += part1+part2+part3+part4;
 				}
 
-				return Message + $"\n @ {Range.FormatLineAndColumn()}, in file: {Range.Filename}\n" + res;
+				return $"{Severity}: " + Message + $"\n  @ {Range.FormatLineAndColumn()}, in file: {Range.Filename}\n" + res;
 			}
 			else
-				return Message;
+				return $"{Severity}: " + Message;
 		}
 
 		public void Print()

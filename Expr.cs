@@ -15,17 +15,17 @@ namespace stilt.AST
 		public bool Explicit = false;
 		public int Precedence = 0;
 
-		public FileRange? InnerRange { private get; set; }
-		public FileRange? Range
+		public FileRange? InnerRange { get; set; }
+		public FileRange? FullRange
 		{
 			get
 			{
 				if (this is IOperator op)
 				{
-					var children = op.GetChildren().Select(c => c?.Range);
-					FileRange? sum = null;
+					var children = op.GetChildren().Select(c => c?.FullRange);
+					FileRange? sum = InnerRange;
 
-					foreach (var child in children.Skip(1))
+					foreach (var child in children)
 					{
 						if (child is null) continue;
 						sum = sum is null ? child : sum + child;
@@ -107,6 +107,9 @@ namespace stilt.AST
 
 			return null;
 		}
+		
+		//public Expr(int precedence, FileRange range) { Precedence = precedence; InnerRange = range; }
+		//public Expr(int precedence) { Precedence = precedence; }
 	}
 
 	public interface IOperator
@@ -119,12 +122,90 @@ namespace stilt.AST
 	public interface IRanged
 	{
 		FileRange? InnerRange { set; }
-		FileRange? Range { get; }
+		FileRange? FullRange { get; }
 	}
 
 	public class IdentityExpr : Expr
 	{
 		public Symbol Identity;
+	}
+
+	public abstract class UnaryExpr : Expr, IOperator
+	{
+		public Expr? Leaf;
+
+		public Expr?[] GetChildren()
+		{
+			return [Leaf];
+		}
+		public void ReplaceChild(Expr what, Expr with)
+		{
+			if (ReferenceEquals(Leaf, what))
+			{
+				Leaf = with;
+				return;
+			}
+
+			//change error
+			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
+		}
+		public void InsertChild(Expr what)
+		{
+			if (Leaf == null)
+			{
+				Leaf = what;
+				return;
+			}
+			//change error
+			throw new ArgumentException();
+		}
+
+		public UnaryExpr(int precedence, FileRange? range = null) { Precedence = precedence; InnerRange = range; }
+	}
+
+	public abstract class BinaryExpr : Expr, IOperator
+	{
+		public Expr? Left;
+		public Expr? Right;
+
+		public Expr?[] GetChildren()
+		{
+			return [Right, Left];
+		}
+		public void ReplaceChild(Expr what, Expr with)
+		{
+			if (ReferenceEquals(Right, what))
+			{
+				Right = with;
+				return;
+			}
+			if (ReferenceEquals(Left, what))
+			{
+				Left = with;
+				return;
+			}
+
+			//change error
+			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
+		}
+		public void InsertChild(Expr what)
+		{
+			if (Left == null)
+			{
+				Left = what;
+				return;
+			}
+			if (Right == null)
+			{
+				Right = what;
+				return;
+			}
+			
+			//change error
+			throw new ArgumentException();
+		}
+
+		public BinaryExpr(int precedence, FileRange? range = null) { Precedence = precedence; InnerRange = range; }
 	}
 
 	public abstract class TernaryExpr : Expr, IOperator
@@ -181,163 +262,107 @@ namespace stilt.AST
 			throw new ArgumentException();
 		}
 
-		public TernaryExpr(int precedence) { Precedence = precedence; }
-		public TernaryExpr(int precedence, FileRange range) { Precedence = precedence; InnerRange = range; }
+		public TernaryExpr(int precedence, FileRange? range = null) { Precedence = precedence; InnerRange = range; }
 	}
 
-	public abstract class BinaryExpr : Expr, IOperator
+	public class CommaExpr : Expr, IOperator
 	{
-		public Expr? Left;
-		public Expr? Right;
+		public List<Expr> Exprs = [];
+		public int ExprLength = 2;
 
-		public Expr?[] GetChildren()
+		public Expr[]? GetChildren()
 		{
-			return [Right, Left];
+			return ExprLength < Exprs.Count ? [null, .. Exprs] : [.. Exprs];
 		}
-		public void ReplaceChild(Expr what, Expr with)
-		{
-			if (ReferenceEquals(Right, what))
-			{
-				Right = with;
-				return;
-			}
-			if (ReferenceEquals(Left, what))
-			{
-				Left = with;
-				return;
-			}
 
-			//change error
-			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
-		}
 		public void InsertChild(Expr what)
 		{
-			if (Left == null)
-			{
-				Left = what;
-				return;
-			}
-			if (Right == null)
-			{
-				Right = what;
-				return;
-			}
-			
-			//change error
-			throw new ArgumentException();
+			Exprs = [.. Exprs.Prepend(what)];
 		}
 
-		public BinaryExpr(int precedence) { Precedence = precedence; }
-	}
-
-	public abstract class UnaryExpr : Expr, IOperator
-	{
-		public Expr? Leaf;
-
-		public Expr?[] GetChildren()
-		{
-			return [Leaf];
-		}
 		public void ReplaceChild(Expr what, Expr with)
 		{
-			if (ReferenceEquals(Leaf, what))
-			{
-				Leaf = with;
-				return;
-			}
-
-			//change error
-			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
-		}
-		public void InsertChild(Expr what)
-		{
-			if (Leaf == null)
-			{
-				Leaf = what;
-				return;
-			}
-			//change error
-			throw new ArgumentException();
+			var i = Exprs.FindIndex(e => ReferenceEquals(e, what));
+			if (i != -1)
+				Exprs[i] = with;
+			else
+				throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
 
-		public UnaryExpr(int precedence) { Precedence = precedence; }
+		public CommaExpr(int precedence, FileRange? range = null) { Precedence = precedence; InnerRange = range; }
 	}
 
-	public class IncrementExpr(int p) : UnaryExpr(p) { public bool Prefix = true; }
-	public class DecrementExpr(int p) : UnaryExpr(p) { public bool Prefix = true; }
-	public class PlusExpr(int p) : UnaryExpr(p) { }
-	public class NegationExpr(int p) : UnaryExpr(p) { }
-	public class NewExpr(int p) : UnaryExpr(p) { }
-	public class CloneExpr(int p) : UnaryExpr(p) { }
-	public class LNotExpr(int p) : UnaryExpr(p) { }
-	public class BNotExpr(int p) : UnaryExpr(p) { }
+	public class PlusExpr(int p, FileRange r) : UnaryExpr(p, r) { }
+	public class NegationExpr(int p, FileRange r) : UnaryExpr(p, r) { }
+	public class IncrementExpr(int p, FileRange r) : UnaryExpr(p, r) { public bool Prefix = true; }
+	public class DecrementExpr(int p, FileRange r) : UnaryExpr(p, r) { public bool Prefix = true; }
+	public class NewExpr(int p, FileRange r) : UnaryExpr(p, r) { }
+	public class CloneExpr(int p, FileRange r) : UnaryExpr(p, r) { }
+	public class LNotExpr(int p, FileRange r) : UnaryExpr(p, r) { }
+	public class BNotExpr(int p, FileRange r) : UnaryExpr(p, r) { }
 
-	public class AdditionExpr(int p) : BinaryExpr(p) { }
-	public class SubtractionExpr(int p) : BinaryExpr(p) { }
-	public class DivisionExpr(int p) : BinaryExpr(p) { }
-	public class MultiplicationExpr(int p) : BinaryExpr(p) { }
-	public class ExponentExpr(int p) : BinaryExpr(p) { }
-	public class RangeExpr(int p) : BinaryExpr(p) { }
-	public class ModuloExpr(int p) : BinaryExpr(p) { }
-	public class LAndExpr(int p) : BinaryExpr(p) { }
-	public class LOrExpr(int p) : BinaryExpr(p) { }
-	public class LXorExpr(int p) : BinaryExpr(p) { }
-	public class BAndExpr(int p) : BinaryExpr(p) { }
-	public class BOrExpr(int p) : BinaryExpr(p) { }
-	public class BXorExpr(int p) : BinaryExpr(p) { }
-	public class BSLExpr(int p) : BinaryExpr(p) { }
-	public class BSRExpr(int p) : BinaryExpr(p) { }
-	public class GreaterExpr(int p) : BinaryExpr(p) { }
-	public class LesserExpr(int p) : BinaryExpr(p) { }
-	public class EqualExpr(int p) : BinaryExpr(p) { }
-	public class UnequalExpr(int p) : BinaryExpr(p) { }
-	public class GreaterOrEqualExpr(int p) : BinaryExpr(p) { }
-	public class LesserOrEqualExpr(int p) : BinaryExpr(p) { }
-	public class SwapExpr(int p) : BinaryExpr(p) { }
-	public class CopyExpr(int p) : BinaryExpr(p) { }
-	public class SignalConnectExpr(int p) : BinaryExpr(p) { }
-	public class SignalEmitExpr(int p) : BinaryExpr(p) { }
-	public class UpdateExpr(int p) : BinaryExpr(p) { }
-	public class IndexExpr(int p) : BinaryExpr(p) { }
-	public class AccessExpr(int p) : BinaryExpr(p) { }
-	public class SelfAccessExpr(int p) : BinaryExpr(p) { }
-	public class CommaExpr(int p) : BinaryExpr(p) { }
+	public class AdditionExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class SubtractionExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class DivisionExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class MultiplicationExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class ExponentExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class RangeExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class ModuloExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class LAndExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class LOrExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class LXorExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class BAndExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class BOrExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class BXorExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class BSLExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class BSRExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class GreaterExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class LesserExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class EqualExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class UnequalExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class GreaterOrEqualExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class LesserOrEqualExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class SwapExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class CopyExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class SignalConnectExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class SignalEmitExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class UpdateExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class IndexExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class AccessExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class SelfAccessExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 
-	public class ConditionalExpr(int p) : TernaryExpr(p) { }
+	public class ConditionalExpr(int p, FileRange r) : TernaryExpr(p, r) { }
 
-	public class AssignExpr(int p) : BinaryExpr(p)
+	public class AssignExpr(int p, FileRange r) : BinaryExpr(p, r)
 	{
-		//	   TokenType?
-		public BinaryExpr? Operation;
+		public TokenType? Operation;
 	}
 
-	public class PrototypeLiteralExpr : Expr
-	{
-		public List<Expr> Array = [];
-	}
-
-	public class CallExpr(int p) : BinaryExpr(p) { }
+	public class CallExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 
 	public class LiteralExpr : Expr
 	{
-		public required object Value;
+		public required object? Value;
+		public LiteralExpr(FileRange? range) { InnerRange = range; }
 	}
 
 	public class NullLiteralExpr : LiteralExpr
 	{
 		[SetsRequiredMembers]
-		public NullLiteralExpr()
+		public NullLiteralExpr(FileRange? r)
+			: base(r)
 		{
 			Value = null;
 			Type = Builtins.None;
 		}
 	}
 
-	//future new classes for different num types
+	//new classes for byte, long, float, ...
 	public class NumLiteralExpr : LiteralExpr
 	{
 		[SetsRequiredMembers]
-		public NumLiteralExpr(int num)
+		public NumLiteralExpr(int num, FileRange? r)
+			: base(r)
 		{
 			Value = num;
 			Type = Builtins.Num;
@@ -347,16 +372,51 @@ namespace stilt.AST
 	public class StringLiteralExpr : LiteralExpr
 	{
 		[SetsRequiredMembers]
-		public StringLiteralExpr(string str)
+		public StringLiteralExpr(string str, FileRange? r)
+			: base(r)
 		{
 			Value = str;
 			Type = Builtins.String;
 		}
 	}
 
+	public class ArrayLiteralExpr : LiteralExpr
+	{
+		[SetsRequiredMembers]
+		public ArrayLiteralExpr(FileRange? r)
+			: base(r)
+		{
+			Type = Builtins.Array;
+		}
+		[SetsRequiredMembers]
+		public ArrayLiteralExpr(FileRange? r, List<Expr> exprs)
+			: base(r)
+		{
+			Value = exprs;
+			Type = Builtins.Array;
+		}
+	}
+
+	public class TableLiteralExpr : LiteralExpr
+	{
+		[SetsRequiredMembers]
+		public TableLiteralExpr(FileRange? r)
+			: base(r)
+		{
+			Type = Builtins.Table;
+		}
+		[SetsRequiredMembers]
+		public TableLiteralExpr(FileRange? r, Dictionary<Symbol, Expr> exprs)
+			: base(r)
+		{
+			Value = exprs;
+			Type = Builtins.Table;
+		}
+	}
+
 	public class LambdaFuncExpr : Expr
 	{
-		public List<VarSymbol> Arguments = new();
+		public List<VarSymbol> Arguments = [];
 		public Stmt Value;
 	}
 }

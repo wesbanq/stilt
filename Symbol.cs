@@ -5,7 +5,7 @@ using System.Text;
 
 namespace stilt.AST
 {
-	public class Symbol
+	public abstract class Symbol
 	{
 		public string Name;
 		//TODO (IMPORTANT VERY)
@@ -39,23 +39,18 @@ namespace stilt.AST
 			return (Name + Source).GetHashCode();
 		}
 
-		public void Untemp(string src)
-		{
-			if (IsTemp)
-			{
-				Source = src;
-			}
-		}
+		//public void Untemp(string src)
+		//{
+		//	if (IsTemp)
+		//	{
+		//		Source = src;
+		//	}
+		//}
 
-		protected Symbol(string name, string src)
+		protected Symbol(string name, string src = "<TEMP>")
 		{
 			Name = name;
 			Source = src;
-		}
-		protected Symbol(string name)
-		{
-			Name = name;
-			Source = "<TEMP>";
 		}
 	}
 
@@ -71,7 +66,7 @@ namespace stilt.AST
 		public VarSymbol(string n, TypeSymbol type)
 			: base(n)
 		{
-			Type = new(type);
+			Type = type;
 		}
 		public VarSymbol(string n)
 			: base(n) 
@@ -82,7 +77,7 @@ namespace stilt.AST
 	{
 		public TypeSymbol? Base;
 		public TypeSymbol? Inherits => Base == null ? _inherits : Base.Inherits;
-		private TypeSymbol? _inherits = null;
+		private TypeSymbol? _inherits;
 
 		public int ArgumentCount = 0;
 		public TypeSymbol[]? Arguments;

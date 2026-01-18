@@ -87,6 +87,13 @@ namespace stilt
 			}
 		}
 
+		public class UnexpectedEOF : SyntaxError
+		{
+			public UnexpectedEOF(Lexer lex)
+				: base(lex.Text.EOF, "File unexpectedly ended")
+			{ }
+		}
+
 		public void WriteErrors()
 		{
 			CompilationIssues.ForEach(m => m.Print());
@@ -95,16 +102,22 @@ namespace stilt
 		protected void NewError(SyntaxError err)
 		{
 			CompilationIssues.Add(err);
+			//if (err.Severity >= ErrorSeverity.Error)
+			//	throw err;
 		}
 
 		protected void InsertIntoExprTree(ref Expr rootExpr, Expr? newExpr)
 		{
-			if (rootExpr == null || newExpr == null)
+			if (rootExpr == null && newExpr != null)
 			{
-				if (newExpr != null)
-					rootExpr = newExpr;
+				if (newExpr is IOperator && newExpr is not UnaryExpr)
+					throw new Exception();
+				rootExpr = newExpr;
 				return;
 			}
+
+			//needs another rework but im lazy
+			//add more comments to explain all of this later
 			var toReplace = rootExpr.FindFirstPrecedenceOrNull(newExpr.Precedence, out var parent);
 			if (toReplace == null && parent == null)
 			{
@@ -121,20 +134,46 @@ namespace stilt
 			if (newExpr is IOperator spreadable)
 			{
 				if (toReplace != null)
+				{
 					spreadable.InsertChild(toReplace);
-				
+					if (parent != null)
+					{
+						//with the old CommaExpr a tuple of 3 will evaluate to a type of ((Type, Type), Type) instead of (Type, Type, Type)
+						//there might be a better way to accomplishing this with BinaryExpr
+						//by looking if the child CommaExpr is bracketed during type eval
+						if (toReplace is CommaExpr rootComma && newExpr is CommaExpr)
+						{
+							++rootComma.ExprLength;
+							return;
+						}
+
+						if (parent is IOperator op)
+						{
+							op.ReplaceChild(toReplace, newExpr);
+						}
+					}
+					else
+					{
+						rootExpr = newExpr;
+					}
+
+					return;
+				}
+
 				if (parent != null)
 				{
 					if (parent is IOperator sParent)
 					{
-						if (toReplace == null)
+						if (toReplace == null && newExpr.Bracketed)
 							sParent.InsertChild(newExpr);
 						else
-							sParent.ReplaceChild(toReplace, newExpr);
+							throw new Exception();
 					}
 					else
 						//change error
 						throw new Exception();
+
+					return;
 				}
 				else
 					rootExpr = newExpr;
@@ -158,7 +197,7 @@ namespace stilt
 			List<Expr> exprs = [];
 			foreach (var op in operatorAttr)
 			{
-				exprs.Add(Activator.CreateInstance(op.AssociatedExpr, op.Precedence) as Expr);
+				exprs.Add(Activator.CreateInstance(op.AssociatedExpr, op.Precedence, token.Range) as Expr);
 			}
 
 			return exprs
@@ -187,63 +226,78 @@ namespace stilt
 				}
 				default:
 				{
-					//change error
-					throw new Exception();
+					throw new MalformedExprError(expr.FullRange);
 				}
 			}
 			return res;
 		}
 
-		//protected List<VarSymbol> ParsePattern(Scope scope, Token? firstToken, bool ignoreType = false)
-		//{
-		//	Token varToken;
-		//	List<VarSymbol> res = [];
+		protected bool ExpectingOperator(ref Expr expr)
+		{
+			//a == null - expecting operand / a != null - expecting operator
+			return expr?.FindFirstPrecedenceOrNull(expr.Precedence, out var _) != null;
+		}
 
-		//	while (true)
-		//	{
-		//		varToken = Lex.Next();
-		//		if (varToken.Which == TokenType.OpenBracket) continue;
-		//		var nextToken = Lex.Next();
-		//		if (nextToken.Which == TokenType.OpenBracket) break;
-		//		switch (nextToken.Which)
-		//		{
-		//			case TokenType.Type:
-		//			{
-		//				if (ignoreType)
-		//					throw new UnexpectedToken(nextToken.Range, nextToken);
+		protected ArrayLiteralExpr ParseArrayLiteral(Token? currentToken)
+		{
+			if (currentToken is null)
+				throw new UnexpectedEOF(Lex);
+			
+			Expr newExpr = null;
+			ParseExpr(ref newExpr, currentToken);
+			
+			return newExpr is CommaExpr commaExpr
+				? new ArrayLiteralExpr(currentToken.Range, [.. commaExpr.GetChildren()])
+				: new ArrayLiteralExpr(currentToken.Range, [newExpr]);
+		}
 
-		//				nextToken = Lex.Next()
-		//				?? throw new Exception();
+		protected TableLiteralExpr ParseTableLiteral(Token? currentToken)
+		{
+			if (currentToken is null)
+				throw new UnexpectedEOF(Lex);
 
-		//				if (nextToken.Which != TokenType.Identifier)
-		//					throw new UnexpectedToken(nextToken.Range, TokenType.Identifier, nextToken);
+			Expr newExpr = null;
+			Dictionary<Symbol, Expr> dict = [];
+			ParseExpr(ref newExpr, currentToken);
+			var list = ParseArrayLiteral(currentToken).Value as List<Expr>;
+			
+			foreach (var expr in list)
+			{
+				if (expr is AssignExpr assign)
+				{
+					if (assign.Operation != null)
+						throw new SyntaxError(assign.InnerRange, "Self-assingment operators are not permitted inside tables");
 
-		//				var typeToken = Lex.Next();
-		//				if (typeToken.Which != TokenType.Identifier)
-		//					throw new UnexpectedToken(typeToken.Range, TokenType.Identifier, typeToken);
+					Symbol newSym;
+					//keys in tables may not neccessarily be strings
+					//separate dictionary type for non string keys?????????????
+					switch (assign.Left)
+					{
+						case IdentityExpr id:
+						{
+							newSym = id.Identity;
+							newSym.Source = Lex.Filepath;
+							break;
+						}
+						case StringLiteralExpr str:
+						{
+							//think of something for types
+							newSym = new VarSymbol(str.Value as String, Lex.Filepath, Builtins.Any);
+							break;
+						}
+						default:
+						{
+							throw new SyntaxError(assign.FullRange, "Invalid key in table");
+						}
+					}
+					dict.Add(newSym, expr);
+				}
+				else
+					throw new SyntaxError(expr.InnerRange, "Only assingnment-type expressions allowed inside a table literal");
+			}
 
-		//				res.Append(new VarSymbol(varToken.Text, new TypeSymbol(typeToken.Text)));
-		//				break;
-		//			}
-		//			case TokenType.Comma:
-		//			{
-		//				res.Append(new VarSymbol(varToken.Text));
-		//				continue;
-		//			}
-		//			case TokenType.CloseBracket:
-		//			case TokenType.Assign:
-		//			{
-		//				res.Append(new VarSymbol(varToken.Text));
-		//				break;
-		//			}
-		//			default:
-		//				throw new UnexpectedToken(nextToken.Range, TokenType.CloseBracket, nextToken);
-		//		}
-		//	}
-
-		//	if (firstToken != null) Lex.Goto(firstToken);
-		//	return res;
-		//}
+			return new(currentToken.Range, dict);
+		}
 
 		protected void ParseExpr(ref Expr rootExpr, Token? currentToken)
 		{
@@ -257,62 +311,67 @@ namespace stilt
 					var newSym = new VarSymbol(currentToken.Range.Text);
 					newExpr = new IdentityExpr()
 					{
-						Identity = newSym
+						//SERGH9isehjgfz9rhg8jzr9ehjeifnh
+						InnerRange = currentToken.Range,
+						Identity = newSym,
 					};
-					
 					break;
 				}
-				//TODO
-				case TokenType.FormatStringLiteral:
-				//
 				case TokenType.StringLiteral:
+				//TODO		   VVVVVVVVVVVVVVVVVVV
+				case TokenType.FormatStringLiteral:
 				{
-					newExpr = new StringLiteralExpr(currentToken.Range.Text);
-
+					newExpr = new StringLiteralExpr(currentToken.Range.Text, currentToken.Range);
 					break;
 				}
 				case TokenType.NumericLiteral:
 				{
-					newExpr = new NumLiteralExpr(int.Parse(currentToken.Range.Text));
-
+					newExpr = new NumLiteralExpr(int.Parse(currentToken.Range.Text), currentToken.Range);
 					break;
 				}
 				case TokenType.Null:
 				{
-					newExpr = new NullLiteralExpr();
-
-					break;
-				}
-				case TokenType.OpenSquareBracket:
-				{
-					//TODO
-					newExpr = CreateOperatorExpr(currentToken).First();
-					ParseExpr(ref newExpr, Lex.Next());
+					newExpr = new NullLiteralExpr(currentToken.Range);
 					break;
 				}
 				case TokenType.OpenBracket:
+				case TokenType.OpenSquareBracket:
 				{
 					//empty brackets are equal to null
 					ParseExpr(ref newExpr, Lex.Next());
-					if (newExpr == null)
-						newExpr = new NullLiteralExpr();
 
-					var a = rootExpr?.FindFirstPrecedenceOrNull(newExpr.Precedence, out var _);
-					//a == null - expecting operand / a != null - expecting operator
-					if (a != null)
+					if (ExpectingOperator(ref rootExpr))
 					{
-						var callExpr = CreateOperatorExpr(currentToken).First() as CallExpr;
-						callExpr.Right = newExpr;
-						newExpr = callExpr;
+						if (newExpr == null && currentToken.Which == TokenType.OpenSquareBracket)
+							throw new SyntaxError(currentToken.Range, "No valid expression given as an index");
+						var opExpr = CreateOperatorExpr(currentToken).First() as BinaryExpr;
+						opExpr.Right = newExpr;
+						opExpr.Bracketed = true;
+						newExpr = opExpr;
+					}
+					else if (currentToken.Which == TokenType.OpenSquareBracket)
+					{
+						newExpr = ParseArrayLiteral(Lex.Next());
 					}
 
 					break;
 				}
-				case TokenType.StmtSeparator:
-				case TokenType.CloseBracket:
-				case TokenType.CloseSquareBracket:
 				case TokenType.OpenCurlyBracket:
 				{
+					if (ExpectingOperator(ref rootExpr))
+						rootExpr?.Bracketed = true;
+					else
+					{
+						newExpr = ParseTableLiteral(Lex.Next());
+					}
+
+					break;
+				}
+				case TokenType.CloseBracket:
+				case TokenType.StmtSeparator:
+				case TokenType.CloseSquareBracket:
+				{
+					//FIX FullRange will ignore the closing bracket
 					rootExpr?.Bracketed = true;
 					return;
 				}
@@ -347,7 +406,7 @@ namespace stilt
 				}
 				default:
 				{
-					if (Compiler.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(currentToken.Which) != null)
+					if (currentToken.IsUnimplemented)
 						throw new UnimplementedError(currentToken);
 					var possibleExprs = CreateOperatorExpr(currentToken)
 						?? throw new UnexpectedToken(currentToken.Range, currentToken);
@@ -356,9 +415,10 @@ namespace stilt
 					{
 						Lex.Next();
 						possibleExprs = possibleExprs.Where(e => e is BinaryExpr).Select(e => 
-							new AssignExpr(Compiler.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign).Precedence)
+							new AssignExpr(Compiler.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign).Precedence, 
+								currentToken.Range + Lex.CurrentToken.Range)
 							{
-								Operation = e as BinaryExpr
+								Operation = currentToken.Which
 							} as Expr
 						).ToList();
 						if (possibleExprs.Count != 1)
@@ -447,6 +507,9 @@ namespace stilt
 						if (assign.Left == null || assign.Right == null)
 							throw new MalformedExprError(firstToken.Range);
 
+						if (assign.Operation != null)
+							throw new SyntaxError(assign.InnerRange, "Cannot use self-assignment operators in variable definition");
+
 						//ReplaceIdentities
 						newSymbols = AddTempSymToScope(assign.Left, newScope);
 					}
@@ -454,6 +517,7 @@ namespace stilt
 					{
 						if (firstToken.Which == TokenType.ConstDecl)
 							throw new SyntaxError(varToken.Range, $"No value given to initialize constant '{varToken.Range.Text}'");
+
 						else if (newExpr is CommaExpr || newExpr is IdentityExpr)
 						{
 							newSymbols = AddTempSymToScope(newExpr, newScope);
@@ -467,7 +531,7 @@ namespace stilt
 						Scope = newScope,
 						Name = newSymbols,
 						IsConst = firstToken.Which == TokenType.ConstDecl,
-						Value = newExpr
+						Value = newExpr,
 					};
 
 					break;
@@ -560,18 +624,22 @@ namespace stilt
 					newStmt = new CompoundStmt()
 					{
 						Scope = newScope,
-						Statements = innerStmt
+						Statements = innerStmt,
 					};
 
 					break;
 				}
 				case null:
-				case TokenType.StmtSeparator:
 				case TokenType.CloseCurlyBracket:
 				{
 					return false;
 				}
+				case TokenType.StmtSeparator:
+				{
+					return true;
+				}
 				default:
+				//ExprStmt
 				{
 					if (firstToken.IsUnimplemented)
 						throw new UnimplementedError(firstToken);
@@ -580,7 +648,7 @@ namespace stilt
 					if (newExpr == null)
 						throw new SyntaxError(firstToken.Range, $"Unknown statement: '{firstToken.Range.Text}'");
 					
-					newStmt = new ExpressionStmt()
+					newStmt = new ExprStmt()
 					{
 						Scope = newScope,
 						Expression = newExpr,
@@ -600,43 +668,31 @@ namespace stilt
 			while (true)
 			{
 				Stmt newStmt = null;
-				if (Args.Throw)
+				try
 				{
 					if (!ParseStmt(ref newStmt))
 						break;
-					if (Lex.CurrentToken?.Which == TokenType.StmtSeparator)
+					if (Lex.CurrentToken == null)
+						break;
+					else if (Lex.CurrentToken?.Which == TokenType.StmtSeparator)
 						Lex.Next();
 					else
 						throw new ArgumentException("sdgfsdgrsgfr");
-					
-					innerStmts.AddLast(newStmt);
 				}
-				else
+				catch (SyntaxError se)
 				{
-					try
+					NewError(se);
+					if ((Args.Throw && se.Severity >= ErrorSeverity.Error) || se.Severity == ErrorSeverity.Critical)
 					{
-						if (!ParseStmt(ref newStmt))
-							break;
-						if (Lex.CurrentToken?.Which == TokenType.StmtSeparator)
-							Lex.Next();
-						else
-							throw new ArgumentException("sdgfsdgrsgfr");
+						se.Print();
+						throw;
 					}
-					catch (SyntaxError se)
-					{
-						NewError(se);
-						if (se.Severity == ErrorSeverity.Critical)
-						{
-							se.Print();
-							break;
-						}
-						Lex.SkipStmt();
-					}
-					finally
-					{
-						if (newStmt != null)
-							innerStmts.AddLast(newStmt);
-					}
+					Lex.SkipStmt();
+				}
+				finally
+				{
+					if (newStmt != null)
+						innerStmts.AddLast(newStmt);
 				}
 			}
 
