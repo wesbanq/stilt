@@ -37,6 +37,7 @@ namespace stilt
 		}
 	}
 
+	public class TernaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
 	public class BinaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
 	public class UnaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
 
@@ -100,36 +101,6 @@ namespace stilt
 		[BinaryOperator(14, typeof(AssignExpr))]
 		[Symbol("=")]
 		Assign,
-
-		//[Symbol(":=")]
-		//TypedAssign,
-
-		//[Symbol("+=")]
-		//AddAssign,
-
-		//[Symbol("-=")]
-		//SubtractAssign,
-
-		//[Symbol("*=")]
-		//MultiplyAssign,
-
-		//[Symbol("/=")]
-		//DivideAssign,
-
-		//[Symbol("%=")]
-		//ModuloAssign,
-
-		//[Symbol("**=")]
-		//ExponentAssign,
-
-		//[Symbol("&=")]
-		//BitwiseAndAssign,
-
-		//[Symbol("|=")]
-		//BitwiseOrAssign,
-
-		//[Symbol("^=")]
-		//BitwiseXorAssign,
 
 		// Comparison Operators
 		[BinaryOperator(6, typeof(GreaterExpr))]
@@ -223,21 +194,6 @@ namespace stilt
 		[Symbol("""\d\d*(?:\.\d*|[bsilfd])?""", true)]
 		NumericLiteral,
 
-		// [Symbol(r"\d+b")]
-		// ByteLiteral,
-
-		// [Symbol(r"\d+i")]
-		// IntLiteral,
-
-		// [Symbol(r"\d+l")]
-		// LongLiteral,
-
-		// [Symbol(r"\d+.\d+f")]
-		// FloatLiteral,
-
-		// [Symbol(r"\d+.\d+d")]
-		// DoubleLiteral,
-
 		// Delimiters
 		[Symbol("""[\r\n;]+""", true)]
 		StmtSeparator,
@@ -275,7 +231,11 @@ namespace stilt
 		Access,
 
 		[Symbol(":")]
-		Type,
+		Colon,
+
+		[TernaryOperator(13, typeof(ConditionalExpr))]
+		[Symbol("?")]
+		Conditional,
 
 		[BinaryOperator(14, typeof(UpdateExpr))]
 		[Symbol("|>")]

@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using stilt.AST;
+using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -226,6 +227,9 @@ namespace stilt
 
 			[Action("preprocess", [Option.InputFile])]
 			Preprocess,
+
+			[Action("tree", [Option.InputFile])]
+			Tree,
 		}
 
 		public enum Option
@@ -243,36 +247,62 @@ namespace stilt
 
 	internal class Program
 	{
-		public static void Dump(object obj, int l = 0)
+		public static void Dump(object? obj, int l = 0)
 		{
+			if (obj == null)
+			{
+				Console.WriteLine("null");
+				return;
+			}
 			if (l == 0) Console.WriteLine();
 			var type = obj.GetType();
 			Console.WriteLine($"{new string('\t', l)}{type.Name}");
 
 			foreach (var prop in type.GetProperties())
 			{
-				var value = prop.GetValue(obj);
-				if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
+				try
 				{
-					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = " +
-					$"'{(value is string ? $"\"{Escape((string)value)}\"" : value)}'");
+					var value = prop.GetValue(obj);
+					if (value == null) 
+					{
+						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = null");
+						continue;
+					}
+						if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
+						{
+							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
+							$"{(value is string ? $"\"{Escape((string)value)}\"" : value)}");
+						}
+						else
+						{
+							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
+							Dump(value, l + 1);
+						} 
 				}
-				else
-				{
-					Dump(value, l + 1);
-				}
+				catch { }
 			}
 			foreach (var prop in type.GetFields())
 			{
-				var value = prop.GetValue(obj);
-				if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
+				try
 				{
-					Console.WriteLine($"{new string('\t', l+1)}{prop.Name} = '{value}'");
+					var value = prop.GetValue(obj);
+					if (value == null)
+					{
+						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = null");
+						continue;
+					}
+					if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
+					{
+						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
+						$"{(value is string ? $"\"{Escape((string)value)}\"" : value)}");
+					}
+					else
+					{
+						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
+						Dump(value, l + 1);
+					}
 				}
-				else
-				{
-					Dump(value, l + 1);
-				}
+				catch { }
 			}
 		}
 
@@ -286,8 +316,8 @@ namespace stilt
 					'\n' => "\\n",
 					'\r' => "\\r",
 					'\t' => "\\t",
-					'\\' => "\\\\",
-					'"' => "\\\"",
+					//'\\' => "\\\\",
+					//'"' => "\\\"",
 					_ when char.IsControl(c) => $"\\x{(int)c:X2}",
 					_ => c.ToString()
 				});
@@ -327,14 +357,36 @@ namespace stilt
 				case ProgramArgs.Command.Tokenize:
 				{
 					var lex = new Lexer(arg);
-					Token t;
-					while ((t = lex.Next()) != null) Dump(t);
+					Token t = lex.CurrentToken;
+					do Dump(t); while ((t = lex.Next()) != null);
 					break;
 				}
 				case ProgramArgs.Command.Preprocess:
 				{
 					var code = File.ReadAllText(arg.MainCodeFilepath);
 					Console.Write(Lexer.Preprocess(code));
+					break;
+				}
+				case ProgramArgs.Command.Tree:
+				{
+					//AdditionExpr test = new(2)
+					//{
+					//	Left = new IdentitiyExpr()
+					//	{
+					//		Identity = new VarSymbol("a", "")
+					//	},
+					//};
+
+					//Dump(test.FindFirstPrecedenceOrNull(2, out var parent));
+
+					//test.Right = new IdentitiyExpr() {Identity = new VarSymbol("b", "")};
+
+					//Dump(test.FindFirstPrecedenceOrNull(2, out parent));
+
+					var lex = new Lexer(arg);
+					var parse = new Parser(lex);
+					var stmt = parse.ParseStmt();
+					Dump(stmt);
 					break;
 				}
 			}

@@ -77,6 +77,12 @@ namespace stilt
 			return tokens;
 		}
 
+		public Token Prev()
+		{
+			CurrentPos--;
+			return CurrentToken;
+		}
+
 		public Token Next()
 		{
 			CurrentPos++;

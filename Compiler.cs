@@ -126,7 +126,7 @@ namespace stilt
 		{
 			return typeof(T)
 				.GetField(value.ToString())
-				?.GetCustomAttribute<A>();
+				?.GetCustomAttributes<A>().First();
 		}
 
 		public static List<A?> GetAttributesFromType<A>(Type t)
