@@ -385,8 +385,13 @@ namespace stilt
 
 					var lex = new Lexer(arg);
 					var parse = new Parser(lex);
-					var stmt = parse.ParseStmt();
-					Dump(stmt);
+					parse.ParseBranch();
+
+					foreach (var stmt in parse.Statements)
+					{
+						Dump(stmt);
+					}
+
 					break;
 				}
 			}

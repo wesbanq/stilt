@@ -92,58 +92,6 @@ namespace stilt.AST
 	{
 		public required Symbol Identity;
 	}
-	//public class AccessExpr : IdentityExpr
-	//{
-	//	public IdentityExpr? From;
-	//}
-
-	public abstract class Symbol
-	{
-		[Required] public string Name;
-		[Required] public string Source;
-
-		public static bool operator ==(Symbol? left, Symbol? right)
-		{
-			if (left == null || right == null) return false;
-			return left.Name.Equals(right.Name) && left.Source.Equals(right.Source);
-		}
-
-		public override bool Equals(object? other)
-		{
-			return other is Symbol && this == other as Symbol;
-		}
-
-		public override int GetHashCode()
-		{
-			return base.GetHashCode();
-		}
-
-		public static bool operator !=(Symbol? left, Symbol? right)
-		{
-			return !(left == right);
-		}
-
-		public Symbol(string name, string src)
-		{
-			Name = name;
-			Source = src;
-		}
-	}
-
-	public class VarSymbol(string n, string s) : Symbol(n, s) 
-	{
-		public TypeSymbol Type = TypeSymbol.Any;
-	}
-	public class FuncSymbol(string n, string s) : Symbol(n, s)
-	{
-		//return type
-		public TypeSymbol Type = TypeSymbol.Any;
-	}
-	public class TypeSymbol(string n, string s) : Symbol(n, s) 
-	{
-		public static readonly TypeSymbol Any = new("Any", "<BUILTIN>");
-		public bool IsBuiltin => Source.StartsWith("<BUILTIN>");
-	}
 
 	public abstract class TernaryExpr : Expr, IOperator
 	{
@@ -277,6 +225,10 @@ namespace stilt.AST
 	public class IncrementExpr(int p) : UnaryExpr(p) { }
 	public class DecrementExpr(int p) : UnaryExpr(p) { }
 	public class NegationExpr(int p) : UnaryExpr(p) { }
+	public class NewExpr(int p) : UnaryExpr(p) { }
+	public class LNotExpr(int p) : UnaryExpr(p) { }
+	public class BNotExpr(int p) : UnaryExpr(p) { }
+
 	public class AdditionExpr(int p) : BinaryExpr(p) { }
 	public class SubtractionExpr(int p) : BinaryExpr(p) { }
 	public class DivisionExpr(int p) : BinaryExpr(p) { }
@@ -287,11 +239,9 @@ namespace stilt.AST
 	public class LAndExpr(int p) : BinaryExpr(p) { }
 	public class LOrExpr(int p) : BinaryExpr(p) { }
 	public class LXorExpr(int p) : BinaryExpr(p) { }
-	public class LNotExpr(int p) : BinaryExpr(p) { }
 	public class BAndExpr(int p) : BinaryExpr(p) { }
 	public class BOrExpr(int p) : BinaryExpr(p) { }
 	public class BXorExpr(int p) : BinaryExpr(p) { }
-	public class BNotExpr(int p) : BinaryExpr(p) { }
 	public class BSLExpr(int p) : BinaryExpr(p) { }
 	public class BSRExpr(int p) : BinaryExpr(p) { }
 	public class GreaterExpr(int p) : BinaryExpr(p) { }
@@ -307,16 +257,17 @@ namespace stilt.AST
 	public class UpdateExpr(int p) : BinaryExpr(p) { }
 	public class IndexExpr(int p) : BinaryExpr(p) { }
 	public class AccessExpr(int p) : BinaryExpr(p) { }
+	public class SelfAccessExpr(int p) : BinaryExpr(p) { }
 	public class CommaExpr(int p) : BinaryExpr(p) { }
+
+	public class ConditionalExpr(int p) : TernaryExpr(p) { }
 
 	public class AssignExpr(int p) : BinaryExpr(p)
 	{
 		public BinaryExpr? Operation;
 	}
 
-	public class ConditionalExpr(int p) : TernaryExpr(p) { }
-
-	public class ArrayExpr : Expr
+	public class PrototypeLiteralExpr : Expr
 	{
 		public List<Expr> Array = [];
 	}
@@ -328,5 +279,9 @@ namespace stilt.AST
 		public required object Value;
 	}
 
-
+	public class LambdaFuncExpr : Expr
+	{
+		public List<VarSymbol> Arguments = new();
+		public Stmt Value;
+	}
 }

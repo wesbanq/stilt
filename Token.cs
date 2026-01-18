@@ -58,7 +58,7 @@ namespace stilt
 
 	public enum TokenType
 	{
-		None = 0,
+		//None = 0,
 
 		[BinaryOperator(4, typeof(AdditionExpr))]
 		[Symbol("+")]
@@ -128,7 +128,7 @@ namespace stilt
 		NotEqualTo,
 
 		// Logical Operators
-		[BinaryOperator(2, typeof(BNotExpr))]
+		[UnaryOperator(2, typeof(BNotExpr))]
 		[Symbol("!")]
 		[Symbol("not")]
 		LogicalNot,
@@ -149,7 +149,7 @@ namespace stilt
 		LogicalXor,
 
 		// Bitwise Operators
-		[BinaryOperator(8, typeof(BNotExpr))]
+		[UnaryOperator(8, typeof(BNotExpr))]
 		[Symbol("!!")]
 		BitwiseNot,
 
@@ -221,6 +221,10 @@ namespace stilt
 		CloseBracket,
 
 		// Special
+		[UnaryOperator(3, typeof(NewExpr))]
+		[Symbol("new")]
+		New,
+
 		[Symbol("@")]
 		CurrentExecutor,
 
@@ -231,8 +235,12 @@ namespace stilt
 		[Symbol(".")]
 		Access,
 
+		[BinaryOperator(1, typeof(AccessExpr))]
 		[Symbol(":")]
-		Colon,
+		SelfAccess,
+
+		[Symbol("::")]
+		Type,
 
 		[TernaryOperator(13, typeof(ConditionalExpr))]
 		[Symbol("?")]
@@ -289,7 +297,7 @@ namespace stilt
 		VarDecl,
 
 		//class is the same thing as type
-		[Symbol("class")]
+		[Symbol("prototype")]
 		ClassDecl,
 
 		[Symbol("const")]
