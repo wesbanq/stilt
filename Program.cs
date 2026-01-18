@@ -56,6 +56,10 @@ namespace stilt
 				{
 					if (!File.Exists(value))
 						throw new ArgumentParsingException("Given a non-existing file for option {0}: {1}", opt, value);
+					if (!value.EndsWith(".stilt"))
+						Console.WriteLine("The given file does not end in '.stilt'. " +
+						"The code will still be compiled, but importing it for use in other files may be problematic." +
+						"Consider changing the file's extension to .stilt.");
 					MainCodeFilepath = value;
 					break;
 				}
