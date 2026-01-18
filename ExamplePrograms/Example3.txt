@@ -1,0 +1,12 @@
+var a = 6
+
+
+var b = a&3
+
+
+
+
+
+for var i := 0, i <= b, i++ {
+	Log.Print(b)
+}

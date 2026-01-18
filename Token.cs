@@ -39,16 +39,16 @@ namespace stilt
 			None = 0,
 
 			[Symbol("+", false)]
-			Add,
+			Plus,
 
 			[Symbol("-", false)]
-			Subtract,
+			Minus,
 
 			[Symbol("/", false)]
 			Divide,
 
 			[Symbol("*", false)]
-			Multiply,
+			Star,
 
 			[Symbol("%", false)]
 			Modulo,
@@ -115,38 +115,44 @@ namespace stilt
 			[Symbol("==", false)]
 			EqualTo,
 
-			[Symbol("!!=", false)]
+			[Symbol("!=", false)]
 			NotEqualTo,
 
 			// Logical Operators
-			[Symbol("!!", false)]
+			[Symbol("!", false)]
 			[Symbol("not", false)]
 			LogicalNot,
 
-			[Symbol("||", false)]
+			[Symbol("|", false)]
 			[Symbol("or", false)]
 			LogicalOr,
 
-			[Symbol("&&", false)]
+			[Symbol("&", false)]
 			[Symbol("and", false)]
 			LogicalAnd,
 
-			[Symbol("^^", false)]
+			[Symbol("^", false)]
 			[Symbol("xor", false)]
 			LogicalXor,
 
 			// Bitwise Operators
-			[Symbol("!", false)]
+			[Symbol("!!", false)]
 			BitwiseNot,
 
-			[Symbol("&", false)]
+			[Symbol("&&", false)]
 			BitwiseAnd,
 
-			[Symbol("|", false)]
+			[Symbol("||", false)]
 			BitwiseOr,
 
-			[Symbol("^", false)]
+			[Symbol("^^", false)]
 			BitwiseXor,
+
+			[Symbol("<<", false)]
+			BitShiftLeft,
+
+			[Symbol(">>", false)]
+			BitShiftRight,
 
 			// Signal Operators
 			[Symbol("->", false)]
@@ -219,15 +225,21 @@ namespace stilt
 			[Symbol("|>", false)]
 			Update,
 
+			[Symbol("><", false)]
+			SwapMemory,
+
+			[Symbol("=>", false)]
+			CopyTo,
+
 			[Symbol("""(?:[a-zA-Z_]\w*)""", true)]
 			Indentifier,
 
 			[Symbol("""\[.*\]""", true)]
 			Attribute,
 
-			[Symbol("""#.*""", true)]
-			[Symbol("""##(?:.*\s)*##""", true)]
-			Comment,
+			//[Symbol("""#.*""", true)]
+			//[Symbol("""##(?:.*\s)*##""", true)]
+			//Comment,
 
 			// Keywords
 			[Symbol("if", false)]
@@ -246,13 +258,13 @@ namespace stilt
 			Execute,
 
 			[Symbol("func", false)]
-			Function,
+			FuncDecl,
 
 			[Symbol("var", false)]
-			Variable,
+			VarDecl,
 
 			[Symbol("const", false)]
-			Constant,
+			ConstDecl,
 
 			[Symbol("return", false)]
 			Return,
