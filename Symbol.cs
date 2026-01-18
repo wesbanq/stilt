@@ -4,10 +4,11 @@ using System.Text;
 
 namespace stilt.AST
 {
-	public abstract class Symbol
+	public class Symbol
 	{
 		public string Name;
 		public string Source;
+		public bool IsTemp => Source.StartsWith("<TEMP>");
 
 		public static bool operator ==(Symbol? left, Symbol? right)
 		{
@@ -35,34 +36,58 @@ namespace stilt.AST
 			Name = name;
 			Source = src;
 		}
-
+		public Symbol(string name)
+		{
+			Name = name;
+			Source = "<TEMP>";
+		}
 	}
 
-	public class TempSymbol(string n, string s) : Symbol(n, s) { }
-
-	public class VarSymbol(string n, string s) : Symbol(n, s)
+	public class VarSymbol : Symbol
 	{
-		public TypeSymbol Type = TypeSymbol.Any;
+		public List<TypeSymbol>? Type = [TypeSymbol.Any];
 		public VarDeclStmt? Declaration = null;
+		public TypeSymbol? SingletonType => Type?.Count == 1 ? Type.First() : null;
 
 		public VarSymbol(string n, string s, TypeSymbol type)
-			: this(n, s)
+			: base(n, s)
+		{
+			Type = [type];
+		}
+		public VarSymbol(string n, string s, List<TypeSymbol>? type)
+			: base(n, s)
 		{
 			Type = type;
 		}
+		public VarSymbol(string n)
+			: base(n) { }
+		public VarSymbol(string n, TypeSymbol t)
+			: base(n) { Type = [t]; }
+		public VarSymbol(string n, List<TypeSymbol> t)
+			: base(n) { Type = t; }
 	}
-	public class FuncSymbol(string n, string s) : Symbol(n, s)
+	public class FuncSymbol : Symbol
 	{
 		public FuncDeclStmt? Declaration = null;
-		public TypeSymbol ReturnType = TypeSymbol.Any;
+
+		//return variables
+		//public List<VarSymbol>? Return;
+		public List<TypeSymbol>? Return;
+		public List<VarSymbol>? Arguments;
 
 		public FuncSymbol(string n, string s, FuncDeclStmt stmt)
-			: this(n, s)
+			: base(n, s)
 		{
 			Declaration = stmt;
 		}
+		public FuncSymbol(string n, string s)
+			: base(n, s)
+		{ }
+		public FuncSymbol(string n)
+			: base(n)
+		{ }
 	}
-	public class TypeSymbol(string n, string s) : Symbol(n, s)
+	public class TypeSymbol : Symbol
 	{
 		public static readonly TypeSymbol Any = new("Any", "<BUILTIN>");
 		public static readonly TypeSymbol None = new("None", "<BUILTIN>");
@@ -78,5 +103,10 @@ namespace stilt.AST
 		//public bool Strong = false;
 		public List<TypeSymbol>? Inherited = null;
 		public TypeDeclStmt? Declaration = null;
+
+		public TypeSymbol(string n, string s)
+			: base(n, s) { }
+		public TypeSymbol(string n)
+			: base(n) { }
 	}
 }

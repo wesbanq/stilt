@@ -208,12 +208,14 @@ namespace stilt
 		[Symbol("}")]
 		CloseCurlyBracket,
 
+		[BinaryOperator(1, typeof(IndexExpr))]
 		[Symbol("[")]
 		OpenSquareBracket,
 
 		[Symbol("]")]
 		CloseSquareBracket,
 
+		[BinaryOperator(1, typeof(CallExpr))]
 		[Symbol("(")]
 		OpenBracket,
 

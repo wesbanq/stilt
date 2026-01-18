@@ -29,21 +29,20 @@ namespace stilt.AST
 
 	public class VarDeclStmt : Stmt
 	{
-		public required Symbol Name;
+		public Symbol Name;
 		public bool IsConst = false;
 		public Expr? Value;
 	}
 
 	public class TypeDeclStmt : Stmt
 	{
-		public required TypeSymbol Name;
+		public TypeSymbol Name;
 		public Stmt Value;
 	}
 
 	public class FuncDeclStmt : Stmt
 	{
 		public required Symbol Name;
-		public List<VarSymbol> Arguments = new();
 		public Stmt Value;
 	}
 }
