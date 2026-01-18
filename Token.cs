@@ -32,6 +32,7 @@ namespace stilt
 	{
 		public Tokens Which { get; set; }
 		public FileRange Range { get; set; }
+		public string Text { get; set; }
 
 		public enum Tokens
 		{
@@ -243,6 +244,9 @@ namespace stilt
 
 			[Symbol("execute", false)]
 			Execute,
+
+			[Symbol("func", false)]
+			Function,
 
 			[Symbol("var", false)]
 			Variable,
