@@ -1,4 +1,5 @@
 ﻿using stilt.AST;
+using System;
 using System.ComponentModel.DataAnnotations;
 
 namespace stilt
@@ -9,86 +10,86 @@ namespace stilt
 		public LinkedList<Stmt> Statements = new();
 		public Scope RootScope = new();
 
-		public class RedeclaredSymbolException : Exception
+		public List<CompilationMessage> CompilationMessages = [];
+		public bool ErrorsEncoutered => CompilationMessages.Any(m => m.Severity >= ErrorSeverity.Error);
+		public CompilationMessage? CritcalError => CompilationMessages.Find(m => m.Severity == ErrorSeverity.Critical);
+
+		public class SyntaxError : Exception
 		{
-			[Required] FileRange Range;
-			
-			public RedeclaredSymbolException(Symbol symbol, FileRange range)
-				: base($"Multiple declarations for symbol '{symbol.Name}'\n\t in {range.Filename} @ {range.ToLineAndColumnF()}")
+			public FileRange Position;
+
+			public SyntaxError(FileRange range)
+				: base($"Syntax error @ {range.FormatLineAndColumn()}, in file: {range.Filename}")
 			{
-				Range = range;
+				Position = range;
+			}
+			public SyntaxError(FileRange range, string msg)
+				: base(msg + $" @ {range.FormatLineAndColumn()}, in file: {range.Filename}")
+			{
+				Position = range;
+			}
+			public SyntaxError(FileRange range, string msg, params string[] strings)
+				: base(string.Format(msg, strings) + $" @ {range.FormatLineAndColumn()}, in file: {range.Filename}")
+			{
+				Position = range;
 			}
 		}
 
-		public class SyntaxErrorException : Exception
-		{
-			[Required] public FileRange Position;
-
-			public SyntaxErrorException(string message, FileRange pos, params string[] strings)
-				: base(string.Format(message, strings) + $"\n\tIn file {pos.Filename}, " +
-				$"at line: {pos.ToLineAndColumn().line}, col: {pos.ToLineAndColumn().column}")
-			{
-				Position = pos;
-			}
-			public SyntaxErrorException(string message, FileRange pos)
-				: base(message + $"\n\tIn file {pos.Filename}, " +
-				$"at line: {pos.ToLineAndColumn().line}, col: {pos.ToLineAndColumn().column}")
-			{
-				Position = pos;
-			}
+		public class RedeclaredSymbolException : SyntaxError
+		{	
+			public RedeclaredSymbolException(FileRange range, Symbol symbol)
+				: base(range, $"Multiple declarations for symbol '{symbol.Name}'")
+			{ }
 		}
 
-		public class UndefinedSymbolException : Exception
+		public class UnimplementedException : SyntaxError
+		{
+			public UnimplementedException(Token token)
+				: base(token.Range, $"{token.Which} is unimplemented.")
+			{ }
+		}
+
+		public class UndefinedSymbolException : SyntaxError
 		{
 			public string Got;
-			[Required] public FileRange Position;
 
-			public UndefinedSymbolException(Symbol symbol, FileRange pos)
-				: base($"Unknown symbol: '{symbol.Name}' found\n\tin file: {pos.Filename} @ {pos.ToLineAndColumnF()}")
+			public UndefinedSymbolException(FileRange pos, Symbol symbol)
+				: base(pos, $"Unknown symbol: '{symbol.Name}'")
 			{
 				Got = symbol.Name;
-				Position = pos;
 			}
-			public UndefinedSymbolException(string symbolName, FileRange pos)
-				: base($"Unknown symbol: '{symbolName}' found\n\tin file: {pos.Filename} @ {pos.ToLineAndColumnF()}")
+			public UndefinedSymbolException(FileRange pos, string symbolName)
+				: base(pos, $"Unknown symbol: '{symbolName}'")
 			{
 				Got = symbolName;
-				Position = pos;
 			}
 		}
 
-		public class MalformedExprException : Exception
+		public class MalformedExprError : SyntaxError
 		{
-			public FileRange Start;
-
-			public MalformedExprException(FileRange start)
-				: base($"Malformed expression starting:\n\t@ {start.ToLineAndColumnF()}")
-			{
-				Start = start;
-			}
+			public MalformedExprError(FileRange start)
+				: base(start, $"Malformed expression starting")
+			{ }
 		}
 
-		public class UnexpectedTokenException : Exception
+		public class UnexpectedToken : SyntaxError
 		{
 			public TokenType Expected;
 			public Token Got;
-			public FileRange Position;
 
-			public UnexpectedTokenException(TokenType expected, Token got, FileRange pos)
-				: base($"Unexpected character at {pos.ToLineAndColumn()}\nExpected: '{Token.GetRulesFromType(expected).First()}'\nGot: '{got.Text}'")
+			public UnexpectedToken(FileRange pos, TokenType expected, Token got)
+				: base(pos, $"Unexpected token: '{got.Text}'\nExpected: '{Token.GetRulesFromType(expected).First()}'")
 			{
 				Expected = expected;
 				Got = got;
-				Position = pos;
 			}
 
-			public UnexpectedTokenException(Token? got, FileRange? pos)
-				: base($"Unexpected token: {got?.Text}\n\t@ {pos?.ToLineAndColumnF()}")
+			public UnexpectedToken(FileRange? pos, Token? got)
+				: base(pos, $"Unexpected token: {got?.Text}")
 			{
 				if (got != null && pos != null)
 				{
 					Got = got;
-					Position = pos;
 				}
 			}
 		}
@@ -110,6 +111,7 @@ namespace stilt
 					rootExpr = newExpr;
 				}
 				else
+					//change error
 					throw new Exception();
 			}
 
@@ -123,6 +125,7 @@ namespace stilt
 					if (parent is IOperator sParent)
 						sParent.ReplaceChild(toReplace, newExpr);
 					else
+						//change error
 						throw new Exception();
 				}
 				else
@@ -133,6 +136,7 @@ namespace stilt
 				if (parent is IOperator newSpreadable)
 					newSpreadable.InsertChild(newExpr);
 				else
+					//change error
 					throw new ArgumentException();
 			}
 		}
@@ -141,79 +145,14 @@ namespace stilt
 		{
 			var operatorAttr = Compiler.GetAttributeFromEnum<TokenType, OperatorAttribute>(token.Which);
 			if (operatorAttr == null)
-				throw new UnexpectedTokenException(token, token.Range);
+				throw new UnexpectedToken(token.Range, token);
 
 			var newExpr = Activator.CreateInstance(operatorAttr.AssociatedExpr, operatorAttr.Precedence) as Expr;
 			return newExpr ?? throw new Exception();
+			//change error
 		}
 
-		protected List<VarSymbol> ParsePattern(Scope scope, Token? firstToken, bool ignoreType = false)
-		{
-			Token varToken;
-			List<VarSymbol> res = [];
-
-			//while ((varToken = Lex.Next())?.Which == TokenType.Identifier)
-			while (true)
-			{
-				varToken = Lex.Next();
-				if (varToken.Which == TokenType.OpenBracket) continue;
-				var nextToken = Lex.Next();
-				if (nextToken.Which == TokenType.OpenBracket) break;
-				switch (nextToken.Which)
-				{
-					case TokenType.Type:
-					{
-						if (ignoreType) 
-							throw new UnexpectedTokenException(nextToken, nextToken.Range);
-
-						nextToken = Lex.Next()
-						?? throw new Exception();
-
-						if (nextToken.Which != TokenType.Identifier)
-							throw new UnexpectedTokenException(TokenType.Identifier, nextToken, nextToken.Range);
-
-						var typeToken = Lex.Next();
-						if (typeToken.Which != TokenType.Identifier)
-							throw new UnexpectedTokenException(TokenType.Identifier, typeToken, typeToken.Range);
-
-						res.Append(new VarSymbol(varToken.Text, new TypeSymbol(typeToken.Text)));
-						break;
-					}
-					case TokenType.Comma:
-					{
-						res.Append(new VarSymbol(varToken.Text));
-						continue;
-					}
-					case TokenType.CloseBracket:
-					case TokenType.Assign:
-					{
-						res.Append(new VarSymbol(varToken.Text));
-						break;
-					}
-					default:
-						throw new UnexpectedTokenException(TokenType.CloseBracket, nextToken, nextToken.Range);
-				}
-			}
-
-			if (firstToken != null) Lex.Goto(firstToken);
-			return res;
-		}
-
-		//protected List<VarSymbol> ParseVarPattern(Scope scope, Token? firstToken)
-		//{
-		//	return ParsePattern(scope, firstToken);
-		//}
-
-		//protected List<TypeSymbol> ParseTypePattern(Scope scope, Token? firstToken)
-		//{
-		//	var a = ParsePattern(scope, firstToken).Select(static v => v.Type);
-		//	if (a.Any(l => l.Count > 1))
-		//		throw new Exception();
-
-		//	return [.. a.Select(l => l)];
-		//}
-
-		protected void ParseExpr(ref Expr rootExpr, Token? currentToken, Scope scope)
+		protected void ParseExpr(ref Expr rootExpr, Token? currentToken)
 		{
 			if (currentToken == null) return;
 			Expr newExpr = null;
@@ -230,7 +169,7 @@ namespace stilt
 					
 					break;
 				}
-				//for format strings turn into String.Format(string) in the future
+				//for format strings turn into smth like String.Format(string) in the future
 				case TokenType.FormatStringLiteral:
 				case TokenType.StringLiteral:
 				{
@@ -252,18 +191,22 @@ namespace stilt
 				}
 				case TokenType.OpenSquareBracket:
 				{
-					newExpr = CreateOperatorExpr(currentToken);
-					ParseExpr(ref newExpr, Lex.Next(), scope);
+					newExpr = CreateOperatorExpr(currentToken)
+					//change error
+					?? throw new Exception();
+					ParseExpr(ref newExpr, Lex.Next());
 					break;
 				}
 				case TokenType.OpenBracket:
 				{
-					newExpr = CreateOperatorExpr(currentToken);
+					newExpr = CreateOperatorExpr(currentToken)
+					//change error
+					?? throw new Exception();
 					var a = rootExpr.FindFirstPrecedenceOrNull(newExpr.Precedence, out var parent);
 					if (a == null && parent != null)
 						newExpr = null;
 
-					ParseExpr(ref newExpr, Lex.Next(), scope);
+					ParseExpr(ref newExpr, Lex.Next());
 					break;
 				}
 				case TokenType.StmtSeparator:
@@ -276,25 +219,14 @@ namespace stilt
 				}
 				case TokenType.Type:
 				{
+					//TODO
 					var typeToken = Lex.Next()
-						?? throw new Exception();
+					//change error
+					?? throw new Exception();
 					if (typeToken.Which != TokenType.Identifier && typeToken.Which != TokenType.OpenBracket)
-						throw new UnexpectedTokenException(TokenType.Identifier, typeToken, typeToken.Range);
+						throw new UnexpectedToken(typeToken.Range, TokenType.Identifier, typeToken);
 
-					List<TypeSymbol> typeSymbol;
-					if (typeToken.Which == TokenType.OpenBracket)
-					{
-						var a = ParsePattern(scope, typeToken, true).Select(t => t.SingletonType).ToList()
-						?? throw new UnexpectedTokenException(typeToken, typeToken.Range);
-						if (a.Any(t => t == null) || a == null)
-							throw new Exception();
-
-						typeSymbol = a;
-					}
-					else
-					{
-						typeSymbol = [new TypeSymbol(typeToken.Text)];
-					}
+					var typeSymbol = new TypeSymbol(typeToken.Text);
 					rootExpr.Type = typeSymbol;
 
 					if (rootExpr is IdentityExpr sym)
@@ -303,9 +235,10 @@ namespace stilt
 						{
 							case VarSymbol var:
 							{
-								if (var.Type == null || var.Type.Count == 1 && var.Type[0] == TypeSymbol.Any)
+								if (var.Type == null || var.Type == Builtins.Any)
 									var.Type = typeSymbol;
 								else
+									//change error
 									throw new Exception();
 								break;
 							}
@@ -316,25 +249,30 @@ namespace stilt
 				}
 				default:
 				{
-					newExpr = CreateOperatorExpr(currentToken);
+					if (Compiler.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(currentToken.Which) != null)
+						throw new UnimplementedException(currentToken);
+
+					newExpr = CreateOperatorExpr(currentToken)
+					//change error
+					?? throw new Exception();
+
 					if (Lex.PeekNext()?.Which == TokenType.Assign
-						&& newExpr is BinaryExpr)
+						&& newExpr is BinaryExpr binExpr)
 					{
 						Lex.Next();
 						var precedence = Compiler.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign).Precedence;
 						newExpr = new AssignExpr(precedence)
 						{
-							Operation = newExpr as BinaryExpr
+							Operation = binExpr
 						};
 					}
-					//TODO unary & ternary
-					//func calls, arrays, index
+					//TODO unary/ternary, array/table lits
 					break;
 				}
 			}
 
 			InsertIntoExprTree(ref rootExpr, newExpr);
-			ParseExpr(ref rootExpr, Lex.Next(), scope);
+			ParseExpr(ref rootExpr, Lex.Next());
 		}
 
 		protected List<IdentityExpr> GetIdentities(Expr expr)
@@ -358,6 +296,7 @@ namespace stilt
 				}
 				default:
 				{
+					//change error
 					throw new ArgumentException();
 				}
 			}
@@ -377,18 +316,18 @@ namespace stilt
 				{
 					var varToken = Lex.Next();
 					if (varToken.Which != TokenType.Identifier || varToken.Which != TokenType.OpenBracket)
-						throw new UnexpectedTokenException(TokenType.Identifier, varToken, varToken.Range);
+						throw new UnexpectedToken(varToken.Range, TokenType.Identifier, varToken);
 
-					ParseExpr(ref newExpr, varToken, newScope);
+					ParseExpr(ref newExpr, varToken);
 
 					if (newExpr == null && firstToken.Which == TokenType.ConstDecl)
-						throw new SyntaxErrorException("No value given to initialize constant '{0}'",
-							varToken.Range, varToken.Text);
+						throw new SyntaxError(varToken.Range, 
+							"No value given to initialize constant '{0}'", varToken.Text);
 
 					if (newExpr is AssignExpr assign)
 					{
 						if (assign.Left == null || assign.Right == null)
-							throw new MalformedExprException(firstToken.Range);
+							throw new MalformedExprError(firstToken.Range);
 
 						//ReplaceIdentities
 						var left = GetIdentities(assign.Left);
@@ -415,15 +354,12 @@ namespace stilt
 				}
 				case TokenType.FuncDecl:
 				{
-					ParseExpr(ref newExpr, Lex.Next(), newScope);
+					ParseExpr(ref newExpr, Lex.Next());
 
 					if (newExpr is CallExpr funcCall && funcCall.Left is IdentityExpr id)
 					{
-						FuncSymbol funcSymbol = new(id.Identity.Name, Lex.Filepath);
-						newScope.AddSymbol(funcSymbol);
-						id.Identity = funcSymbol;
-
 						if (!ParseStmt(ref newStmt))
+							//change error
 							throw new Exception();
 
 						var arguments = GetIdentities(funcCall.Right).Select(e => 
@@ -431,27 +367,25 @@ namespace stilt
 							if (e.Identity is VarSymbol v)
 								return v;
 							else
-								throw new MalformedExprException(firstToken.Range);
+								throw new MalformedExprError(firstToken.Range);
 						}).ToList();
 
-						newStmt = new FuncDeclStmt()
+						newStmt = new FuncDeclStmt(id.Identity.Name, Lex.Filepath, newStmt)
 						{
 							Scope = newScope,
-							Name = funcSymbol,
-							Value = newStmt
 						};
-						funcSymbol.Declaration = newStmt as FuncDeclStmt;
-						funcSymbol.Arguments = arguments;
-						funcSymbol.Return = funcCall.Type;
+						newScope.AddSymbol((newStmt as FuncDeclStmt).Name);
+						id.Identity = (newStmt as FuncDeclStmt).Name;
 					}
 					else
-						throw new MalformedExprException(firstToken.Range);
+						throw new MalformedExprError(firstToken.Range);
 
 					break;
 				}
+				case TokenType.Elif:
 				case TokenType.If:
 				{
-					ParseExpr(ref newExpr, Lex.Next(), newScope);
+					ParseExpr(ref newExpr, Lex.Next());
 					ParseStmt(ref newStmt);
 
 					newStmt = new IfStmt()
@@ -461,27 +395,51 @@ namespace stilt
 						NextIf = newStmt,
 					};
 
+					if (firstToken.Which == TokenType.Elif)
+					{
+						if (Statements.Last?.Value is IfStmt ifStmt)
+						{
+							while (ifStmt?.NextIf is IfStmt)
+							{
+								ifStmt = ifStmt.NextIf as IfStmt;
+							}
+							ifStmt.NextElse = new IfStmt()
+							{
+								Scope = newScope,
+								Condition = newExpr,
+								NextIf = newStmt
+							};
+							return true;
+						}
+						else
+							throw new UnexpectedToken(firstToken.Range, firstToken);
+					}
+
 					break;
 				}
 				case TokenType.Else:
 				{
 					if (Statements.Last?.Value is IfStmt ifStmt)
 					{
+						while (ifStmt?.NextIf is IfStmt)
+						{
+							ifStmt = ifStmt.NextIf as IfStmt;
+						}
 						ParseStmt(ref newStmt);
 						ifStmt.NextElse = newStmt;
 						return true;
 					}
 					else
-						throw new UnexpectedTokenException(firstToken, firstToken.Range);
+						throw new UnexpectedToken(firstToken.Range, firstToken);
 				}
 				case TokenType.OpenCurlyBracket:
 				{
-					var innerStmt = new Parser(Lex, newScope);
-					innerStmt.ParseBranch();
+					Lex.Next();
+					var innerStmt = ParseBranch();
 					newStmt = new CompoundStmt()
 					{
 						Scope = newScope,
-						Statements = innerStmt.Statements
+						Statements = innerStmt
 					};
 
 					break;
@@ -489,13 +447,15 @@ namespace stilt
 				case null:
 				case TokenType.CloseCurlyBracket:
 				{
-					break;
+					return false;
 				}
 				default:
 				{
-					ParseExpr(ref newExpr, firstToken, newScope);
+					if (Compiler.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(firstToken.Which) != null)
+						throw new UnimplementedException(firstToken);
+					ParseExpr(ref newExpr, firstToken);
 					if (newExpr == null)
-						throw new SyntaxErrorException("Unknown statement '{0}'", firstToken.Range, firstToken.Text);
+						throw new SyntaxError(firstToken.Range, "Unknown statement '{0}'", firstToken.Text);
 					
 					newStmt = new ExpressionStmt()
 					{
@@ -516,13 +476,22 @@ namespace stilt
 				return false;
 		}
 
-		public void ParseBranch()
+		public LinkedList<Stmt> ParseBranch()
 		{
+			LinkedList<Stmt> innerStmts = [];
+
 			Stmt newStmt = null;
 			while (ParseStmt(ref newStmt))
 			{
-				Statements.AddLast(newStmt);
+				innerStmts.AddLast(newStmt);
 			}
+
+			return innerStmts;
+		}
+
+		public void ParseFile()
+		{
+			Statements = ParseBranch();
 		}
 
 		public Parser(Lexer lex)
