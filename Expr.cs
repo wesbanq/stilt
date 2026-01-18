@@ -38,19 +38,61 @@ namespace stilt.AST
 					}
 					default:
 					{
-						throw new Exception("This class doesn't support walking. (cripple ahh)");
+						throw new Exception("very bad things just happened");
 					}
 				}
 			}
 			sofar.Add(this);
 			return sofar;
 		}
+
+		public Expr? FindFirstNull()
+		{
+			return FindFirst(e =>
+			{
+				return e switch
+				{
+					TertiaryExpr t => t.Right == null || t.Middle == null || t.Left == null,
+					BinaryExpr b => b.Right == null || b.Left == null,
+					UnaryExpr u => u.Leaf == null,
+					_ => throw new Exception("something bad just happened"),
+				};
+			});
+		}
+
+		public Expr? FindFirstPrecedence(int precedence)
+		{
+			return FindFirst(e =>
+			{
+				return true;
+			});
+		}
+
+		public Expr? FindFirst(Predicate<Expr> predicate)
+		{
+			if (predicate.Invoke(this))
+				return this;
+
+			if (!this.Bracketed)
+				return null;
+
+			switch (this)
+			{
+				case TertiaryExpr t:
+					return (t.Right?.FindFirst(predicate) ?? t.Middle?.FindFirst(predicate)) ?? t.Left?.FindFirst(predicate);
+				case BinaryExpr b:
+					return b.Right?.FindFirst(predicate) ?? b.Left?.FindFirst(predicate);
+				case UnaryExpr u:
+					return u.Leaf?.FindFirst(predicate);
+				default:
+					throw new Exception("very bad things just happened");
+			}
+		}
 	}
 	
 	public class IdentitiyExpr : Expr 
 	{
-		[Required]
-		public Symbol Identity;
+		public required Symbol Identity;
 	}
 
 	public class AccessExpr : IdentitiyExpr
@@ -60,10 +102,8 @@ namespace stilt.AST
 
 	public abstract class Symbol 
 	{
-		[Required]
-		public string Name;
-		[Required]
-		public string Source;
+		[Required] public string Name;
+		[Required] public string Source;
 
 		public static bool operator ==(Symbol left, Symbol right)
 		{
@@ -72,7 +112,7 @@ namespace stilt.AST
 
 		public override bool Equals(object other)
 		{
-			return other is Symbol ? this == other : false;
+			return other is Symbol && this == other;
 		}
 
 		public override int GetHashCode()
@@ -107,16 +147,12 @@ namespace stilt.AST
 	{
 		public Expr? Left;
 		public Expr? Right;
-		//public Token Operation;
 	}
 
 	public abstract class UnaryExpr : Expr
 	{
 		public Expr? Leaf;
-		//public Token Operation;
 	}
-
-	//public class BracketedExpr : UnaryExpr { }
 
 	public class IncrementExpr : UnaryExpr { }
 	public class DecrementExpr : UnaryExpr { }
@@ -144,12 +180,17 @@ namespace stilt.AST
 	public class UnequalExpr : BinaryExpr { }
 	public class GreaterOrEqualExpr : BinaryExpr { }
 	public class LesserOrEqualExpr : BinaryExpr { }
-	public class AssignExpr : BinaryExpr { }
 	public class SwapExpr : BinaryExpr { }
 	public class CopyExpr : BinaryExpr { }
 	public class SignalConnectExpr : BinaryExpr { }
 	public class SignalEmitExpr : BinaryExpr { }
 	public class UpdateExpr : BinaryExpr { }
+	public class IndexExpr : BinaryExpr { }
+	//left should be identityexpr
+	public class AssignExpr : BinaryExpr 
+	{
+		public Expr? Operation;
+	}
 
 	public class ArrayExpr : Expr
 	{
@@ -158,15 +199,13 @@ namespace stilt.AST
 
 	public class CallExpr : Expr
 	{
-		[Required]
-		public FuncSymbol Function;
+		[Required] public FuncSymbol Function;
 		public List<Expr> Arguments = new();
 	}
 
 	public class LiteralExpr : Expr
 	{
-		[Required]
-		public object Value;
+		[Required] public object Value;
 	}
 
 

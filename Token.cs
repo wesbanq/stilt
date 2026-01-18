@@ -32,11 +32,8 @@ namespace stilt
 		}
 	}
 
-	public class BinaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e)
-	{ }
-
-	public class UnaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e)
-	{ }
+	public class BinaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
+	public class UnaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
 
 	public class Token
 	{
@@ -290,7 +287,8 @@ namespace stilt
 		[Symbol("""[a-zA-Z_]\w*""", true)]
 		Identifier,
 
-		[Symbol("""\[.*\s*\]""", true)]
+		//[Symbol("""\[.*\s*\]""", true)]
+		[Symbol("""\[.*\]""", true)]
 		Decorator,
 
 		//[Symbol("""#.*""", true)]

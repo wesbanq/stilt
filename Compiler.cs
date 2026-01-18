@@ -10,6 +10,13 @@ namespace stilt
 		public int End;
 		public int Length => End - Start;
 		public string Filename;
+
+		public string ToLineAndColumnF()
+		{
+			var (l, c) = ToLineAndColumn();
+			return $"line: {l}, char: {c}";
+		}
+
 		public (int line, int column) ToLineAndColumn()
 		{
 			int line = 1;
