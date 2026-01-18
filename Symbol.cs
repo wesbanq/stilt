@@ -76,7 +76,8 @@ namespace stilt.AST
 	public class TypeSymbol : Symbol
 	{
 		public TypeSymbol? Base;
-		public TypeSymbol? Inherits => Base == null ? _inherits : Base.Inherits;
+
+		public TypeSymbol? Inherits => Base is null ? _inherits : Base.Inherits;
 		private TypeSymbol? _inherits;
 
 		public int ArgumentCount = 0;
@@ -112,13 +113,25 @@ namespace stilt.AST
 			return this == other;
 		}
 
-		public TypeSymbol(string n, int argumentCount = 0, TypeSymbol? inherits = null)
+		public bool InheritsFrom(TypeSymbol from)
+		{
+			var currentType = this;
+			while (currentType != null)
+			{
+				if (currentType == from)
+					return true;
+				currentType = currentType.Inherits;
+			}
+			return false;
+		}
+
+		public TypeSymbol(string n, TypeSymbol? inherits = null, int argumentCount = 0)
 			: base(n)
 		{
 			ArgumentCount = argumentCount;
 			_inherits = inherits;
 		}
-		public TypeSymbol(string n, string s, int argumentCount = 0, TypeSymbol? inherits = null)
+		public TypeSymbol(string n, string s, TypeSymbol? inherits = null, int argumentCount = 0)
 			: base(n, s)
 		{
 			ArgumentCount = argumentCount;
