@@ -10,7 +10,7 @@ namespace stilt
 {
 	public class FileText
 	{
-		private string Text;
+		public string Text;
 		public string Filepath;
 
 		public string Slice(int start, int len) => Text.Substring(start, len);
@@ -54,7 +54,6 @@ namespace stilt
 				--newEnd;
 
 				return text.Substring(newStart, newEnd - newStart + 1).Split("\n");
-				//return [Text];
 			}
 		}
 
@@ -64,26 +63,17 @@ namespace stilt
 			return $"line: {l}, char: {c}";
 		}
 
-		public (int line, int column) StartLineAndColumn => ToLineAndColumn(Start, Filename);
-		public (int line, int column) EndLineAndColumn => ToLineAndColumn(End-1, Filename);
-		public static (int line, int column) ToLineAndColumn(int charAt, string Filename)
+		public (int line, int column) StartLineAndColumn => ToLineAndColumn(Start);
+		public (int line, int column) EndLineAndColumn => ToLineAndColumn(End-1);
+		public (int line, int column) ToLineAndColumn(int charAt)
 		{
-			if (!File.Exists(Filename))
-				throw new ArgumentException();
-
-			var text = File.ReadAllText(Filename).ReplaceLineEndings("\n");
 			var line = 1;
 			var column = 1;
 
 			for (int i = 0; i < charAt; ++i) 
 			{
 				++column;
-				//if (text[i] == '\r')
-				//{
-				//	text = text.Remove(i, 1);
-				//	//++charAt;
-				//}
-				if (text[i] == '\n')
+				if (_text.Text[i] == '\n')
 				{
 					++line;
 					column = 1;
@@ -154,7 +144,6 @@ namespace stilt
 		{
 			//precedence - longest > shortest : symbol > regex
 			//assume both ranges are sorted
-			//ts sucks pls fix
 			var finalList = ranges.Concat(priorityRanges);
 
 			foreach (Token token in finalList)
@@ -198,7 +187,6 @@ namespace stilt
 		{
 			if (Range != null)
 			{
-				//???????????????????????????????????
 				var (lineS, columnS) = Range.StartLineAndColumn;
 				var (lineE, columnE) = Range.EndLineAndColumn;
 				var text = Range.TextLines;
@@ -206,6 +194,7 @@ namespace stilt
 				var res = "";
 				for (int line = lineS; line <= lineE; ++line)
 				{
+					//TODO rewrite with StringBuilder
 					//magic numbers found via trial and error
 					var part1 = $"\n\t{line}| ";
 					var part2 = text[line-lineS];
@@ -246,32 +235,22 @@ namespace stilt
 			where T : Enum
 			where A : Attribute
 		{
-			try
-			{
-				return typeof(T)
-				.GetField(value.ToString())
-				?.GetCustomAttributes<A>()?.First();
-			}
-			catch (InvalidOperationException)
-			{
+			var a = typeof(T).GetField(value.ToString())?.GetCustomAttributes<A>()?.ToArray();
+			if (a is not null && a.Length > 0)
+				return a.First();
+			else
 				return null;
-			}
 		}
 
 		public static A[]? GetAttributesFromEnum<T, A>(T value)
 			where T : Enum
 			where A : Attribute
 		{
-			try
-			{
-				return typeof(T)
-				.GetField(value.ToString())
-				?.GetCustomAttributes<A>()?.ToArray();
-			}
-			catch (InvalidOperationException)
-			{
+			var a = typeof(T).GetField(value.ToString())?.GetCustomAttributes<A>()?.ToArray();
+			if (a is not null && a.Length > 0)
+				return a;
+			else
 				return null;
-			}
 		}
 
 		public static List<A?> GetAttributesFromType<A>(Type t)

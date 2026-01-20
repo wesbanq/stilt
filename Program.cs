@@ -15,6 +15,7 @@ namespace stilt
 
 		public static void PrintHelp()
 		{
+			//TODO dynamically generate help text for specific options/actions using reflection
 			Console.WriteLine("help text");
 		}
 
@@ -37,6 +38,7 @@ namespace stilt
 
 		void GiveValueTo(string opt, string value)
 		{
+			//TODO redo this entirely
 			//var fields = GetType().GetFields();
 			//var a = Array.Find(fields, f => f.Name == opt);
 			//if (a == null)
@@ -261,6 +263,14 @@ namespace stilt
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = null");
 						continue;
 					}
+					if (value is LinkedList<Stmt>)
+					{
+						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
+						foreach (var item in (value as LinkedList<Stmt>))
+						{
+							Dump(item, l + 1);
+						}
+					}
 					if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string || value is string[])
 					{
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
@@ -268,7 +278,7 @@ namespace stilt
 					}
 					else
 					{
-						if (!expanded && (value is (FileRange or TypeSymbol or FileText or Scope)))
+						if (!expanded && (value is (FileRange or TypeSymbol or FileText or Scope or List<Symbol>)))
 						{
 							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}: <HIDDEN>");
 							continue;
@@ -289,6 +299,14 @@ namespace stilt
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = null");
 						continue;
 					}
+					if (value is LinkedList<Stmt>)
+					{
+						foreach (var item in (value as LinkedList<Stmt>))
+						{
+							Dump(item, l + 1);
+						}
+						continue;
+					}
 					if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
 					{
 						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
@@ -296,7 +314,7 @@ namespace stilt
 					}
 					else
 					{
-						if (!expanded && (value is (FileRange or TypeSymbol or FileText or Scope)))
+						if (!expanded && (value is (FileRange or TypeSymbol or FileText or Scope or List<Symbol>)))
 						{
 							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}: <HIDDEN>");
 							continue;
@@ -371,23 +389,19 @@ namespace stilt
 				}
 				case ProgramArgs.Command.Tree:
 				{
-					//string g = File.ReadAllText(arg.MainCodeFilepath);
-					//FileRange a = new(0, 1, arg.MainCodeFilepath);
-					//FileRange b = new(17, 18, arg.MainCodeFilepath);
-					//FileRange c = new(20, 23, arg.MainCodeFilepath);
-					//throw new Exception();
-
 					var lex = new Lexer(arg);
 					var parse = new Parser(lex, arg);
-					parse.ParseFile();
 
-					foreach (var stmt in parse.Statements)
+					parse.ParseFile();
+					if (!parse.HasErrors)
 					{
-						Dump(stmt, expanded: arg.ExpandedDump);
+						foreach (var stmt in parse.Statements)
+						{
+							Dump(stmt, expanded: arg.ExpandedDump);
+						}
 					}
 
 					parse.WriteErrors();
-					//Console.WriteLine(parse.Statements.Count);
 
 					break;
 				}

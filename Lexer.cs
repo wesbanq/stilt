@@ -10,7 +10,7 @@ namespace stilt
 		public readonly string Filepath;
 		public FileText Text;
 
-		public Token? CurrentToken => Tokens.Count > CurrentPos ? Tokens[CurrentPos] : null;
+		public Token CurrentToken => Tokens.Count > CurrentPos ? Tokens[CurrentPos] : throw new Exception();
 
 		public static void GetSymbolAttribute(out List<string[]> symbols, out List<string[]> regex)
 		{
@@ -38,20 +38,21 @@ namespace stilt
 
 		public static string Preprocess(string code)
 		{
-			//changes to the preprocessor to keep the amount of lines
+			//preprocessor needs to keep the same amount of lines to make sure the error reports are at the correct positions
 			const string commentRegex1 = """#.*""";
 			const string commentRegex2 = """##(?:.*\s)*##""";
-			//const string commentRegex3 = """\n{2,}""";
-			const string commentRegex4 = """\r\n""";
+			const string commentRegex3 = """\r\n""";
+			const string removeTabs = """\t""";
+			const string newTab = "    ";
 			const string linebreakRegex = """ ?\\\s+""";
-			return Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(//Regex.Replace(
-				code + "\n", commentRegex4, "\n")
+			return Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(
+				code + "\n", commentRegex3, "\n")
+				, removeTabs, newTab)
 				, commentRegex2, m => { var lines = m.Value.Count(c => c == '\n'); return new String('\n', lines); })
 				, commentRegex1, "")
-				// will still ruin compilarion error reports, but its a crutch to deal with the lack of multiline expression support
-				// so ill remove once thats added
+				// will still ruin compilation error reports, temporary fix to deal with the lack of multiline expression support
+				// ill remove once this thats added
 				, linebreakRegex, " ");
-				//, commentRegex3, "\n");
 		}
 
 		protected List<Token> GetTokenMatches(string code, List<string[]> rules)
@@ -81,19 +82,20 @@ namespace stilt
 
 		public void SkipStmt()
 		{
-			//TODO actually skip
-			while (Next()?.Which switch { null or TokenType.StmtSeparator or TokenType.CloseCurlyBracket => false, _ => true}) { }
+			do { Next(); } while (CurrentToken.Which is not (TokenType.EOF or TokenType.StmtSeparator or TokenType.CloseCurlyBracket));
 		}
 
 		public Token Prev()
 		{
-			CurrentPos--;
+			if (CurrentPos > 0)
+				CurrentPos--;
 			return CurrentToken;
 		}
 
-		public Token? Next()
+		public Token Next()
 		{
-			CurrentPos++;
+			if (CurrentPos < Tokens.Count-1)
+				CurrentPos++;
 			return CurrentToken;
 		}
 
@@ -125,6 +127,12 @@ namespace stilt
 			)
 			.OrderBy(t => t.Range.Start)
 			.ThenBy(t => t.Range.End)];
+
+			Tokens.Add(new Token()
+			{
+				Which = TokenType.EOF,
+				Range = Text.EOF,
+			});
 		}
 	}
 }
