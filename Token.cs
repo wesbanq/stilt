@@ -39,12 +39,16 @@ namespace stilt
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
 	public class UnimplementedAttribute : Attribute { }
 
+	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
+	public class SpecifierAttribute : Attribute { }
+
 	public class Token
 	{
 		public TokenType Which;
 		public FileRange Range;
 
 		public bool IsUnimplemented => Compiler.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(Which) != null;
+		public bool IsSpecifier => Compiler.GetAttributeFromEnum<TokenType, SpecifierAttribute>(Which) != null;
 
 		public Expr[]? GetOperators()
 		{
@@ -65,7 +69,7 @@ namespace stilt
 
 	public enum TokenType
 	{
-		//None = 0,
+		EOF,
 
 		[UnaryOperator(2, typeof(PlusExpr))]
 		[BinaryOperator(4, typeof(AdditionExpr))]
@@ -128,13 +132,13 @@ namespace stilt
 		[Symbol("<=")]
 		LesserOrEqual,
 
-		[BinaryOperator(6, typeof(EqualExpr))]
+		[BinaryOperator(6, typeof(EqualityExpr))]
 		[Symbol("==")]
-		EqualTo,
+		Equals,
 
-		[BinaryOperator(6, typeof(UnequalExpr))]
+		[BinaryOperator(6, typeof(InequalityExpr))]
 		[Symbol("!=")]
-		NotEqualTo,
+		Unequals,
 
 		// Logical Operators
 		[UnaryOperator(2, typeof(BNotExpr))]
@@ -252,7 +256,6 @@ namespace stilt
 		[Symbol("new")]
 		New,
 
-		[Unimplemented]
 		[UnaryOperator(3, typeof(CloneExpr))]
 		[Symbol("copy")]
 		[Symbol("clone")]
@@ -271,8 +274,8 @@ namespace stilt
 		Access,
 
 		[BinaryOperator(1, typeof(AccessExpr))]
-		[Symbol(":")]
-		SelfAccess,
+		[Symbol("?.")]
+		NullAccess,
 
 		[Symbol("::")]
 		Type,
@@ -284,6 +287,16 @@ namespace stilt
 		[BinaryOperator(15, typeof(UpdateExpr))]
 		[Symbol("|>")]
 		Update,
+
+		[Unimplemented]
+		[BinaryOperator(15, typeof(OverwriteExpr))]
+		[Symbol("!>")]
+		Overwrite,
+
+		[Unimplemented]
+		[BinaryOperator(14, typeof(CompositionExpr))]
+		[Symbol(".>")]
+		Composition,
 
 		[Unimplemented]
 		[BinaryOperator(15, typeof(SwapExpr))]
@@ -316,9 +329,7 @@ namespace stilt
 		[Symbol("var")]
 		VarDecl,
 
-		[Symbol("const")]
-		ConstDecl,
-
+		//TODO decide which one of these words i like the most
 		[Symbol("prototype")]
 		[Symbol("type")]
 		[Symbol("class")]
@@ -329,6 +340,14 @@ namespace stilt
 		TraitDecl,
 
 		[Unimplemented]
+		[Symbol("impl")]
+		ImplDef,
+
+		[Unimplemented]
+		[Symbol("extend")]
+		ExtensionDef,
+
+		[Unimplemented]
 		[Symbol("target")]
 		TargetFuncDecl,
 
@@ -336,17 +355,33 @@ namespace stilt
 		[Symbol("signal")]
 		SignalDecl,
 
-		// Keywords
-		[Symbol("internal")]
-		Internal,
+		[Symbol("""execute *{(?:.*\s)*}""", true)]
+		[Symbol("""execute +as +.* *{(?:.*\s)*}""", true)]
+		ExecuteStmt,
 
+		// Keywords
+		[Specifier]
+		[Symbol("internal")]
+		InternalSpec,
+
+		[Specifier]
 		[Symbol("priv")]
 		[Symbol("private")]
 		PrivateSpec,
 
+		[Specifier]
 		[Symbol("pub")]
 		[Symbol("public")]
 		PublicSpec,
+
+		[Specifier]
+		[Unimplemented]
+		[Symbol("shared")]
+		SharedSpec,
+
+		[Specifier]
+		[Symbol("const")]
+		ConstSpec,
 
 		[TernaryOperator(12, typeof(ConditionalExpr))]
 		[Symbol("if")]
@@ -357,9 +392,6 @@ namespace stilt
 
 		[Symbol("elif")]
 		Elif,
-
-		[Symbol("""execute *{(?:.*\s*)*}""", true)]
-		ExecuteStmt,
 
 		[Symbol("return")]
 		Return,

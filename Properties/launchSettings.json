@@ -2,11 +2,11 @@
   "profiles": {
     "stilt": {
       "commandName": "Project",
-      "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example4.sl"
+      "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example4.stilt"
     },
     "throw": {
       "commandName": "Project",
-      "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example4.sl -t"
+      "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example4.stilt -t"
     }
   }
 }

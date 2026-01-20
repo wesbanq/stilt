@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace stilt.AST
 {
@@ -42,29 +43,57 @@ namespace stilt.AST
 		public Stmt? NextElse;
 	}
 
-	public class ExprStmt : Stmt
+	public class ExpressionStmt : Stmt
 	{
 		public required Expr Expression;
 	}
 
-	public class VarDeclStmt : Stmt
+	public class ExecuteStmt : Stmt
 	{
-		public required List<Symbol> Name;
-		public bool IsConst = false;
-		public Expr? Value;
+		public string[] Commands;
+		public VarSymbol? Executor;
+
+		public ExecuteStmt(Token token)
+		{
+			var tokenText = token.Range.Text.Trim();
+			var executorStr = Regex.Match(tokenText, """as +(.*) +{""").ToString().Trim();
+			var comStr = Regex.Match(tokenText, """{(?:.*\s)*}""").ToString()?.Split('\n');
+			for (var i = 0; i < comStr.Length; i++)
+			{
+				comStr[i] = comStr[i].Trim();
+			}
+
+			Commands = comStr;
+			if (executorStr.Length > 0)
+				Executor = executorStr != null ? new(executorStr) : null;
+		}
 	}
 
-	public class TypeDeclStmt : Stmt
-	{
-		public required Symbol Name;
-		public Stmt Value;
-	}
-
-	public class FuncDeclStmt : Stmt
+	public class DeclStmt : Stmt
 	{
 		public Symbol Name;
 		public Stmt Value;
+		public List<TokenType> Specifiers = [];
+	}
 
+	public class VarDeclStmt : DeclStmt
+	{
+		public new List<Symbol> Name;
+		public new Expr Value;
+		public bool IsConst = false;
+	}
+
+	public class TypeDeclStmt : DeclStmt
+	{
+		public TypeDeclStmt(string name, string source, Stmt v, TypeSymbol? inherits = null)
+		{
+			Value = v;
+			Name = new TypeSymbol(name, source, new(name, source, inherits));
+		}
+	}
+
+	public class FuncDeclStmt : DeclStmt
+	{
 		public FuncDeclStmt(string name, string source, Stmt v, TypeSymbol? args = null, TypeSymbol? returns = null)
 		{
 			Value = v;

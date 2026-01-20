@@ -318,12 +318,14 @@ namespace stilt.AST
 	public class BSRExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class GreaterExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class LesserExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class EqualExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class UnequalExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class EqualityExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class InequalityExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class GreaterOrEqualExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class LesserOrEqualExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class SwapExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class CopyExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class OverwriteExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class CompositionExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class SignalConnectExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class SignalEmitExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class UpdateExpr(int p, FileRange r) : BinaryExpr(p, r) { }
@@ -357,7 +359,6 @@ namespace stilt.AST
 		}
 	}
 
-	//new classes for byte, long, float, ...
 	public class NumLiteralExpr : LiteralExpr
 	{
 		[SetsRequiredMembers]

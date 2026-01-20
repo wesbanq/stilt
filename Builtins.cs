@@ -12,6 +12,9 @@ namespace stilt
 		public static readonly TypeSymbol Num = new("Num", "<BUILTIN>");
 		public static readonly TypeSymbol String = new("String", "<BUILTIN>");
 		public static readonly TypeSymbol UUID = new("UUID", "<BUILTIN>");
+		public static readonly TypeSymbol NBT = new("NBT", "<BUILTIN>");
+		public static readonly TypeSymbol Attribute = new("Attribute", "<BUILTIN>");
+		public static readonly TypeSymbol Tag = new("Tag", "<BUILTIN>");
 		public static readonly TypeSymbol Decorator = new("Decorator", "<BUILTIN>");
 		public static readonly TypeSymbol Array = new("Array", "<BUILTIN>", argumentCount: 1);
 		public static readonly TypeSymbol Table = new("Table", "<BUILTIN>", argumentCount: 1);
@@ -23,11 +26,11 @@ namespace stilt
 
 		public static readonly TypeSymbol Whole = new("Whole", "<BUILTIN>", Num);
 		public static readonly TypeSymbol Fractional = new("Fractional", "<BUILTIN>", Num);
-		public static readonly TypeSymbol Byte = new("Callable", "<BUILTIN>", Whole);
-		public static readonly TypeSymbol Short = new("Callable", "<BUILTIN>", Whole);
-		public static readonly TypeSymbol Int = new("Callable", "<BUILTIN>", Whole);
-		public static readonly TypeSymbol Long = new("Callable", "<BUILTIN>", Whole);
-		public static readonly TypeSymbol Float = new("Callable", "<BUILTIN>", Fractional);
-		public static readonly TypeSymbol Double = new("Callable", "<BUILTIN>", Fractional);
+		public static readonly TypeSymbol Byte = new("Byte", "<BUILTIN>", Whole);
+		public static readonly TypeSymbol Short = new("Short", "<BUILTIN>", Whole);
+		public static readonly TypeSymbol Int = new("Int", "<BUILTIN>", Whole);
+		public static readonly TypeSymbol Long = new("Long", "<BUILTIN>", Whole);
+		public static readonly TypeSymbol Float = new("Float", "<BUILTIN>", Fractional);
+		public static readonly TypeSymbol Double = new("Double", "<BUILTIN>", Fractional);
 	}
 }
