@@ -82,16 +82,16 @@ namespace stilt.AST
 			//reverse preorder walk
 			parent = supposedParent;
 
-			if (predicate.Invoke(this))
+			if (/**/Bracketed ||/**/predicate.Invoke(this))
 			{
 				return this;
 			}
 
 			//check root of bracketed expr but not its children
-			if (Bracketed)
-			{
-				return null;
-			}
+			//if (Bracketed)
+			//{
+			//	return null;
+			//}
 
 			if (this is IOperator spreadable)
 			{
@@ -300,6 +300,7 @@ namespace stilt.AST
 	public class CloneExpr(int p, FileRange r) : UnaryExpr(p, r) { }
 	public class LNotExpr(int p, FileRange r) : UnaryExpr(p, r) { }
 	public class BNotExpr(int p, FileRange r) : UnaryExpr(p, r) { }
+	public class AwaitExpr(int p, FileRange r) : UnaryExpr(p, r) { }
 
 	public class AdditionExpr(int p, FileRange r) : BinaryExpr(p, r) { }
 	public class SubtractionExpr(int p, FileRange r) : BinaryExpr(p, r) { }

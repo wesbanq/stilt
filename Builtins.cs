@@ -7,6 +7,8 @@ namespace stilt
 {
 	public static class Builtins
 	{
+		public static readonly Scope BuiltinScope;
+	
 		public static readonly TypeSymbol Any = new("Any", "<BUILTIN>");
 		public static readonly TypeSymbol None = new("None", "<BUILTIN>");
 		public static readonly TypeSymbol Num = new("Num", "<BUILTIN>");
@@ -32,5 +34,18 @@ namespace stilt
 		public static readonly TypeSymbol Long = new("Long", "<BUILTIN>", Whole);
 		public static readonly TypeSymbol Float = new("Float", "<BUILTIN>", Fractional);
 		public static readonly TypeSymbol Double = new("Double", "<BUILTIN>", Fractional);
+
+		static Builtins()
+		{
+			BuiltinScope = new();
+			foreach (var prop in typeof(Builtins).GetFields())
+			{
+				var value = prop.GetValue(null);
+				if (value is Symbol symbol)
+				{
+					BuiltinScope.AddSymbol(symbol);
+				}
+			}
+		}
 	}
 }

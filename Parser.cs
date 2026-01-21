@@ -10,7 +10,7 @@ namespace stilt
 	{
 		public Lexer Lex;
 		public LinkedList<Stmt> Statements = new();
-		public Scope RootScope = new();
+		public Scope RootScope = Builtins.BuiltinScope;
 		public ProgramArgs Args;
 
 		public List<CompilationMessage> CompilationIssues = [];
@@ -39,7 +39,7 @@ namespace stilt
 		public class UnimplementedError : SyntaxError
 		{
 			public UnimplementedError(Token token)
-				: base(token.Range, $"'{token.Which}' is not implemented yet.")
+				: base(token.Range, $"Use of unimlemented fearure: '{token.Which}'.")
 			{ }
 		}
 
@@ -110,6 +110,23 @@ namespace stilt
 				: base(pos, msg)
 			{
 				Severity = ErrorSeverity.Warning;
+			}
+		}
+
+		public class ShadowedSymbol : SyntaxWarning
+		{
+			public ShadowedSymbol(FileRange pos, Symbol symbol)
+				: base(pos, $"Shadowed symbol: '{symbol.Name}'.")
+			{ }
+		}
+
+		public class ShadowedBuiltinSymbol : SyntaxWarning
+		{
+			public ShadowedBuiltinSymbol(FileRange pos, Symbol symbol)
+				: base(pos, $"Shadowed builtin symbol: '{symbol.Name}'.\nWarning treated as error. Suppress it if you know what you're doing.")
+																								 //you cant suppress warnings yet
+			{
+				Severity = ErrorSeverity.Error;
 			}
 		}
 
@@ -562,6 +579,14 @@ namespace stilt
 				if (i.Identity.IsTemp)
 				{
 					i.Identity.Source = Lex.Filepath;
+					var foundSymbol = scope.FindSymbolByName(i.Identity.Name);
+					if (foundSymbol != null)
+					{
+						if (foundSymbol.IsBuiltin)
+							NewError(new ShadowedBuiltinSymbol(i.InnerRange, i.Identity));
+						else
+							NewError(new ShadowedSymbol(i.InnerRange, i.Identity));
+					}
 					scope.AddSymbol(i.Identity);
 					return i.Identity;
 				}
@@ -569,12 +594,12 @@ namespace stilt
 			})];
 		}
 
-		protected void ParseStmt(ref Stmt newStmt)
+		protected void ParseStmt(ref Stmt newStmt, Scope currentScope)
 		{
 			var firstToken = Lex.CurrentToken;
 
 			Expr newExpr = null;
-			Scope newScope = new(Statements.Last?.Value.Scope ?? RootScope);
+			//Scope newScope = new(Statements.Last?.Value.Scope ?? RootScope);
 			List<Symbol> newSymbols = [];
 			List<Token> specifiers = [];
 
@@ -603,7 +628,7 @@ namespace stilt
 						if (assign.Operation != null)
 							throw new SyntaxError(assign.InnerRange, "Cannot use self-assignment operators in variable definition");
 
-						newSymbols = AddTempSymToScope(assign.Left, newScope);
+						newSymbols = AddTempSymToScope(assign.Left, currentScope);
 					}
 					else
 					{
@@ -612,7 +637,7 @@ namespace stilt
 
 						else if (newExpr is CommaExpr || newExpr is IdentityExpr)
 						{
-							newSymbols = AddTempSymToScope(newExpr, newScope);
+							newSymbols = AddTempSymToScope(newExpr, currentScope);
 						}
 						else
 							throw new MalformedExprError(firstToken.Range);
@@ -620,7 +645,7 @@ namespace stilt
 
 					newStmt = new VarDeclStmt()
 					{
-						Scope = newScope,
+						Scope = currentScope,
 						Name = newSymbols,
 						IsConst = specifiers.Any(t => t.Which == TokenType.ConstSpec),
 						Value = newExpr,
@@ -636,7 +661,8 @@ namespace stilt
 
 					if (newExpr is CallExpr funcCall && funcCall.Left is IdentityExpr id)
 					{
-						ParseStmt(ref newStmt);
+						Scope newScope = new(currentScope);
+						ParseStmt(ref newStmt, newScope);
 						//if (!ParseStmt(ref newStmt))
 							//throw new UnexpectedToken(firstToken.Range, null);
 
@@ -650,9 +676,9 @@ namespace stilt
 
 						newStmt = new FuncDeclStmt(id.Identity.Name, Lex.Filepath, newStmt)
 						{
-							Scope = newScope,
+							Scope = currentScope,
 						};
-						newScope.AddSymbol((newStmt as FuncDeclStmt).Name);
+						currentScope.AddSymbol((newStmt as FuncDeclStmt).Name);
 						id.Identity = (newStmt as FuncDeclStmt).Name;
 					}
 					else
@@ -664,11 +690,12 @@ namespace stilt
 				case TokenType.Elif:
 				{
 					ParseExpr(ref newExpr, Lex.Next());
-					ParseStmt(ref newStmt);
+					Scope newScope = new(currentScope);
+					ParseStmt(ref newStmt, newScope);
 
 					newStmt = new IfStmt()
 					{
-						Scope = newScope,
+						Scope = currentScope,
 						Condition = newExpr,
 						NextIf = newStmt,
 					};
@@ -683,7 +710,7 @@ namespace stilt
 							}
 							ifStmt.NextElse = new IfStmt()
 							{
-								Scope = newScope,
+								Scope = currentScope,
 								Condition = newExpr,
 								NextIf = newStmt
 							};
@@ -703,7 +730,7 @@ namespace stilt
 						{
 							ifStmt = ifStmt.NextIf as IfStmt;
 						}
-						ParseStmt(ref newStmt);
+						ParseStmt(ref newStmt, currentScope);
 						ifStmt.NextElse = newStmt;
 						return;
 					}
@@ -714,7 +741,7 @@ namespace stilt
 				{
 					newStmt = new ExecuteStmt(firstToken)
 					{
-						Scope = newScope,
+						Scope = currentScope,
 					};
 					Lex.Next();
 
@@ -722,8 +749,10 @@ namespace stilt
 				}
 				case TokenType.OpenCurlyBracket:
 				{
+					Scope newScope = new(currentScope);
+
 					Lex.Next();
-					var innerStmt = ParseBranch();
+					var innerStmt = ParseBranch(newScope, false);
 					Lex.Next();
 
 					if (Lex.CurrentToken.Which is TokenType.EOF)
@@ -755,7 +784,7 @@ namespace stilt
 					
 					newStmt = new ExpressionStmt()
 					{
-						Scope = newScope,
+						Scope = currentScope,
 						Expression = newExpr,
 					};
 
@@ -772,7 +801,7 @@ namespace stilt
 			return;
 		}
 
-		protected LinkedList<Stmt> ParseBranch(bool topLevel = false)
+		protected LinkedList<Stmt> ParseBranch(Scope parentScope, bool topLevel)
 		{
 			var firstToken = Lex.CurrentToken;
 			LinkedList<Stmt> innerStmts = [];
@@ -782,7 +811,7 @@ namespace stilt
 				Stmt newStmt = null;
 				if (Args.Throw)
 				{
-					ParseStmt(ref newStmt);
+					ParseStmt(ref newStmt, parentScope);
 
 					if (newStmt != null)
 						innerStmts.AddLast(newStmt);
@@ -803,15 +832,12 @@ namespace stilt
 					}
 
 					Lex.Next();
-					//if (Lex.CurrentToken.Which is TokenType.StmtSeparator)
-					//	//two StmtSeparator tokens in a row should be impossible
-					//	throw new Exception();
 				}
 				else
 				{
 					try
 					{
-						ParseStmt(ref newStmt);
+						ParseStmt(ref newStmt, parentScope);
 					}
 					catch (SyntaxError se)
 					{
@@ -843,9 +869,6 @@ namespace stilt
 					}
 
 					Lex.Next();
-					//if (Lex.CurrentToken.Which is TokenType.StmtSeparator)
-					//	//two StmtSeparator tokens in a row should be impossible
-					//	throw new Exception();
 				}
 			}
 
@@ -854,7 +877,7 @@ namespace stilt
 
 		public void ParseFile()
 		{
-			Statements = ParseBranch(true);
+			Statements = ParseBranch(RootScope, true);
 		}
 
 		public Parser(Lexer lex, ProgramArgs args)
