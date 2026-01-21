@@ -31,11 +31,17 @@ namespace stilt.AST
 		}
 	}
 
+	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
+	public class NewScopeAttribute : Attribute
+	{ }
+
+	[NewScope]
 	public class CompoundStmt : Stmt
 	{
 		public required LinkedList<Stmt> Statements = new();
 	}
 
+	[NewScope]
 	public class IfStmt : Stmt
 	{
 		public required Expr Condition;
@@ -83,6 +89,7 @@ namespace stilt.AST
 		public bool IsConst = false;
 	}
 
+	[NewScope]
 	public class TypeDeclStmt : DeclStmt
 	{
 		public TypeDeclStmt(string name, string source, Stmt v, TypeSymbol? inherits = null)
@@ -92,6 +99,7 @@ namespace stilt.AST
 		}
 	}
 
+	[NewScope]
 	public class FuncDeclStmt : DeclStmt
 	{
 		public FuncDeclStmt(string name, string source, Stmt v, TypeSymbol? args = null, TypeSymbol? returns = null)

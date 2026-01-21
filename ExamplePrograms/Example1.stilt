@@ -1,17 +1,14 @@
 var a = 2
-var b
+var b := 6
+	 #^^ typed assignment
 
-var c: int = a +  \
-	b
+var c: int = a +  \ #linebreak
+				  b
 
 ##
-
-
-gdfgf
+multiline 
+comment
 ##
-
-
-
 
 print(c)\
 

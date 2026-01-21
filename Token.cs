@@ -277,7 +277,7 @@ namespace stilt
 		[Symbol("?.")]
 		NullAccess,
 
-		[Symbol("::")]
+		[Symbol(":")]
 		Type,
 
 		[Symbol("then")]
@@ -355,6 +355,10 @@ namespace stilt
 		[Symbol("signal")]
 		SignalDecl,
 
+		[Unimplemented]
+		[Symbol("select")]
+		SelectStmt,
+
 		[Symbol("""execute *{(?:.*\s)*}""", true)]
 		[Symbol("""execute +as +.* *{(?:.*\s)*}""", true)]
 		ExecuteStmt,
@@ -382,6 +386,11 @@ namespace stilt
 		[Specifier]
 		[Symbol("const")]
 		ConstSpec,
+
+		[Unimplemented]
+		[UnaryOperator(13, typeof(AwaitExpr))]
+		[Symbol("await")]
+		Await,
 
 		[TernaryOperator(12, typeof(ConditionalExpr))]
 		[Symbol("if")]

@@ -27,9 +27,9 @@ namespace stilt.AST
 			return null;
 		}
 
-		public void AddSymbol(Symbol? sym)
+		public void AddSymbol(Symbol sym)
 		{
-			if (sym != null && !IsInScope(sym)) Symbols.Add(sym);
+			Symbols.Add(sym);
 		}
 
 		public Scope(Scope parent)

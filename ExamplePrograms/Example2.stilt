@@ -3,7 +3,7 @@ var b = 4
 
 if a < b {
 	execute {
-		say dffdsf
+		say "Hello, world!"
 		tp @p ~2 ~1 ~2
 	}
 } else {

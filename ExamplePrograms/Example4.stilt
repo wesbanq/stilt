@@ -1,5 +1,6 @@
-var a = 5*(2+3)
+const shared var a = 5*(2+3)
 
-{var a = 2}
+	{
+	var Int = 2}
 
 var b = 2 +  4
