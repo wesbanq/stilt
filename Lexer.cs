@@ -40,7 +40,7 @@ namespace stilt
 		{
 			//preprocessor needs to keep the same amount of lines to make sure the error reports are at the correct positions
 			const string commentRegex1 = """#.*""";
-			const string commentRegex2 = """##(?:.*\s)*##""";
+			const string commentRegex2 = """##(?>.*\s)+?##""";
 			const string commentRegex3 = """\r\n""";
 			const string removeTabs = """\t""";
 			const string newTab = "    ";
@@ -64,15 +64,23 @@ namespace stilt
 				if (rules[i] == null || rules[i].Length == 0) continue;
 				foreach (var rule in rules[i])
 				{
-					var matchCollection = Regex.Matches(code, rule);
-					foreach (Match match in matchCollection)
+					var matchCollection = Regex.Matches(code, rule, RegexOptions.NonBacktracking);
+					try
 					{
-						var newToken = new Token();
+						foreach (Match match in matchCollection)
+						{
+							var newToken = new Token();
 
-						newToken.Range = new FileRange(match.Index, match.Index + match.Length, Filepath, Text);
-						newToken.Which = (TokenType)i;
+							newToken.Range = new FileRange(match.Index, match.Index + match.Length, Filepath, Text);
+							newToken.Which = (TokenType)i;
 
-						tokens.Add(newToken);
+							tokens.Add(newToken);
+						}
+					}
+					catch (RegexMatchTimeoutException e)
+					{
+						Console.WriteLine(e);
+						throw;
 					}
 				}
 			}

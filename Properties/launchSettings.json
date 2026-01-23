@@ -7,6 +7,10 @@
     "throw": {
       "commandName": "Project",
       "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example4.stilt -t"
+    },
+    "perf": {
+      "commandName": "Project",
+      "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example1.stilt -t"
     }
   }
 }

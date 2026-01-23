@@ -69,6 +69,7 @@ namespace stilt
 
 	public enum TokenType
 	{
+		//regex patterns used CANNOT have backtracking
 		EOF,
 
 		[UnaryOperator(2, typeof(PlusExpr))]
@@ -205,22 +206,22 @@ namespace stilt
 		[Symbol("""(?:\$|f)"(?:\\.|[^\\"])*"|(?:\$|f)'(?:\\.|[^\\'])*'""", true)]
 		FormatStringLiteral,
 
-		[Symbol("""[bsilfd]?(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)""", true)]
+		[Symbol("""(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[bsilfd]?""", true)]
 		DecimalNumericLiteral,
 
-		[Symbol("""[bsilfd]?\d[\d_]*""", true)]
+		[Symbol("""\d[\d_]*[bsilfd]?""", true)]
 		WholeNumericLiteral,
 
-		[Symbol("""[bsilfd]?0x[\da-fA-F]+[\da-fA-F_]*""", true)]
+		[Symbol("""0x[\da-fA-F]+[\da-fA-F_]*[bsilfd]?""", true)]
 		HexNumericLiteral,
 
-		[Symbol("""[bsilfd]?0o[0-8]+[0-8_]*""", true)]
+		[Symbol("""0o[0-8]+[0-8_]*[bsilfd]?""", true)]
 		OctalNumericLiteral,
 
-		[Symbol("""[bsilfd]?0b[01]+[01_]*""", true)]
+		[Symbol("""0b[01]+[01_]*[bsilfd]?""", true)]
 		ByteNumericLiteral,
 
-		[Symbol("""[bsilfd]?(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[e|E][-|+]\d+""", true)]
+		[Symbol("""(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[e|E][-|+]\d+[bsilfd]?""", true)]
 		ScientificNumericLiteral,
 
 		// Delimiters
@@ -359,8 +360,8 @@ namespace stilt
 		[Symbol("select")]
 		SelectStmt,
 
-		[Symbol("""execute *{(?:.*\s)*}""", true)]
-		[Symbol("""execute +as +.* *{(?:.*\s)*}""", true)]
+		[Symbol("""execute *{(?:.*\s)*?}""", true)]
+		[Symbol("""execute +as +.* *{(?:.*\s)*?}""", true)]
 		ExecuteStmt,
 
 		// Keywords

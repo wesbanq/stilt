@@ -82,16 +82,16 @@ namespace stilt.AST
 			//reverse preorder walk
 			parent = supposedParent;
 
-			if (/**/Bracketed ||/**/predicate.Invoke(this))
+			if (/*Bracketed ||/**/predicate.Invoke(this))
 			{
 				return this;
 			}
 
 			//check root of bracketed expr but not its children
-			//if (Bracketed)
-			//{
-			//	return null;
-			//}
+			if (Bracketed)
+			{
+				return null;
+			}
 
 			if (this is IOperator spreadable)
 			{
@@ -202,7 +202,7 @@ namespace stilt.AST
 			}
 			
 			//change error
-			throw new ArgumentException();
+			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
 
 		public BinaryExpr(int precedence, FileRange? range = null) { Precedence = precedence; InnerRange = range; }
