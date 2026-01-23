@@ -1,6 +1,7 @@
 ﻿using stilt.AST;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Globalization;
 using System.Numerics;
 using System.Text.RegularExpressions;
 
@@ -144,7 +145,7 @@ namespace stilt
 		{
 			if (rootExpr == null && newExpr != null)
 			{
-				if (newExpr is IOperator && newExpr is not UnaryExpr)
+				if (newExpr is IOperator && newExpr is not UnaryExpr && newExpr is not CommaExpr)
 					throw new Exception();
 				rootExpr = newExpr;
 				return;
@@ -331,8 +332,8 @@ namespace stilt
 			var tokenText = token.Range.Text.Replace("_", "");
 			var splitIndex = tokenText.IndexOfAny(['e', 'E']);
 
-			var mantissa = Convert.ToDouble(tokenText[..splitIndex]);
-			var exponent = Convert.ToInt64(tokenText[(splitIndex+1)..]);
+			var mantissa = Convert.ToDouble(tokenText[..splitIndex], CultureInfo.InvariantCulture);
+			var exponent = Convert.ToInt64(tokenText[(splitIndex+1)..], CultureInfo.InvariantCulture);
 
 			return mantissa * (Math.Pow(10, exponent));
 		}
@@ -367,8 +368,8 @@ namespace stilt
 				case TokenType.DecimalNumericLiteral:
 				case TokenType.ScientificNumericLiteral:
 				{
-					var tokenText = currentToken.Range.Text.Replace("_", "");
-					var literalType = tokenText[0] switch 
+					String tokenText = currentToken.Range.Text.Replace("_", "");
+					var literalType = tokenText.Last() switch 
 					{
 						'b' => Builtins.Byte,
 						's' => Builtins.Short,
@@ -376,7 +377,6 @@ namespace stilt
 						'l' => Builtins.Long,
 						'f' => Builtins.Float,
 						'd' => Builtins.Double,
-						//if it isnt a decimal number it can only be a whole number
 						_	=> currentToken.Which is (TokenType.DecimalNumericLiteral or TokenType.ScientificNumericLiteral) ? Builtins.Fractional : Builtins.Whole,
 					};
 					var numBase = currentToken.Which switch
@@ -389,7 +389,7 @@ namespace stilt
 
 					if (literalType != Builtins.Fractional && literalType != Builtins.Whole)
 					{
-						tokenText = tokenText.Substring(1);
+						tokenText = tokenText.SkipLast(1).ToString();
 					}
 					if (numBase != 10)
 					{
@@ -400,6 +400,8 @@ namespace stilt
 					{
 						if (currentToken.Which is TokenType.ScientificNumericLiteral)
 						{
+							//idk if these warnings are a good idea
+							//if a user wants a 5f theres probably a reason for it and they know the consequences
 							//if (literalType.InheritsFrom(Builtins.Whole))
 								//NewError(new SyntaxWarning(currentToken.Range, $"{literalType.Name} is not whole. Precision may be lost."));
 
@@ -411,13 +413,13 @@ namespace stilt
 							//if (currentToken.Which is not TokenType.DecimalNumericLiteral)
 								//NewError(new SyntaxWarning(currentToken.Range, $"{literalType.Name} is not whole. Precision may be lost."));	
 
-							var num = Convert.ToDouble(tokenText);
+							var num = Convert.ToDouble(tokenText, CultureInfo.InvariantCulture);
 							newExpr = new NumLiteralExpr(num, currentToken.Range, literalType);
 						}
 						else
 						{
-							if (currentToken.Which is TokenType.DecimalNumericLiteral)
-								NewError(new SyntaxWarning(currentToken.Range, $"{literalType.Name} is not fractional. Precision may be lost."));
+							//if (currentToken.Which is TokenType.DecimalNumericLiteral)
+							//	NewError(new SyntaxWarning(currentToken.Range, $"{literalType.Name} is not fractional. Numbers after the decimal may be lost."));
 
 							var num = Convert.ToInt64(tokenText, numBase);
 							newExpr = new NumLiteralExpr(num, currentToken.Range, literalType);
