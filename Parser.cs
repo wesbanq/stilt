@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using System.Numerics;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace stilt
 {
@@ -30,9 +31,9 @@ namespace stilt
 			{ }
 		}
 
-		public class RedeclaredSymbolError : SyntaxError
+		public class RedeclaredSymbol : SyntaxError
 		{	
-			public RedeclaredSymbolError(FileRange range, Symbol symbol)
+			public RedeclaredSymbol(FileRange range, Symbol symbol)
 				: base(range, $"Multiple definitions for symbol: '{symbol.Name}'")
 			{ }
 		}
@@ -60,10 +61,17 @@ namespace stilt
 			}
 		}
 
-		public class MalformedExprError : SyntaxError
+		public class MalformedExpr : SyntaxError
 		{
-			public MalformedExprError(FileRange start)
+			public MalformedExpr(FileRange start)
 				: base(start, "Malformed expression.")
+			{ }
+		}
+
+		public class MalformedDecl : SyntaxError
+		{
+			public MalformedDecl(FileRange start)
+				: base(start, "Malformed declaration.")
 			{ }
 		}
 
@@ -161,7 +169,7 @@ namespace stilt
 					rootExpr = newExpr;
 				}
 				else
-					throw new MalformedExprError(newExpr.FullRange);
+					throw new MalformedExpr(newExpr.FullRange);
 			}
 
 			if (newExpr is IOperator spreadable)
@@ -171,8 +179,8 @@ namespace stilt
 					spreadable.InsertChild(toReplace);
 					if (parent != null)
 					{
-						//with the old CommaExpr a tuple of 3 will evaluate to a type of ((Type, Type), Type) instead of (Type, Type, Type)
-						//there might be a better way to accomplishing this with BinaryExpr
+						//with the old CommaExpr foundSym tuple of 3 will evaluate to foundSym type of ((Type, Type), Type) instead of (Type, Type, Type)
+						//there might be foundSym better way to accomplishing this with BinaryExpr
 						//by looking if the child CommaExpr is bracketed during type eval
 						if (toReplace is CommaExpr rootComma && newExpr is CommaExpr)
 						{
@@ -200,10 +208,10 @@ namespace stilt
 						if (toReplace == null && newExpr.Bracketed)
 							sParent.InsertChild(newExpr);
 						else
-							throw new MalformedExprError(newExpr.FullRange);
+							throw new MalformedExpr(newExpr.FullRange);
 					}
 					else
-						throw new MalformedExprError(newExpr.FullRange);
+						throw new MalformedExpr(newExpr.FullRange);
 
 					return;
 				}
@@ -215,13 +223,14 @@ namespace stilt
 				if (parent is IOperator newSpreadable)
 					newSpreadable.InsertChild(newExpr);
 				else
-					throw new MalformedExprError(newExpr.FullRange);
+					throw new MalformedExpr(newExpr.FullRange);
 			}
 		}
 
-		protected List<Expr> CreateOperatorExpr(Token token)
+		protected List<Expr> CreateOperatorExpr<T>(Token token)
+			where T : OperatorAttribute
 		{
-			var operatorAttr = Compiler.GetAttributesFromEnum<TokenType, OperatorAttribute>(token.Which);
+			var operatorAttr = Compiler.GetAttributesFromEnum<TokenType, T>(token.Which);
 			if (operatorAttr == null)
 				throw new UnexpectedToken(token.Range, token);
 
@@ -236,8 +245,11 @@ namespace stilt
 			?? throw new Exception();
 		}
 
-		protected List<IdentityExpr> GetIdentities(Expr expr)
+		public static List<IdentityExpr> GetIdentities(Expr? expr)
 		{
+			if (expr is null)
+				return [];
+
 			switch (expr)
 			{
 				case CommaExpr op:
@@ -255,15 +267,18 @@ namespace stilt
 				}
 				default:
 				{
-					throw new MalformedExprError(expr.FullRange);
+					throw new MalformedExpr(expr.FullRange);
 				}
 			}
 		}
 
 		protected bool ExpectingOperator(ref Expr expr)
 		{
-			//a == null - expecting operand / a != null - expecting operator
-			return expr?.FindFirstPrecedenceOrNull(expr.Precedence, out var _) != null;
+			if (expr is null)
+				return false;
+			var a = expr.FindFirstNull(out var p);
+			//foundSym == null - expecting operand / foundSym != null - expecting operator
+			return a is null && p is null;
 		}
 
 		protected ArrayLiteralExpr ParseArrayLiteral(Token currentToken)
@@ -356,6 +371,7 @@ namespace stilt
 				}
 				case TokenType.StringLiteral:
 				//TODO format the string
+				case TokenType.RawStringLiteral:
 				case TokenType.FormatStringLiteral:
 				{
 					newExpr = new StringLiteralExpr(currentToken.Range.Text, currentToken.Range);
@@ -368,7 +384,7 @@ namespace stilt
 				case TokenType.DecimalNumericLiteral:
 				case TokenType.ScientificNumericLiteral:
 				{
-					String tokenText = currentToken.Range.Text.Replace("_", "");
+					var tokenText = currentToken.Range.Text.Replace("_", "");
 					var literalType = tokenText.Last() switch 
 					{
 						'b' => Builtins.Byte,
@@ -400,8 +416,8 @@ namespace stilt
 					{
 						if (currentToken.Which is TokenType.ScientificNumericLiteral)
 						{
-							//idk if these warnings are a good idea
-							//if a user wants a 5f theres probably a reason for it and they know the consequences
+							//idk if these warnings are foundSym good idea
+							//if foundSym user wants foundSym 5f theres probably foundSym reason for it and they know the consequences
 							//if (literalType.InheritsFrom(Builtins.Whole))
 								//NewError(new SyntaxWarning(currentToken.Range, $"{literalType.Name} is not whole. Precision may be lost."));
 
@@ -447,7 +463,7 @@ namespace stilt
 					{
 						if (newExpr == null && currentToken.Which == TokenType.OpenSquareBracket)
 							throw new SyntaxError(currentToken.Range, "No valid expression given as an index");
-						var opExpr = CreateOperatorExpr(currentToken).First() as BinaryExpr;
+						var opExpr = CreateOperatorExpr<BinaryOperatorAttribute>(currentToken).First() as BinaryExpr;
 						opExpr.Right = newExpr;
 						opExpr.Bracketed = true;
 						newExpr = opExpr;
@@ -462,7 +478,10 @@ namespace stilt
 				case TokenType.OpenCurlyBracket:
 				{
 					if (ExpectingOperator(ref rootExpr))
+					{
 						rootExpr?.Bracketed = true;
+						return;
+					}
 					else
 					{
 						newExpr = ParseTableLiteral(Lex.Next());
@@ -480,40 +499,24 @@ namespace stilt
 					rootExpr?.Bracketed = true;
 					return;
 				}
-				case TokenType.Type:
-				{
-					//TODO finish this part
-					var typeToken = Lex.Next()
-						?? throw new UnexpectedToken(currentToken.Range, TokenType.Identifier, null);
-					if (typeToken.Which != TokenType.Identifier && typeToken.Which != TokenType.OpenBracket)
-						throw new UnexpectedToken(typeToken.Range, TokenType.Identifier, typeToken);
+				//case TokenType.Type:
+				//{
+				//	var nextToken = Lex.Next();
+				//	if (nextToken.Which is TokenType.Assign)
+				//	{
+						
+				//	}
+				//	else
+				//		throw new UnexpectedToken();
 
-					var typeSymbol = new TypeSymbol(typeToken.Range.Text);
-					rootExpr.Type = typeSymbol;
-
-					if (rootExpr is IdentityExpr sym)
-					{
-						switch (sym.Identity)
-						{
-							case VarSymbol var:
-							{
-								if (var.Type == null || var.Type == Builtins.Any)
-									var.Type = typeSymbol;
-								else
-									//change error
-									throw new Exception();
-								break;
-							}
-						}
-					}
-
-					break;
-				}
+				//		break;
+				//}
 				default:
 				{
 					if (currentToken.IsUnimplemented)
 						throw new UnimplementedError(currentToken);
-					var possibleExprs = CreateOperatorExpr(currentToken)
+
+					var possibleExprs = CreateOperatorExpr<OperatorAttribute>(currentToken)
 						?? throw new UnexpectedToken(currentToken.Range, currentToken);
 
 					if (Lex.PeekNext().Which == TokenType.Assign)
@@ -528,7 +531,7 @@ namespace stilt
 						).ToList();
 
 						if (possibleExprs.Count != 1)
-							throw new MalformedExprError(currentToken.Range);
+							throw new MalformedExpr(currentToken.Range);
 
 						newExpr = possibleExprs.First();
 						break;
@@ -573,27 +576,73 @@ namespace stilt
 			ParseExpr(ref rootExpr, Lex.Next());
 		}
 
-		protected List<Symbol> AddTempSymToScope(Expr begin, Scope scope)
+		protected void AddToScope(List<Symbol> symbols, Scope scope)
 		{
-			var left = GetIdentities(begin);
-			return [.. left.Select(i =>
+			foreach (var sym in symbols)
 			{
-				if (i.Identity.IsTemp)
+				var foundSymbol = scope.FindSymbolByName(sym.Name);
+				if (foundSymbol is not null)
 				{
-					i.Identity.Source = Lex.Filepath;
-					var foundSymbol = scope.FindSymbolByName(i.Identity.Name);
-					if (foundSymbol != null)
-					{
-						if (foundSymbol.IsBuiltin)
-							NewError(new ShadowedBuiltinSymbol(i.InnerRange, i.Identity));
-						else
-							NewError(new ShadowedSymbol(i.InnerRange, i.Identity));
-					}
-					scope.AddSymbol(i.Identity);
-					return i.Identity;
+					if (foundSymbol.IsBuiltin)
+						throw new ShadowedBuiltinSymbol(sym.Declaration.FullRange, sym);
+					else if (scope.Symbols.Any(s => s.Name == sym.Name))
+						throw new RedeclaredSymbol(sym.Declaration.FullRange, sym);
+					else
+						NewError(new ShadowedSymbol(sym.Declaration.FullRange, sym));
 				}
-				else throw new Exception();
+				scope.AddSymbol(sym);
+			}
+		}
+
+		protected VarDeclStmt ParseVarDecl(Scope scope, bool isConst, Expr idExpr, Expr? valExpr = null)
+		{
+			if (valExpr is null && isConst)
+				throw new SyntaxError(idExpr.FullRange, $"No value given to initialize constant.");
+			
+			var ids = GetIdentities(idExpr) ?? throw new Exception();
+			List<Symbol> syms = [.. ids.Select(i =>
+			{
+				var sym = i.Identity;
+				sym.Source = Lex.Filepath;
+				return sym;
 			})];
+
+			VarDeclStmt decl = new()
+			{
+				Scope = scope,
+				IsConst = isConst,
+				Name = syms,
+				Value = valExpr,
+			};
+			foreach (var item in syms)
+			{
+				item.Declaration = decl;
+			}
+
+			return decl;
+		}
+
+		protected FuncDeclStmt ParseFuncDecl(Scope scope, Stmt innerStmt, Expr call)
+		{
+			Scope newScope = new(scope);
+
+			if (call is CallExpr callExpr && callExpr.Left is IdentityExpr id)
+			{
+				if (callExpr.Right is not (CommaExpr or IdentityExpr or null) || callExpr.Left is not IdentityExpr)
+					throw new MalformedDecl(callExpr.FullRange);
+
+				var arguments = GetIdentities(callExpr.Right).Select(e => e.Identity).ToList();
+
+				var decl = new FuncDeclStmt((callExpr.Left as IdentityExpr).Identity.Name, Lex.Filepath, innerStmt)
+				{
+					Scope = newScope,
+				};
+				id.Identity = decl.Name;
+			
+				return decl;
+			}
+			else
+				throw new MalformedDecl(call.FullRange);
 		}
 
 		protected void ParseStmt(ref Stmt newStmt, Scope currentScope)
@@ -601,91 +650,76 @@ namespace stilt
 			var firstToken = Lex.CurrentToken;
 
 			Expr newExpr = null;
-			//Scope newScope = new(Statements.Last?.Value.Scope ?? RootScope);
-			List<Symbol> newSymbols = [];
 			List<Token> specifiers = [];
 
-			while (firstToken.IsSpecifier == true)
+			while (firstToken.IsSpecifier)
 			{
+				if (specifiers.Any(t => t.Which == firstToken.Which))
+					throw new SyntaxError(firstToken.Range, "Duplicate specifiers.");
 				specifiers.Add(firstToken);
 				firstToken = Lex.Next();
 			}
 
 			switch (firstToken.Which)
 			{
+				//TODO switch away from using expressions for declarations
 				case TokenType.VarDecl:
 				{
 					var varToken = Lex.Next();
 					if (varToken.Which != TokenType.Identifier && varToken.Which != TokenType.OpenBracket)
 						throw new UnexpectedToken(varToken.Range, TokenType.Identifier, varToken);
+					var isConst = specifiers.Any(t => t.Which == TokenType.ConstSpec);
 
 					ParseExpr(ref newExpr, varToken);
 
-					if (newExpr is AssignExpr assign)
+					switch (newExpr)
 					{
-						//unnecessary?
-						if (assign.Left == null || assign.Right == null)
-							throw new MalformedExprError(firstToken.Range);
-
-						if (assign.Operation != null)
-							throw new SyntaxError(assign.InnerRange, "Cannot use self-assignment operators in variable definition");
-
-						newSymbols = AddTempSymToScope(assign.Left, currentScope);
-					}
-					else
-					{
-						if (specifiers.Any(t => t.Which == TokenType.ConstSpec))
-							throw new SyntaxError(varToken.Range, $"No value given to initialize constant '{varToken.Range.Text}'");
-
-						else if (newExpr is CommaExpr || newExpr is IdentityExpr)
+						case AssignExpr assign:
 						{
-							newSymbols = AddTempSymToScope(newExpr, currentScope);
-						}
-						else
-							throw new MalformedExprError(firstToken.Range);
-					}
+							if (assign.Operation is not (null or TokenType.Type))
+								throw new SyntaxError(assign.InnerRange, "Cannot use self-assignment operators in variable definition");
 
-					newStmt = new VarDeclStmt()
-					{
-						Scope = currentScope,
-						Name = newSymbols,
-						IsConst = specifiers.Any(t => t.Which == TokenType.ConstSpec),
-						Value = newExpr,
-					};
+							newStmt = ParseVarDecl(currentScope, isConst, assign.Left, assign.Right);
+							break;
+						}
+						case CommaExpr:
+						case IdentityExpr:
+						{
+							newStmt = ParseVarDecl(currentScope, isConst, newExpr);
+							break;
+						}
+						default:
+						{
+							throw new MalformedExpr(firstToken.Range);
+						}
+					}
+					AddToScope((newStmt as VarDeclStmt).Name, currentScope);
 
 					break;
 				}
 				case TokenType.FuncDecl:
-				//TODO emit warining when defining macro outside type
-				case TokenType.MacroDecl:
 				{
 					ParseExpr(ref newExpr, Lex.Next());
+					ParseStmt(ref newStmt, currentScope);
 
-					if (newExpr is CallExpr funcCall && funcCall.Left is IdentityExpr id)
-					{
-						Scope newScope = new(currentScope);
-						ParseStmt(ref newStmt, newScope);
-						//if (!ParseStmt(ref newStmt))
-							//throw new UnexpectedToken(firstToken.Range, null);
+					newStmt = ParseFuncDecl(currentScope, newStmt, newExpr);
+					AddToScope([(newStmt as FuncDeclStmt).Name], currentScope);
 
-						var arguments = GetIdentities(funcCall.Right).Select(e => 
-						{
-							if (e.Identity is VarSymbol v)
-								return v;
-							else
-								throw new MalformedExprError(firstToken.Range);
-						}).ToList();
-
-						newStmt = new FuncDeclStmt(id.Identity.Name, Lex.Filepath, newStmt)
-						{
-							Scope = currentScope,
-						};
-						currentScope.AddSymbol((newStmt as FuncDeclStmt).Name);
-						id.Identity = (newStmt as FuncDeclStmt).Name;
-					}
-					else
-						throw new MalformedExprError(firstToken.Range);
-
+					break;
+				}
+				//TODO
+				case TokenType.TypeDecl:
+				{
+					break;
+				}
+				case TokenType.Return:
+				{
+					ParseExpr(ref newExpr, Lex.Next());
+					newStmt = new ReturnStmt()
+					{ 
+						Scope = currentScope,
+						Value = newExpr,
+					};
 					break;
 				}
 				case TokenType.If:
@@ -774,6 +808,8 @@ namespace stilt
 				{
 					break;
 				}
+				case TokenType.MacroDecl:
+					throw new SyntaxError(firstToken.Range, "Macros can only be defined inside type declarations.");
 				default:
 				//ExpressionStmt
 				{
@@ -799,6 +835,8 @@ namespace stilt
 
 			if (Lex.CurrentToken.Which is not (TokenType.StmtSeparator or TokenType.CloseCurlyBracket or TokenType.EOF))
 				throw new RunonStatement(Lex.CurrentToken.Range);
+
+			newStmt?.InnerRange = firstToken.Range;
 
 			return;
 		}
