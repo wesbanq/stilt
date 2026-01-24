@@ -202,8 +202,11 @@ namespace stilt
 		[Symbol("""(?:"(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
 		StringLiteral,
 
+		[Symbol("""r"(?:\\.|[^\\"])*"|r'(?:\\.|[^\\'])*'""", true)]
+		RawStringLiteral,
+
 		[Unimplemented]
-		[Symbol("""(?:\$|f)"(?:\\.|[^\\"])*"|(?:\$|f)'(?:\\.|[^\\'])*'""", true)]
+		[Symbol("""f"(?:\\.|[^\\"])*"|f'(?:\\.|[^\\'])*'""", true)]
 		FormatStringLiteral,
 
 		[Symbol("""(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[bsilfd]?""", true)]

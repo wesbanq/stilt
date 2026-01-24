@@ -8,7 +8,7 @@ namespace stilt
 	public static class Builtins
 	{
 		public static readonly Scope BuiltinScope;
-	
+
 		public static readonly TypeSymbol Any = new("Any", "<BUILTIN>");
 		public static readonly TypeSymbol None = new("None", "<BUILTIN>");
 		public static readonly TypeSymbol Num = new("Num", "<BUILTIN>");
@@ -20,7 +20,7 @@ namespace stilt
 		public static readonly TypeSymbol Decorator = new("Decorator", "<BUILTIN>");
 		public static readonly TypeSymbol Array = new("Array", "<BUILTIN>", argumentCount: 1);
 		public static readonly TypeSymbol Table = new("Table", "<BUILTIN>", argumentCount: 1);
-		public static readonly TypeSymbol Callable = new("Callable", "<BUILTIN>", argumentCount: 1);
+		public static readonly TypeSymbol Callable = new("Callable", "<BUILTIN>", argumentCount: 2);
 
 		public static readonly VarSymbol IgnoreWarning = new("IgnoreWarning", "<BUILTIN>", Decorator);
 		public static readonly VarSymbol PrivateByDefault = new("PrivateByDefault", "<BUILTIN>", Decorator);

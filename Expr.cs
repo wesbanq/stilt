@@ -48,14 +48,14 @@ namespace stilt.AST
 				return FindFirstPrecedence(precedence, out parent);
 		}
 
-		protected Expr? FindFirstNull(out Expr? parent)
+		public Expr? FindFirstNull(out Expr? parent)
 		{
 			parent = null;
 			var firstNull = FindFirst(e =>
 			{
 				if (e is IOperator spreadable)
 				{
-					return spreadable.GetChildren().Any(c => c == null);
+					return !e.Bracketed && spreadable.GetChildren().Any(c => c == null);
 				}
 				return false;
 			}, out parent);
@@ -68,7 +68,7 @@ namespace stilt.AST
 			return null;
 		}
 
-		protected Expr? FindFirstPrecedence(int precedence, out Expr? parent)
+		public Expr? FindFirstPrecedence(int precedence, out Expr? parent)
 		{
 			parent = null;
 			return FindFirst(e =>
@@ -77,7 +77,7 @@ namespace stilt.AST
 			}, out parent);
 		}
 
-		protected Expr? FindFirst(Predicate<Expr> predicate, out Expr? parent, Expr? supposedParent = null)
+		public Expr? FindFirst(Predicate<Expr> predicate, out Expr? parent, Expr? supposedParent = null)
 		{
 			//reverse preorder walk
 			parent = supposedParent;

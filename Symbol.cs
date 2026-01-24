@@ -11,7 +11,6 @@ namespace stilt.AST
 		//TODO (IMPORTANT VERY)
 		//stop using filepaths
 		public string Source;
-		//actually use this VVVV
 		public Stmt? Declaration;
 
 		public bool IsBuiltin => Source.StartsWith("<BUILTIN>");
@@ -39,14 +38,6 @@ namespace stilt.AST
 			return (Name + Source).GetHashCode();
 		}
 
-		//public void Untemp(string src)
-		//{
-		//	if (IsTemp)
-		//	{
-		//		Source = src;
-		//	}
-		//}
-
 		protected Symbol(string name, string src = "<TEMP>")
 		{
 			Name = name;
@@ -69,7 +60,7 @@ namespace stilt.AST
 			Type = type;
 		}
 		public VarSymbol(string n)
-			: base(n) 
+			: base(n)
 		{ }
 	}
 

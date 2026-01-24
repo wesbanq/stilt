@@ -56,6 +56,7 @@ namespace stilt
 				}
 				case "MainCodeFilepath":
 				{
+					value = Path.GetFullPath(value);
 					if (!File.Exists(value))
 						throw new ArgumentParsingException("Given a non-existing file for option {0}: {1}", opt, value);
 					if (!value.EndsWith(".stilt"))
@@ -278,7 +279,7 @@ namespace stilt
 					}
 					else
 					{
-						if (!expanded && (value is (FileRange or TypeSymbol or FileText or Scope or List<Symbol>)))
+						if (!expanded && (value is (FileRange or FileText or Scope or List<Symbol> or Symbol)))
 						{
 							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}: <HIDDEN>");
 							continue;
@@ -314,7 +315,7 @@ namespace stilt
 					}
 					else
 					{
-						if (!expanded && (value is (FileRange or TypeSymbol or FileText or Scope or List<Symbol>)))
+						if (!expanded && (value is (FileRange or FileText or Scope or List<Symbol> or Symbol)))
 						{
 							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}: <HIDDEN>");
 							continue;
