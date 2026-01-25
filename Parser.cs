@@ -6,139 +6,20 @@ using System.Globalization;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
+using stilt.Errors;
 
 namespace stilt
 {
 	public class Parser
 	{
-		public Lexer Lex;
+		private Lexer Lex;
+
 		public LinkedList<Stmt> Statements = new();
 		public Scope RootScope = Builtins.BuiltinScope;
 		public ProgramArgs Args;
 
 		public List<CompilationMessage> CompilationIssues = [];
 		public bool HasErrors => CompilationIssues.Any(m => m.Severity >= ErrorSeverity.Error);
-
-		public class SyntaxError : CompilationMessage
-		{
-			public SyntaxError(FileRange range)
-				: base("Syntax error", range, ErrorSeverity.Error)
-			{ }
-			public SyntaxError(FileRange range, string msg)
-				: base(msg, range, ErrorSeverity.Error)
-			{ }
-			public SyntaxError(FileRange range, string msg, ErrorSeverity severity)
-				: base(msg, range, severity)
-			{ }
-		}
-
-		public class RedeclaredSymbol : SyntaxError
-		{	
-			public RedeclaredSymbol(FileRange range, Symbol symbol)
-				: base(range, $"Multiple definitions for symbol: '{symbol.Name}'")
-			{ }
-		}
-
-		public class UnimplementedError : SyntaxError
-		{
-			public UnimplementedError(Token token)
-				: base(token.Range, $"Use of unimlemented fearure: '{token.Which}'.")
-			{ }
-		}
-
-		public class UndefinedSymbolError : SyntaxError
-		{
-			public string Got;
-
-			public UndefinedSymbolError(FileRange pos, Symbol symbol)
-				: base(pos, $"Use of undefined symbol: '{symbol.Name}'")
-			{
-				Got = symbol.Name;
-			}
-			public UndefinedSymbolError(FileRange pos, string symbolName)
-				: base(pos, $"Use of undefined symbol: '{symbolName}'")
-			{
-				Got = symbolName;
-			}
-		}
-
-		public class MalformedExpr : SyntaxError
-		{
-			public MalformedExpr(FileRange start)
-				: base(start, "Malformed expression.")
-			{ }
-		}
-
-		public class MalformedDecl : SyntaxError
-		{
-			public MalformedDecl(FileRange start)
-				: base(start, "Malformed declaration.")
-			{ }
-		}
-
-		public class RunonStatement : SyntaxError
-		{
-			public RunonStatement(FileRange range) 
-				: base(range, "Statement is expected to end here, but it keeps going.")
-			{ }
-		}
-
-		public class UnexpectedToken : SyntaxError
-		{
-			public TokenType Expected;
-			public Token Got;
-
-			public UnexpectedToken(FileRange pos, TokenType expected, Token? got)
-				: base(pos, $"Unexpected token: '{got.Which}'.\nExpected: '{expected}'.")
-			{
-				Expected = expected;
-				Got = got;
-			}
-
-			public UnexpectedToken(FileRange? pos, Token got)
-				: base(pos, $"Unexpected token: '{Program.Escape(got.Which.ToString())}'.")
-			{ }
-		}
-
-		public class UnexpectedEOF : SyntaxError
-		{
-			public UnexpectedEOF(FileRange range)
-				: base(range, "File unexpectedly ended.")
-			{ }
-		}
-
-		public class UnexpectedSpecifier : SyntaxError
-		{
-			public UnexpectedSpecifier(FileRange pos)
-				: base(pos, $"Unexpected specifier '{pos.Text}'.")
-			{ }
-		}
-
-		public class SyntaxWarning : SyntaxError
-		{
-			public SyntaxWarning(FileRange pos, string msg)
-				: base(pos, msg)
-			{
-				Severity = ErrorSeverity.Warning;
-			}
-		}
-
-		public class ShadowedSymbol : SyntaxWarning
-		{
-			public ShadowedSymbol(FileRange pos, Symbol symbol)
-				: base(pos, $"Shadowed symbol: '{symbol.Name}'.")
-			{ }
-		}
-
-		public class ShadowedBuiltinSymbol : SyntaxWarning
-		{
-			public ShadowedBuiltinSymbol(FileRange pos, Symbol symbol)
-				: base(pos, $"Shadowed builtin symbol: '{symbol.Name}'.\nWarning treated as error. Suppress it if you know what you're doing.")
-																								 //you cant suppress warnings yet
-			{
-				Severity = ErrorSeverity.Error;
-			}
-		}
 
 		public void WriteErrors()
 		{
@@ -503,18 +384,6 @@ namespace stilt
 					rootExpr?.Bracketed = true;
 					return;
 				}
-				//case TokenType.Type:
-				//{
-				//	var nextToken = Lex.Next();
-				//	if (nextToken.Which is TokenType.Assign)
-				//	{
-						
-				//	}
-				//	else
-				//		throw new UnexpectedToken();
-
-				//		break;
-				//}
 				default:
 				{
 					if (currentToken.IsUnimplemented)
@@ -588,11 +457,14 @@ namespace stilt
 				if (foundSymbol is not null)
 				{
 					if (foundSymbol.IsBuiltin)
-						throw new ShadowedBuiltinSymbol(sym.Declaration.FullRange, sym);
+						NewError(new ShadowedBuiltinSymbol(sym.Identifier.Range, sym));
 					else if (scope.Symbols.Any(s => s.Name == sym.Name))
-						throw new RedeclaredSymbol(sym.Declaration.FullRange, sym);
+					{
+						NewError(new RedeclaredSymbol(sym.Identifier.Range, sym));
+						continue;
+					}
 					else
-						NewError(new ShadowedSymbol(sym.Declaration.FullRange, sym));
+						NewError(new ShadowedSymbol(sym.Identifier.Range, sym));
 				}
 				scope.AddSymbol(sym);
 			}
@@ -727,55 +599,42 @@ namespace stilt
 					break;
 				}
 				case TokenType.If:
-				case TokenType.Elif:
 				{
 					ParseExpr(ref newExpr, Lex.Next());
 					Scope newScope = new(currentScope);
 					ParseStmt(ref newStmt, newScope);
 
-					newStmt = new IfStmt()
+					var ifStmt = new IfStmt()
 					{
 						Scope = currentScope,
 						Condition = newExpr,
 						NextIf = newStmt,
 					};
 
-					if (firstToken.Which == TokenType.Elif)
+					var lastIf = ifStmt;
+					while (Lex.Next().Which == TokenType.Elif)
 					{
-						if (Statements.Last?.Value is IfStmt ifStmt)
+						ParseExpr(ref newExpr, Lex.Next());
+						ParseStmt(ref newStmt, newScope);
+						var newIf = new IfStmt()
 						{
-							while (ifStmt?.NextIf is IfStmt)
-							{
-								ifStmt = ifStmt.NextIf as IfStmt;
-							}
-							ifStmt.NextElse = new IfStmt()
-							{
-								Scope = currentScope,
-								Condition = newExpr,
-								NextIf = newStmt
-							};
-							return;
-						}
-						else
-							throw new UnexpectedToken(firstToken.Range, firstToken);
+							Scope = currentScope,
+							Condition = newExpr,
+							NextIf = newStmt,
+						};
+						lastIf.NextElse = newIf;
+						lastIf = newIf;
 					}
 
-					break;
-				}
-				case TokenType.Else:
-				{
-					if (Statements.Last?.Value is IfStmt ifStmt)
+					if (Lex.CurrentToken.Which == TokenType.Else)
 					{
-						while (ifStmt?.NextIf is IfStmt)
-						{
-							ifStmt = ifStmt.NextIf as IfStmt;
-						}
-						ParseStmt(ref newStmt, currentScope);
-						ifStmt.NextElse = newStmt;
-						return;
+						ParseStmt(ref newStmt, newScope);
+						lastIf.NextElse = newStmt;
 					}
-					else
-						throw new UnexpectedToken(firstToken.Range, firstToken);
+
+					newStmt = ifStmt;
+
+					break;
 				}
 				case TokenType.ExecuteStmt:
 				{

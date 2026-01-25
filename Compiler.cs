@@ -236,6 +236,9 @@ namespace stilt
 
 		public void Build()
 		{
+			Timers.Add(new("Compilation"));
+			Timers[0].StartTimer();
+
 			Console.WriteLine($"Currently building: {Args.MainCodeFilepath}");
 			
 			Lexer = new Lexer(Args);
@@ -243,6 +246,8 @@ namespace stilt
 
 			Timers.Add(new("Lexing", () => Lexer.Lex()));
 			Timers.Add(new("Parsing", () => Parser.ParseFile()));
+
+			Timers[0].StopTimer();
 		}
 
 		public Compiler(ProgramArgs args)
