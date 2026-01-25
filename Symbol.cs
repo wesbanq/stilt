@@ -12,6 +12,7 @@ namespace stilt.AST
 		//stop using filepaths
 		public string Source;
 		public Stmt? Declaration;
+		public Token? Identifier;
 
 		public bool IsBuiltin => Source.StartsWith("<BUILTIN>");
 		public bool IsTemp => Source.StartsWith("<TEMP>");

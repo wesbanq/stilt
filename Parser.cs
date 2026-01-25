@@ -1,6 +1,7 @@
 ﻿using stilt.AST;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Globalization;
 using System.Numerics;
 using System.Text.RegularExpressions;
@@ -230,7 +231,7 @@ namespace stilt
 		protected List<Expr> CreateOperatorExpr<T>(Token token)
 			where T : OperatorAttribute
 		{
-			var operatorAttr = Compiler.GetAttributesFromEnum<TokenType, T>(token.Which);
+			var operatorAttr = Program.GetAttributesFromEnum<TokenType, T>(token.Which);
 			if (operatorAttr == null)
 				throw new UnexpectedToken(token.Range, token);
 
@@ -374,7 +375,11 @@ namespace stilt
 				case TokenType.RawStringLiteral:
 				case TokenType.FormatStringLiteral:
 				{
-					newExpr = new StringLiteralExpr(currentToken.Range.Text, currentToken.Range);
+					newExpr = new StringLiteralExpr(currentToken.Which switch 
+					{
+						TokenType.RawStringLiteral => Program.Escape(currentToken.Range.Text.Replace("\\\"", "\"").Replace("\\\'", "\'")),
+						_ => currentToken.Range.Text,
+					}, currentToken.Range);
 					break;
 				}
 				case TokenType.HexNumericLiteral:
@@ -456,7 +461,6 @@ namespace stilt
 				case TokenType.OpenBracket:
 				case TokenType.OpenSquareBracket:
 				{
-					//empty brackets are equal to null
 					ParseExpr(ref newExpr, Lex.Next());
 
 					if (ExpectingOperator(ref rootExpr))
@@ -523,7 +527,7 @@ namespace stilt
 					{
 						Lex.Next();
 						possibleExprs = possibleExprs.Where(e => e is BinaryExpr).Select(e => 
-							new AssignExpr(Compiler.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign).Precedence, 
+							new AssignExpr(Program.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign).Precedence, 
 								currentToken.Range + Lex.CurrentToken.Range)
 							{
 								Operation = currentToken.Which

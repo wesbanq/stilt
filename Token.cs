@@ -47,12 +47,12 @@ namespace stilt
 		public TokenType Which;
 		public FileRange Range;
 
-		public bool IsUnimplemented => Compiler.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(Which) != null;
-		public bool IsSpecifier => Compiler.GetAttributeFromEnum<TokenType, SpecifierAttribute>(Which) != null;
+		public bool IsUnimplemented => Program.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(Which) != null;
+		public bool IsSpecifier => Program.GetAttributeFromEnum<TokenType, SpecifierAttribute>(Which) != null;
 
 		public Expr[]? GetOperators()
 		{
-			var l = Compiler.GetAttributesFromEnum<TokenType, OperatorAttribute>(Which);
+			var l = Program.GetAttributesFromEnum<TokenType, OperatorAttribute>(Which);
 			return l != null ? [.. l.Select(static a => 
 				Activator.CreateInstance(a.AssociatedExpr, a.Precedence) as Expr ?? throw new Exception())] : null;
 		}

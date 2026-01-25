@@ -1,10 +1,6 @@
-﻿using stilt.AST;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Diagnostics.Metrics;
+﻿using System.Diagnostics;
 using System.Reflection;
-using System.Text;
+using System.Timers;
 
 namespace stilt
 {
@@ -229,71 +225,29 @@ namespace stilt
 	public enum ErrorSeverity
 	{ Info, Warning, Error, Critical }
 
-	public static class Compiler
+	public class Compiler
 	{
-		public static A? GetAttributeFromEnum<T, A>(T value)
-			where T : Enum
-			where A : Attribute
+		public ProgramArgs Args;
+		//something to keep track of all compilation steps betwwen all files
+		//temporary solution for one file
+		public List<Timer> Timers = [];
+		public Parser Parser;
+		public Lexer Lexer;
+
+		public void Build()
 		{
-			var a = typeof(T).GetField(value.ToString())?.GetCustomAttributes<A>()?.ToArray();
-			if (a is not null && a.Length > 0)
-				return a.First();
-			else
-				return null;
+			Console.WriteLine($"Currently building: {Args.MainCodeFilepath}");
+			
+			Lexer = new Lexer(Args);
+			Parser = new Parser(Lexer, Args);
+
+			Timers.Add(new("Lexing", () => Lexer.Lex()));
+			Timers.Add(new("Parsing", () => Parser.ParseFile()));
 		}
 
-		public static A[]? GetAttributesFromEnum<T, A>(T value)
-			where T : Enum
-			where A : Attribute
+		public Compiler(ProgramArgs args)
 		{
-			var a = typeof(T).GetField(value.ToString())?.GetCustomAttributes<A>()?.ToArray();
-			if (a is not null && a.Length > 0)
-				return a;
-			else
-				return null;
-		}
-
-		public static List<A?> GetAttributesFromType<A>(Type t)
-			where A : Attribute
-		{
-			List<A?> res = [];
-			foreach (var field in t.GetFields())
-			{
-				res.Add(field.GetCustomAttribute<A>());
-			}
-			return res;
-		}
-
-		public static T GetEnumFromDescription<T, A>(string toFind)
-			where T : Enum
-			where A : Attribute, IDescriptable
-		{
-			foreach (var field in typeof(T).GetFields())
-			{
-				if (field.GetCustomAttribute<A>()?.Name == toFind)
-					return (T)field.GetValue(null);
-			}
-			//return default;
-			throw new ArgumentException($"Enum value with description '{toFind}' not found.");
-		}
-
-		public static A? GetAttrFromDescription<T, A>(string toFind)
-			where T : Enum
-			where A : Attribute, IDescriptable
-		{
-			foreach (var field in typeof(T).GetFields())
-			{
-				if (field.GetCustomAttribute<A>()?.Name == toFind)
-					return field.GetCustomAttribute<A>();
-			}
-			return null;
-		}
-
-		public static void Build(ProgramArgs args)
-		{
-			Console.WriteLine($"Currently building: {args.MainCodeFilepath}");
-			var lex = new Lexer(args);
-			// ...
+			Args = args;
 		}
 	}
 }
