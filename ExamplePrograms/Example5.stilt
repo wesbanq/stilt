@@ -1,0 +1,294 @@
+# Comprehensive compiler test file
+# Testing complex expressions, declarations, and control flow
+
+## Variable Declarations ##
+
+var a = 10
+var b = 20
+const c = 30
+
+var x = a + b * c - 5
+var y = (a + b) * (c - 5)
+var z = a ** 2 + b ** 2
+
+# Complex arithmetic with precedence
+var result1 = 5 * 6 % 4 + 3 - 6 + 6 * 3 / 2.5
+var result2 = (1 + 2) * 3 - 4 / 5 + 6 % 7
+var result3 = -a + b * -c / 2
+
+# Assignment operations
+var counter = 0
+counter = counter + 1
+var sum = a + b
+sum = sum * 2
+
+# Multiple variable declarations
+var (p, q) = 5 * 6 % 4 + 3 - 6 + 6 * 3 / 2.5
+var (m, n, o) = 10, 20, 30
+
+## Function Declarations ##
+
+func add(x, y) {
+	return x + y
+}
+
+func multiply(a, b, c) {
+	return a * b * c
+}
+
+func complexCalc(x, y, z) {
+	var temp = x * y + z
+	return temp / 2 + 1
+}
+
+func nestedFunc(a) {
+	func inner(b) {
+		return b * 2
+	}
+	return inner(a) + 5
+}
+
+## Complex Expressions ##
+
+# Nested function calls
+var funcResult = add(multiply(2, 3, 4), complexCalc(5, 6, 7))
+
+# Complex arithmetic expressions
+var expr1 = a + b * c / d() - e() * f()
+var expr2 = (a + b) * (c - d()) / (e() + f())
+var expr3 = a ** b ** c
+var expr4 = -a + -b * -c
+
+# Logical expressions
+var bool1 = a > b && c < d()
+var bool2 = a == b || c != d()
+var bool3 = !(a > b) && (c < d() || e() > f())
+var bool4 = a & b | c ^ d
+
+# Bitwise operations
+var bit1 = a << 2
+var bit2 = b >> 3
+var bit3 = a && b || c ^^ d
+
+# Comparison chains
+var comp1 = a < b < c
+var comp2 = x >= y <= z
+var comp3 = a == b != c
+
+# Ternary-like expressions (if as ternary operator)
+var ternary = if a > b { a } else { b }
+
+## Control Flow ##
+
+# Simple if statement
+if a > b {
+	var max = a
+}
+
+# If-else statement
+if a < b {
+	var min = a
+} else {
+	var min = b
+}
+
+# If-elif-else chain
+if a > 100 {
+	var category = "high"
+} elif a > 50 {
+	var category = "medium"
+} else {
+	var category = "low"
+}
+
+# Nested if statements
+if a > 0 {
+	if b > 0 {
+		var bothPositive = true
+	} else {
+		var bNegative = true
+	}
+} else {
+	var aNegative = true
+}
+
+# Complex conditionals
+if a > b && c < d() {
+	var result = a + c
+} elif a == b || c != d() {
+	var result = a * c
+} else {
+	var result = a - c
+}
+
+## Function Calls and Expressions ##
+
+# Simple function call
+var simpleCall = add(5, 10)
+
+# Nested function calls
+var nestedCall = add(multiply(2, 3), subtract(10, 5))
+
+# Function calls in expressions
+var exprWithCall = a + add(b, c) * multiply(d(), e(), f())
+
+# Function call with complex arguments
+var complexCall = complexCalc(
+	a + b,
+	c * d(),
+	e() - f()
+)
+
+## Array and Dictionary Literals ##
+
+var arr1 = [1, 2, 3, 4, 5]
+var arr2 = [a, b, c, add(1, 2), multiply(3, 4, 5)]
+var arr3 = [
+	a + b,
+	c * d(),
+	e() - f(),
+	complexCalc(1, 2, 3)
+]
+
+var dict1 = {
+	"key1": "value1",
+	"key2": "value2"
+}
+
+var dict2 = {
+	"a": a,
+	"b": b,
+	"sum": add(a, b),
+	"product": multiply(a, b, c)
+}
+
+## Operator Precedence Tests ##
+
+# Testing operator precedence
+var prec1 = a + b * c / d() - e()
+var prec2 = a * b + c / d() - e() % f()
+var prec3 = a ** b ** c
+var prec4 = a && b || c ^ d
+var prec5 = a < b && c > d() || e() == f()
+
+# Parenthesized expressions
+var paren1 = (a + b) * (c - d())
+var paren2 = ((a + b) * c) / (d() + e())
+var paren3 = (a ** (b + c)) / (d() - e())
+
+## Increment/Decrement ##
+
+var inc = 5
+inc++
+++inc
+var dec = 10
+dec--
+--dec
+
+## Complex Nested Expressions ##
+
+# Deeply nested expressions
+var deep1 = add(multiply(a, b, c), subtract(d(), e(), f()))
+var deep2 = (a + (b * (c - (d() / (e() + f())))))
+var deep3 = a > b && c < d() || e() == f() && g() != h()
+
+# Mixed operators
+var mixed1 = a + b * c / d() - e() % f() ** g()
+var mixed2 = a && b || c ^ d && e() | f()
+var mixed3 = a < b && c > d() || e() == f() && g() != h()
+
+## Scope and Nested Blocks ##
+
+{
+	var blockVar1 = 10
+	var blockVar2 = 20
+	var blockSum = blockVar1 + blockVar2
+	
+	if blockSum > 30 {
+		var large = true
+	}
+}
+
+{
+	var anotherBlock = 5
+	{
+		var nestedBlock = anotherBlock * 2
+	}
+}
+
+## Execute Statements ##
+
+execute {
+	say "Hello from complex test"
+	tp @p ~1 ~2 ~3
+}
+
+execute as player {
+	say "Executing as player"
+	give @s diamond 64
+}
+
+## Return Statements ##
+
+func returnSimple() {
+	return 42
+}
+
+func returnExpr() {
+	return a + b * c
+}
+
+func returnComplex() {
+	if a > b {
+		return a
+	} else {
+		return b
+	}
+}
+
+func returnNested() {
+	return add(multiply(2, 3), subtract(10, 5))
+}
+
+## Comments ##
+
+# Single line comment
+var commented = 5 # inline comment
+
+## Multiline comment
+This is a multiline comment
+that spans multiple lines
+##
+
+## Edge Cases ##
+
+# Empty function
+func empty() {
+}
+
+# Function with no return
+func noReturn(x) {
+	var temp = x * 2
+}
+
+# Complex assignment chain
+var chain1 = 1
+var chain2 = chain1 + 1
+var chain3 = chain2 * 2
+var chain4 = chain3 - chain1
+
+# Self-referential expressions
+var self1 = self1 + 1  # This might be an error, but tests the parser
+
+# Multiple statements on one line (if supported)
+var one = 1; var two = 2; var three = 3
+
+## Final Complex Expression ##
+
+var final = add(
+	multiply(a, b, c),
+	subtract(
+		complexCalc(x, y, z),
+		divide(multiply(2, 3), add(4, 5))
+	)
+) * (a > b ? 1 : -1) + (c < d() ? e() : f())

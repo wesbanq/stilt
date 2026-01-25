@@ -1,4 +1,4 @@
-﻿using stilt.AST;
+using stilt.AST;
 using System;
 using System.Collections.Generic;
 using System.Reflection;
@@ -24,17 +24,15 @@ namespace stilt
 	public class OperatorAttribute : Attribute
 	{
 		public int Precedence;
-		public Type AssociatedExpr;
 
-		public OperatorAttribute(int precedence, Type associatedExpr)
+		public OperatorAttribute(int precedence)
 		{
 			Precedence = precedence;
-			AssociatedExpr = associatedExpr;
 		}
 	}
-	public class UnaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
-	public class BinaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
-	public class TernaryOperatorAttribute(int p, Type e) : OperatorAttribute(p, e) { }
+	public class UnaryOperatorAttribute(int p) : OperatorAttribute(p) { }
+	public class BinaryOperatorAttribute(int p) : OperatorAttribute(p) { }
+	public class TernaryOperatorAttribute(int p) : OperatorAttribute(p) { }
 
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
 	public class UnimplementedAttribute : Attribute { }
@@ -50,18 +48,9 @@ namespace stilt
 		public bool IsUnimplemented => Program.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(Which) != null;
 		public bool IsSpecifier => Program.GetAttributeFromEnum<TokenType, SpecifierAttribute>(Which) != null;
 
-		public Expr[]? GetOperators()
-		{
-			var l = Program.GetAttributesFromEnum<TokenType, OperatorAttribute>(Which);
-			return l != null ? [.. l.Select(static a => 
-				Activator.CreateInstance(a.AssociatedExpr, a.Precedence) as Expr ?? throw new Exception())] : null;
-		}
-
 		public static string[] GetRulesFromType(TokenType t)
 		{
 			var types = typeof(TokenType).GetFields();
-
-			Activator.CreateInstance(typeof(AdditionExpr), 0);
 			return types[(int)t + 1].GetCustomAttributes<SymbolAttribute>().Select(o => o.Symbol).ToArray();
 		}
 
@@ -72,129 +61,131 @@ namespace stilt
 		//regex patterns used CANNOT have backtracking
 		EOF,
 
-		[UnaryOperator(2, typeof(PlusExpr))]
-		[BinaryOperator(4, typeof(AdditionExpr))]
+		[UnaryOperator(2)]
+		[BinaryOperator(4)]
 		[Symbol("+")]
 		Plus,
 
-		[UnaryOperator(2, typeof(NegationExpr))]
-		[BinaryOperator(4, typeof(SubtractionExpr))]
+		[UnaryOperator(2)]
+		[BinaryOperator(4)]
 		[Symbol("-")]
 		Minus,
 
-		[BinaryOperator(3, typeof(DivisionExpr))]
+		[BinaryOperator(3)]
 		[Symbol("/")]
 		Divide,
 
-		[BinaryOperator(3, typeof(MultiplicationExpr))]
+		[BinaryOperator(3)]
 		[Symbol("*")]
 		Star,
 
-		[BinaryOperator(3, typeof(ModuloExpr))]
+		[BinaryOperator(3)]
 		[Symbol("%")]
 		Modulo,
 
-		[BinaryOperator(1, typeof(ExponentExpr))]
+		[BinaryOperator(1)]
 		[Symbol("**")]
 		Exponent,
 
 		[Unimplemented]
-		[BinaryOperator(5, typeof(RangeExpr))]
+		[BinaryOperator(5)]
 		[Symbol("..")]
 		Range,
 
-		[BinaryOperator(1, typeof(IncrementExpr))]
+		[UnaryOperator(1)]
+		[BinaryOperator(1)]
 		[Symbol("++")]
 		Increment,
 
-		[BinaryOperator(1, typeof(DecrementExpr))]
+		[UnaryOperator(1)]
+		[BinaryOperator(1)]
 		[Symbol("--")]
 		Decrement,
 
 		// Assignment Operators
-		[BinaryOperator(15, typeof(AssignExpr))]
+		[BinaryOperator(15)]
 		[Symbol("=")]
 		Assign,
 
 		// Comparison Operators
-		[BinaryOperator(6, typeof(GreaterExpr))]
+		[BinaryOperator(6)]
 		[Symbol(">")]
 		Greater,
 
-		[BinaryOperator(6, typeof(LesserExpr))]
+		[BinaryOperator(6)]
 		[Symbol("<")]
 		Lesser,
 
-		[BinaryOperator(6, typeof(GreaterOrEqualExpr))]
+		[BinaryOperator(6)]
 		[Symbol(">=")]
 		GreaterOrEqual,
 
-		[BinaryOperator(6, typeof(LesserOrEqualExpr))]
+		[BinaryOperator(6)]
 		[Symbol("<=")]
 		LesserOrEqual,
 
-		[BinaryOperator(6, typeof(EqualityExpr))]
+		[BinaryOperator(6)]
 		[Symbol("==")]
 		Equals,
 
-		[BinaryOperator(6, typeof(InequalityExpr))]
+		[BinaryOperator(6)]
 		[Symbol("!=")]
 		Unequals,
 
 		// Logical Operators
-		[UnaryOperator(2, typeof(BNotExpr))]
+		[UnaryOperator(2)]
 		[Symbol("!")]
 		[Symbol("not")]
 		LogicalNot,
 
-		[BinaryOperator(2, typeof(LOrExpr))]
+		[BinaryOperator(2)]
 		[Symbol("|")]
 		[Symbol("or")]
 		LogicalOr,
 
-		[BinaryOperator(2, typeof(LAndExpr))]
+		[BinaryOperator(2)]
 		[Symbol("&")]
 		[Symbol("and")]
 		LogicalAnd,
 
-		[BinaryOperator(2, typeof(LXorExpr))]
+		[BinaryOperator(2)]
 		[Symbol("^")]
 		[Symbol("xor")]
 		LogicalXor,
 
 		// Bitwise Operators
-		[UnaryOperator(8, typeof(BNotExpr))]
+		[UnaryOperator(8)]
 		[Symbol("!!")]
 		BitwiseNot,
 
-		[BinaryOperator(8, typeof(BAndExpr))]
+		[BinaryOperator(8)]
 		[Symbol("&&")]
 		BitwiseAnd,
 
-		[BinaryOperator(8, typeof(BOrExpr))]
+		[BinaryOperator(8)]
 		[Symbol("||")]
 		BitwiseOr,
 
-		[BinaryOperator(8, typeof(BXorExpr))]
+		[BinaryOperator(8)]
 		[Symbol("^^")]
 		BitwiseXor,
 
-		[BinaryOperator(5, typeof(BSLExpr))]
+		[BinaryOperator(5)]
 		[Symbol("<<")]
 		BitShiftLeft,
 
-		[BinaryOperator(5, typeof(BSRExpr))]
+		[BinaryOperator(5)]
 		[Symbol(">>")]
 		BitShiftRight,
 
 		// Signal Operators
 		[Unimplemented]
-		[BinaryOperator(15, typeof(SignalConnectExpr))]
+		[BinaryOperator(15)]
 		[Symbol("->")]
 		ConnectSignal,
 
 		[Unimplemented]
-		[BinaryOperator(15, typeof(SignalEmitExpr))]
+		[BinaryOperator(15)]
 		[Symbol("<-")]
 		EmitSignal,
 
@@ -231,7 +222,7 @@ namespace stilt
 		[Symbol("""[\r\n;]+""", true)]
 		StmtSeparator,
 
-		[BinaryOperator(14, typeof(CommaExpr))]
+		[BinaryOperator(14)]
 		[Symbol(",")]
 		Comma,
 
@@ -241,14 +232,14 @@ namespace stilt
 		[Symbol("}")]
 		CloseCurlyBracket,
 
-		[BinaryOperator(1, typeof(IndexExpr))]
+		[BinaryOperator(1)]
 		[Symbol("[")]
 		OpenSquareBracket,
 
 		[Symbol("]")]
 		CloseSquareBracket,
 
-		[BinaryOperator(1, typeof(CallExpr))]
+		[BinaryOperator(1)]
 		[Symbol("(")]
 		OpenBracket,
 
@@ -256,11 +247,11 @@ namespace stilt
 		CloseBracket,
 
 		// Special
-		[UnaryOperator(3, typeof(NewExpr))]
+		[UnaryOperator(3)]
 		[Symbol("new")]
 		New,
 
-		[UnaryOperator(3, typeof(CloneExpr))]
+		[UnaryOperator(3)]
 		[Symbol("copy")]
 		[Symbol("clone")]
 		Clone,
@@ -273,11 +264,11 @@ namespace stilt
 		[Symbol("$")]
 		Server,
 
-		[BinaryOperator(1, typeof(AccessExpr))]
+		[BinaryOperator(1)]
 		[Symbol(".")]
 		Access,
 
-		[BinaryOperator(1, typeof(AccessExpr))]
+		[BinaryOperator(1)]
 		[Symbol("?.")]
 		NullAccess,
 
@@ -288,27 +279,27 @@ namespace stilt
 		Conditional,
 
 		[Unimplemented]
-		[BinaryOperator(15, typeof(UpdateExpr))]
+		[BinaryOperator(15)]
 		[Symbol("|>")]
 		Update,
 
 		[Unimplemented]
-		[BinaryOperator(15, typeof(OverwriteExpr))]
+		[BinaryOperator(15)]
 		[Symbol("!>")]
 		Overwrite,
 
 		[Unimplemented]
-		[BinaryOperator(14, typeof(CompositionExpr))]
+		[BinaryOperator(14)]
 		[Symbol(".>")]
 		Composition,
 
 		[Unimplemented]
-		[BinaryOperator(15, typeof(SwapExpr))]
+		[BinaryOperator(15)]
 		[Symbol("><")]
 		SwapValue,
 
 		[Unimplemented]
-		[BinaryOperator(15, typeof(CopyExpr))]
+		[BinaryOperator(15)]
 		[Symbol("=>")]
 		CopyTo,
 
@@ -392,11 +383,11 @@ namespace stilt
 		ConstSpec,
 
 		[Unimplemented]
-		[UnaryOperator(13, typeof(AwaitExpr))]
+		[UnaryOperator(13)]
 		[Symbol("await")]
 		Await,
 
-		[TernaryOperator(12, typeof(ConditionalExpr))]
+		[TernaryOperator(12)]
 		[Symbol("if")]
 		If,
 

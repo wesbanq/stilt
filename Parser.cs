@@ -1,4 +1,4 @@
-﻿using stilt.AST;
+using stilt.AST;
 using System;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics;
@@ -119,12 +119,23 @@ namespace stilt
 			List<Expr> exprs = [];
 			foreach (var op in operatorAttr)
 			{
-				exprs.Add(Activator.CreateInstance(op.AssociatedExpr, op.Precedence, token.Range) as Expr);
+				Expr expr = op switch
+				{
+					UnaryOperatorAttribute => new UnaryExpr(op.Precedence, token.Range, token),
+					BinaryOperatorAttribute when token.Which == TokenType.OpenBracket => 
+						new CallExpr(op.Precedence, token.Range, token),
+					BinaryOperatorAttribute when token.Which == TokenType.Comma => 
+						new CommaExpr(op.Precedence, token.Range, token),
+					BinaryOperatorAttribute when token.Which == TokenType.Assign => 
+						new AssignExpr(op.Precedence, token.Range, token),
+					BinaryOperatorAttribute => new BinaryExpr(op.Precedence, token.Range, token),
+					TernaryOperatorAttribute => new TernaryExpr(op.Precedence, token.Range, token),
+					_ => throw new UnexpectedToken(token.Range, token)
+				};
+				exprs.Add(expr);
 			}
 
-			return exprs
-			//change error
-			?? throw new Exception();
+			return exprs;
 		}
 
 		public static List<IdentityExpr> GetIdentities(Expr? expr)
@@ -391,22 +402,23 @@ namespace stilt
 
 					var possibleExprs = CreateOperatorExpr<OperatorAttribute>(currentToken)
 						?? throw new UnexpectedToken(currentToken.Range, currentToken);
-
 					if (Lex.PeekNext().Which == TokenType.Assign)
 					{
 						Lex.Next();
-						possibleExprs = possibleExprs.Where(e => e is BinaryExpr).Select(e => 
-							new AssignExpr(Program.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign).Precedence, 
-								currentToken.Range + Lex.CurrentToken.Range)
-							{
-								Operation = currentToken.Which
-							} as Expr
-						).ToList();
+						var assignToken = new Token { Which = TokenType.Assign, Range = currentToken.Range + Lex.CurrentToken.Range };
+						var assignExpr = new AssignExpr(
+							Program.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign).Precedence,
+							assignToken.Range,
+							assignToken
+						)
+						{
+							Operation = currentToken.Which
+						};
 
 						if (possibleExprs.Count != 1)
 							throw new MalformedExpr(currentToken.Range);
 
-						newExpr = possibleExprs.First();
+						newExpr = assignExpr;
 						break;
 					}
 
@@ -440,7 +452,6 @@ namespace stilt
 					break;
 				}
 				//TODO
-				//new parsing alg
 				//remove recursion from ParseExpr
 				//multiline exprs
 			}

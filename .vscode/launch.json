@@ -10,7 +10,7 @@
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/bin/Debug/net10.0/stilt.dll",
-            "args": ["ExamplePrograms/Example4.stilt"],
+            "args": ["tree", "-i", "ExamplePrograms/Example4.stilt"],
             "cwd": "${workspaceFolder}",
             "console": "internalConsole",
             "stopAtEntry": false
