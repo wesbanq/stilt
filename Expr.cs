@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text;
+using stilt;
 
 namespace stilt.AST
 {
@@ -130,9 +131,22 @@ namespace stilt.AST
 		public Symbol Identity;
 	}
 
-	public abstract class UnaryExpr : Expr, IOperator
+	public abstract class OperationExpr : Expr
+	{
+		public Token? Operator;
+
+		protected OperationExpr(int precedence, FileRange? range = null, Token? op = null)
+		{
+			Precedence = precedence;
+			InnerRange = range;
+			Operator = op;
+		}
+	}
+
+	public class UnaryExpr : OperationExpr, IOperator
 	{
 		public Expr? Leaf;
+		public bool Prefix = true; // For increment/decrement operators
 
 		public Expr?[] GetChildren()
 		{
@@ -160,10 +174,12 @@ namespace stilt.AST
 			throw new ArgumentException();
 		}
 
-		public UnaryExpr(int precedence, FileRange? range = null) { Precedence = precedence; InnerRange = range; }
+		public UnaryExpr(int p, FileRange? r = null, Token? o = null) 
+			: base(p, r, o)
+		{ }
 	}
 
-	public abstract class BinaryExpr : Expr, IOperator
+	public class BinaryExpr : OperationExpr, IOperator
 	{
 		public Expr? Left;
 		public Expr? Right;
@@ -205,10 +221,12 @@ namespace stilt.AST
 			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
 
-		public BinaryExpr(int precedence, FileRange? range = null) { Precedence = precedence; InnerRange = range; }
+		public BinaryExpr(int p, FileRange? r = null, Token? o = null) 
+			: base(p, r, o)
+		{ }
 	}
 
-	public abstract class TernaryExpr : Expr, IOperator
+	public class TernaryExpr : OperationExpr, IOperator
 	{
 		public Expr? Left;
 		public Expr? Middle;
@@ -262,10 +280,12 @@ namespace stilt.AST
 			throw new ArgumentException();
 		}
 
-		public TernaryExpr(int precedence, FileRange? range = null) { Precedence = precedence; InnerRange = range; }
+		public TernaryExpr(int p, FileRange? r = null, Token? o = null) 
+			: base(p, r, o)
+		{ }
 	}
 
-	public class CommaExpr : Expr, IOperator
+	public class CommaExpr : OperationExpr, IOperator
 	{
 		public List<Expr> Exprs = [];
 		public int ExprLength = 2;
@@ -289,59 +309,26 @@ namespace stilt.AST
 				throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
 		}
 
-		public CommaExpr(int precedence, FileRange? range = null) { Precedence = precedence; InnerRange = range; }
+		public CommaExpr(int p, FileRange? r = null, Token? o = null) 
+			: base(p, r, o)
+		{ }
 	}
 
-	public class PlusExpr(int p, FileRange r) : UnaryExpr(p, r) { }
-	public class NegationExpr(int p, FileRange r) : UnaryExpr(p, r) { }
-	public class IncrementExpr(int p, FileRange r) : UnaryExpr(p, r) { public bool Prefix = true; }
-	public class DecrementExpr(int p, FileRange r) : UnaryExpr(p, r) { public bool Prefix = true; }
-	public class NewExpr(int p, FileRange r) : UnaryExpr(p, r) { }
-	public class CloneExpr(int p, FileRange r) : UnaryExpr(p, r) { }
-	public class LNotExpr(int p, FileRange r) : UnaryExpr(p, r) { }
-	public class BNotExpr(int p, FileRange r) : UnaryExpr(p, r) { }
-	public class AwaitExpr(int p, FileRange r) : UnaryExpr(p, r) { }
-
-	public class AdditionExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class SubtractionExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class DivisionExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class MultiplicationExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class ExponentExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class RangeExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class ModuloExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class LAndExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class LOrExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class LXorExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class BAndExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class BOrExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class BXorExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class BSLExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class BSRExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class GreaterExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class LesserExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class EqualityExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class InequalityExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class GreaterOrEqualExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class LesserOrEqualExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class SwapExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class CopyExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class OverwriteExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class CompositionExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class SignalConnectExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class SignalEmitExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class UpdateExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class IndexExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class AccessExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-	public class SelfAccessExpr(int p, FileRange r) : BinaryExpr(p, r) { }
-
-	public class ConditionalExpr(int p, FileRange r) : TernaryExpr(p, r) { }
-
-	public class AssignExpr(int p, FileRange r) : BinaryExpr(p, r)
+	public class AssignExpr : BinaryExpr
 	{
-		public TokenType? Operation;
+		public TokenType? Operation; // For compound assignment operators like +=, -=
+
+		public AssignExpr(int p, FileRange? r, Token? o = null) 
+			: base(p, r, o)
+		{ }
 	}
 
-	public class CallExpr(int p, FileRange r) : BinaryExpr(p, r) { }
+	public class CallExpr : BinaryExpr
+	{
+		public CallExpr(int p, FileRange? r, Token? o = null) 
+			: base(p, r, o)
+		{ }
+	}
 
 	public class LiteralExpr : Expr
 	{
