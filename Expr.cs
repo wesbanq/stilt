@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Text;
 using stilt;
+using stilt.Errors;
 
 namespace stilt.AST
 {
@@ -160,8 +161,10 @@ namespace stilt.AST
 				return;
 			}
 
-			//change error
-			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
+			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
+			if (range == null)
+				throw new InvalidOperationException("Internal error: Attempted to replace a child node that does not exist in the expression tree.");
+			throw new SyntaxError(range, "Internal error: Attempted to replace a child node that does not exist in the expression tree.");
 		}
 		public void InsertChild(Expr what)
 		{
@@ -170,8 +173,10 @@ namespace stilt.AST
 				Leaf = what;
 				return;
 			}
-			//change error
-			throw new ArgumentException();
+			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
+			if (range == null)
+				throw new InvalidOperationException("Internal error: Attempted to insert a child into an expression node that is already full.");
+			throw new SyntaxError(range, "Internal error: Attempted to insert a child into an expression node that is already full.");
 		}
 
 		public UnaryExpr(int p, FileRange? r = null, Token? o = null) 
@@ -201,8 +206,10 @@ namespace stilt.AST
 				return;
 			}
 
-			//change error
-			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
+			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
+			if (range == null)
+				throw new InvalidOperationException("Internal error: Attempted to replace a child node that does not exist in the expression tree.");
+			throw new SyntaxError(range, "Internal error: Attempted to replace a child node that does not exist in the expression tree.");
 		}
 		public void InsertChild(Expr what)
 		{
@@ -217,8 +224,10 @@ namespace stilt.AST
 				return;
 			}
 			
-			//change error
-			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
+			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
+			if (range == null)
+				throw new InvalidOperationException("Internal error: Attempted to insert a child into an expression node that is already full.");
+			throw new SyntaxError(range, "Internal error: Attempted to insert a child into an expression node that is already full.");
 		}
 
 		public BinaryExpr(int p, FileRange? r = null, Token? o = null) 
@@ -254,8 +263,10 @@ namespace stilt.AST
 				return;
 			}
 
-			//change error
-			throw new ArgumentException("The node to replace was not found in the children.", nameof(what));
+			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
+			if (range == null)
+				throw new InvalidOperationException("Internal error: Attempted to replace a child node that does not exist in the expression tree.");
+			throw new SyntaxError(range, "Internal error: Attempted to replace a child node that does not exist in the expression tree.");
 		}
 
 		public void InsertChild(Expr what)
@@ -276,8 +287,10 @@ namespace stilt.AST
 				return;
 			}
 
-			//change error
-			throw new ArgumentException();
+			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
+			if (range == null)
+				throw new InvalidOperationException("Internal error: Attempted to insert a child into an expression node that is already full.");
+			throw new SyntaxError(range, "Internal error: Attempted to insert a child into an expression node that is already full.");
 		}
 
 		public TernaryExpr(int p, FileRange? r = null, Token? o = null) 
