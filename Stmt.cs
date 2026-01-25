@@ -100,7 +100,7 @@ namespace stilt.AST
 		public TypeDeclStmt(string name, string source, Stmt v, TypeSymbol? inherits = null)
 		{
 			Value = v;
-			Name = new TypeSymbol(name, source, new(name, source, inherits))
+			Name = new TypeSymbol(name, source, inherits: new(name, source, inherits: inherits))
 			{ Declaration = this };
 		}
 	}
@@ -113,7 +113,7 @@ namespace stilt.AST
 		public FuncDeclStmt(string name, string source, Stmt v, TypeSymbol? args = null, TypeSymbol? returns = null)
 		{
 			Value = v;
-			Name = new VarSymbol(name, source, new(Builtins.Callable, [args ?? Builtins.Any, returns ?? Builtins.Any]))
+			Name = new VarSymbol(name, source, new TypeSymbol(Builtins.Callable, [args ?? Builtins.Any, returns ?? Builtins.Any]))
 			{ Declaration = this };
 		}
 	}

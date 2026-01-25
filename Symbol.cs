@@ -39,6 +39,12 @@ namespace stilt.AST
 			return (Name + Source).GetHashCode();
 		}
 
+		protected Symbol(string name, Token token, string src = "<TEMP>")
+		{
+			Name = name;
+			Source = src;
+			Identifier = token;
+		}
 		protected Symbol(string name, string src = "<TEMP>")
 		{
 			Name = name;
@@ -50,18 +56,23 @@ namespace stilt.AST
 	{
 		public TypeSymbol Type = Builtins.Any;
 
+		public VarSymbol(string n, TypeSymbol? type = null, Token? t = null)
+			: base(n, t)
+		{
+			Type = type ?? Builtins.Any;
+		}
+		public VarSymbol(string n, string s, TypeSymbol type, Token t)
+			: base(n, t, s)
+		{
+			Type = type;
+		}
 		public VarSymbol(string n, string s, TypeSymbol type)
 			: base(n, s)
 		{
 			Type = type;
 		}
-		public VarSymbol(string n, TypeSymbol type)
-			: base(n)
-		{
-			Type = type;
-		}
-		public VarSymbol(string n)
-			: base(n)
+		public VarSymbol(string n, string s, Token t)
+			: base(n, t, s)
 		{ }
 	}
 
@@ -117,14 +128,14 @@ namespace stilt.AST
 			return false;
 		}
 
-		public TypeSymbol(string n, TypeSymbol? inherits = null, int argumentCount = 0)
-			: base(n)
+		public TypeSymbol(string n, Token t = null, TypeSymbol? inherits = null, int argumentCount = 0)
+			: base(n, t)
 		{
 			ArgumentCount = argumentCount;
 			_inherits = inherits;
 		}
-		public TypeSymbol(string n, string s, TypeSymbol? inherits = null, int argumentCount = 0)
-			: base(n, s)
+		public TypeSymbol(string n, string s, Token t = null, TypeSymbol? inherits = null, int argumentCount = 0)
+			: base(n, t, s)
 		{
 			ArgumentCount = argumentCount;
 			_inherits = inherits;

@@ -1,6 +1,7 @@
-﻿using stilt.AST;
+using stilt.AST;
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Text;
 
 namespace stilt
@@ -349,6 +350,12 @@ namespace stilt
 
 		public static void Dump(object? obj, int l = 0, bool expanded = false)
 		{
+			var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
+			Dump(obj, l, expanded, visited);
+		}
+
+		private static void Dump(object? obj, int l, bool expanded, HashSet<object> visited)
+		{
 			//TODO
 			//turn into json file
 			if (obj == null)
@@ -356,81 +363,128 @@ namespace stilt
 				Console.WriteLine("null");
 				return;
 			}
-			if (l == 0) Console.WriteLine();
-			var type = obj.GetType();
-			Console.WriteLine($"{new string('\t', l)}{type.Name}");
 
+			if (l == 0)
+				Console.WriteLine();
+
+			var type = obj.GetType();
+			var indent = new string('\t', l);
+
+			// Handle arrays specially to avoid infinite loops
+			if (type.IsArray)
+			{
+				Console.WriteLine($"{indent}{type.Name}");
+				var array = (Array)obj;
+				for (int i = 0; i < array.Length; i++)
+				{
+					Console.WriteLine($"{indent}\t[{i}]:");
+					Dump(array.GetValue(i), l + 2, expanded, visited);
+				}
+				return;
+			}
+
+			// Check for circular references (only for reference types)
+			if (!type.IsValueType)
+			{
+				if (visited.Contains(obj))
+				{
+					Console.WriteLine($"{indent}{type.Name} <CYCLE>");
+					return;
+				}
+				visited.Add(obj);
+			}
+
+			Console.WriteLine($"{indent}{type.Name}");
+
+			// Dump properties
 			foreach (var prop in type.GetProperties())
 			{
 				try
 				{
-					var value = prop.GetValue(obj);
-					if (value == null)
-					{
-						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = null");
-						continue;
-					}
-					if (value is LinkedList<Stmt>)
-					{
-						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
-						foreach (var item in (value as LinkedList<Stmt>))
-						{
-							Dump(item, l + 1);
-						}
-					}
-					if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string || value is string[])
-					{
-						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
-						$"{(value is string ? $"\"{Escape(value.ToString())}\"" : value)}");
-					}
-					else
-					{
-						if (!expanded && (value is (FileRange or FileText or Scope or List<Symbol> or Symbol)))
-						{
-							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}: <HIDDEN>");
-							continue;
-						}
-						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
-						Dump(value, l + 1, expanded);
-					}
+					DumpMember(prop.Name, prop.GetValue(obj), l, expanded, visited);
 				}
 				catch { }
 			}
-			foreach (var prop in type.GetFields())
+
+			// Dump fields
+			foreach (var field in type.GetFields())
 			{
 				try
 				{
-					var value = prop.GetValue(obj);
-					if (value == null)
-					{
-						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = null");
-						continue;
-					}
-					if (value is LinkedList<Stmt>)
-					{
-						foreach (var item in (value as LinkedList<Stmt>))
-						{
-							Dump(item, l + 1);
-						}
-						continue;
-					}
-					if (value.GetType().IsPrimitive || value.GetType().IsEnum || value is string)
-					{
-						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name} = " +
-						$"{(value is string ? $"\"{Escape(value.ToString())}\"" : value)}");
-					}
-					else
-					{
-						if (!expanded && (value is (FileRange or FileText or Scope or List<Symbol> or Symbol)))
-						{
-							Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}: <HIDDEN>");
-							continue;
-						}
-						Console.WriteLine($"{new string('\t', l + 1)}{prop.Name}:");
-						Dump(value, l + 1, expanded);
-					}
+					DumpMember(field.Name, field.GetValue(obj), l, expanded, visited);
 				}
 				catch { }
+			}
+		}
+
+		private static void DumpMember(string name, object? value, int level, bool expanded, HashSet<object> visited)
+		{
+			var indent = new string('\t', level + 1);
+
+			if (value == null)
+			{
+				Console.WriteLine($"{indent}{name} = null");
+				return;
+			}
+
+			var valueType = value.GetType();
+
+			// Handle LinkedList<Stmt> specially
+			if (value is LinkedList<Stmt> stmtList)
+			{
+				Console.WriteLine($"{indent}{name}:");
+				foreach (var item in stmtList)
+				{
+					Dump(item, level + 1, expanded, visited);
+				}
+				return;
+			}
+
+			// Handle arrays
+			if (valueType.IsArray)
+			{
+				Console.WriteLine($"{indent}{name}:");
+				var array = (Array)value;
+				for (int i = 0; i < array.Length; i++)
+				{
+					Console.WriteLine($"{indent}\t[{i}]:");
+					Dump(array.GetValue(i), level + 2, expanded, visited);
+				}
+				return;
+			}
+
+			// Handle simple types (primitives, enums, strings, string arrays)
+			if (valueType.IsPrimitive || valueType.IsEnum || value is string || value is string[])
+			{
+				var displayValue = value is string str ? $"\"{Escape(str)}\"" : value.ToString();
+				Console.WriteLine($"{indent}{name} = {displayValue}");
+				return;
+			}
+
+			// Handle types that should be hidden when not expanded
+			if (!expanded && (value is FileRange or FileText or Scope or List<Symbol> or Symbol))
+			{
+				Console.WriteLine($"{indent}{name}: <HIDDEN>");
+				return;
+			}
+
+			// Recursively dump complex objects
+			Console.WriteLine($"{indent}{name}:");
+			Dump(value, level + 1, expanded, visited);
+		}
+
+		private class ReferenceEqualityComparer : IEqualityComparer<object>
+		{
+			public static readonly ReferenceEqualityComparer Instance = new();
+
+			public new bool Equals(object? x, object? y)
+			{
+				return ReferenceEquals(x, y);
+			}
+
+			public int GetHashCode(object obj)
+			{
+				return RuntimeHelpers.GetHashCode(obj);
 			}
 		}
 

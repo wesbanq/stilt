@@ -26,14 +26,14 @@ namespace stilt
 		public static readonly VarSymbol PrivateByDefault = new("PrivateByDefault", "<BUILTIN>", Decorator);
 		public static readonly VarSymbol ExplicitByDefault = new("ExplicitByDefault", "<BUILTIN>", Decorator);
 
-		public static readonly TypeSymbol Whole = new("Whole", "<BUILTIN>", Num);
-		public static readonly TypeSymbol Fractional = new("Fractional", "<BUILTIN>", Num);
-		public static readonly TypeSymbol Byte = new("Byte", "<BUILTIN>", Whole);
-		public static readonly TypeSymbol Short = new("Short", "<BUILTIN>", Whole);
-		public static readonly TypeSymbol Int = new("Int", "<BUILTIN>", Whole);
-		public static readonly TypeSymbol Long = new("Long", "<BUILTIN>", Whole);
-		public static readonly TypeSymbol Float = new("Float", "<BUILTIN>", Fractional);
-		public static readonly TypeSymbol Double = new("Double", "<BUILTIN>", Fractional);
+		public static readonly TypeSymbol Whole = new("Whole", "<BUILTIN>", inherits: Num);
+		public static readonly TypeSymbol Fractional = new("Fractional", "<BUILTIN>", inherits: Num);
+		public static readonly TypeSymbol Byte = new("Byte", "<BUILTIN>", inherits: Whole);
+		public static readonly TypeSymbol Short = new("Short", "<BUILTIN>", inherits: Whole);
+		public static readonly TypeSymbol Int = new("Int", "<BUILTIN>", inherits : Whole);
+		public static readonly TypeSymbol Long = new("Long", "<BUILTIN>", inherits : Whole);
+		public static readonly TypeSymbol Float = new("Float", "<BUILTIN>", inherits : Fractional);
+		public static readonly TypeSymbol Double = new("Double", "<BUILTIN>", inherits : Fractional);
 
 		static Builtins()
 		{
