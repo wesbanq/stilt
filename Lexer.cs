@@ -1,17 +1,19 @@
-﻿using System.Reflection;
+﻿using System.Diagnostics;
+using System.Reflection;
 using System.Text.RegularExpressions;
 
 namespace stilt
 {
 	public class Lexer
 	{
-		protected readonly List<Token> Tokens = new List<Token>();
+		protected List<Token> Tokens;
 		protected int CurrentPos = 0;
 		public readonly string Filepath;
+		public readonly ProgramArgs Args;
 		public FileText Text;
 
 		public Token CurrentToken => Tokens.Count > CurrentPos ? Tokens[CurrentPos] : throw new Exception();
-
+		
 		public static void GetSymbolAttribute(out List<string[]> symbols, out List<string[]> regex)
 		{
 			symbols = new List<string[]>();
@@ -123,11 +125,8 @@ namespace stilt
 			CurrentPos = t;
 		}
 
-		public Lexer(ProgramArgs args)
+		public void Lex()
 		{
-			Filepath = args.MainCodeFilepath;
-			Text = new(Filepath);
-
 			GetSymbolAttribute(out var symbols, out var regex);
 			Tokens = [.. FileRange.RemoveOverlaps(
 				GetTokenMatches(Text.ToString(), symbols),
@@ -141,6 +140,13 @@ namespace stilt
 				Which = TokenType.EOF,
 				Range = Text.EOF,
 			});
+		}
+
+		public Lexer(ProgramArgs args)
+		{
+			Args = args;
+			Filepath = args.MainCodeFilepath;
+			Text = new(Filepath);
 		}
 	}
 }

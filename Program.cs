@@ -1,4 +1,5 @@
 ﻿using stilt.AST;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text;
 
@@ -12,6 +13,7 @@ namespace stilt
 		public List<Option> UsedOptions = [];
 		public bool Throw = false;
 		public bool ExpandedDump = false;
+		public bool NoTime = false;
 
 		public static void PrintHelp()
 		{
@@ -76,6 +78,11 @@ namespace stilt
 					ExpandedDump = true;
 					break;
 				}
+				case "NoTime":
+				{
+					NoTime = true;
+					break;
+				}
 				default:
 				{
 					throw new ArgumentException($"Non-existent argument: {opt}");
@@ -121,13 +128,13 @@ namespace stilt
 				throw new ArgumentParsingException("No action given.{0}{1}", "", "");
 			}
 
-			Action = Compiler.GetEnumFromDescription<Command, ActionAttribute>(args[0].ToLower());
+			Action = Program.GetEnumFromDescription<Command, ActionAttribute>(args[0].ToLower());
 
 			for (int i = 1; i < args.Length; i++)
 			{
 				var current = WhichOption(args[i]);
 				var currentAttribute = typeof(Option).GetField(current.ToString()).GetCustomAttribute<OptionAttribute>();
-				var nextAttribute = args.Length > i+1 ? Compiler.GetAttrFromDescription<Option, OptionAttribute>(args[i+1]) : null;
+				var nextAttribute = args.Length > i+1 ? Program.GetAttrFromDescription<Option, OptionAttribute>(args[i+1]) : null;
 
 				if (current != Option.None)
 				{
@@ -144,7 +151,7 @@ namespace stilt
 				}
 				else if (WhichOption(args[i - 1]) == Option.None)
 				{
-					var a = Compiler.GetAttributeFromEnum<Command, ActionAttribute>(Action);
+					var a = Program.GetAttributeFromEnum<Command, ActionAttribute>(Action);
 					if (a != null && a.Required != null)
 					{
 						foreach (var b in a.Required)
@@ -152,7 +159,7 @@ namespace stilt
 							if (!UsedOptions.Contains(b))
 							{
 								GiveValueTo(
-									Compiler.GetAttributeFromEnum<Option, OptionAttribute>(b)?.AssociatedPropertyName ?? ""
+									Program.GetAttributeFromEnum<Option, OptionAttribute>(b)?.AssociatedPropertyName ?? ""
 									, args[i]);
 								UsedOptions.Add(b);
 							}
@@ -235,12 +242,111 @@ namespace stilt
 
 			[Option("-ex", "ExpandedDump", "Additional info in dumps", OptionType.Flag)]
 			Expanded,
+
+			[Option("-nt", "NoTime", "Don't show total compilation time.", OptionType.Flag)]
+			NoTime,
 		}
 
 	}
 
-	internal class Program
+	public class Timer
 	{
+		private string _name;
+
+		public Stopwatch Stopwatch { get; private set; }
+		public string Time => Stopwatch.IsRunning 
+			? $"{_name} has been running for ({Stopwatch.Elapsed.TotalSeconds}s)." 
+			: $"{_name} finished in ({Stopwatch.Elapsed.TotalSeconds}s).";
+
+		public void StartTimer()
+		{
+			Stopwatch ??= new Stopwatch();
+			Stopwatch.Start();
+		}
+
+		public void StopTimer()
+		{
+			Stopwatch?.Stop();
+		}
+
+		public void Run(Action action)
+		{
+			StartTimer();
+			action.Invoke();
+			StopTimer();
+		}
+
+		public Timer(string name, Action action)
+		{
+			_name = name;
+			Run(action);
+		}
+		public Timer(string name)
+		{
+			_name = name;
+		}
+	}
+
+	internal static class Program
+	{
+		public static A? GetAttributeFromEnum<T, A>(T value)
+				where T : Enum
+				where A : Attribute
+		{
+			var a = typeof(T).GetField(value.ToString())?.GetCustomAttributes<A>()?.ToArray();
+			if (a is not null && a.Length > 0)
+				return a.First();
+			else
+				return null;
+		}
+
+		public static A[]? GetAttributesFromEnum<T, A>(T value)
+			where T : Enum
+			where A : Attribute
+		{
+			var a = typeof(T).GetField(value.ToString())?.GetCustomAttributes<A>()?.ToArray();
+			if (a is not null && a.Length > 0)
+				return a;
+			else
+				return null;
+		}
+
+		public static List<A?> GetAttributesFromType<A>(Type t)
+			where A : Attribute
+		{
+			List<A?> res = [];
+			foreach (var field in t.GetFields())
+			{
+				res.Add(field.GetCustomAttribute<A>());
+			}
+			return res;
+		}
+
+		public static T GetEnumFromDescription<T, A>(string toFind)
+			where T : Enum
+			where A : Attribute, IDescriptable
+		{
+			foreach (var field in typeof(T).GetFields())
+			{
+				if (field.GetCustomAttribute<A>()?.Name == toFind)
+					return (T)field.GetValue(null);
+			}
+			//return default;
+			throw new ArgumentException($"Enum value with description '{toFind}' not found.");
+		}
+
+		public static A? GetAttrFromDescription<T, A>(string toFind)
+			where T : Enum
+			where A : Attribute, IDescriptable
+		{
+			foreach (var field in typeof(T).GetFields())
+			{
+				if (field.GetCustomAttribute<A>()?.Name == toFind)
+					return field.GetCustomAttribute<A>();
+			}
+			return null;
+		}
+
 		public static void Dump(object? obj, int l = 0, bool expanded = false)
 		{
 			//TODO
@@ -348,6 +454,14 @@ namespace stilt
 			return sb.ToString();
 		}
 
+		public static void TimerReadout(List<Timer> timers)
+		{
+			foreach (var timer in timers)
+			{
+				Console.WriteLine(timer.Time);
+			}
+		}
+
 		static int Main(string[] args)
 		{
 			ProgramArgs arg;
@@ -372,12 +486,21 @@ namespace stilt
 				}
 				case ProgramArgs.Command.Build:
 				{
-					Compiler.Build(arg);
+					var compiler = new Compiler(arg);
+					compiler.Build();
+
+					Console.WriteLine();
+					compiler.Parser.WriteErrors();
+					Console.WriteLine();
+					if (!arg.NoTime)
+						TimerReadout(compiler.Timers);
+
 					break;
 				}
 				case ProgramArgs.Command.Tokenize:
 				{
 					var lex = new Lexer(arg);
+					lex.Lex();
 					Token t = lex.CurrentToken;
 					do Dump(t); while ((t = lex.Next()).Which != TokenType.EOF);
 					break;
@@ -390,19 +513,22 @@ namespace stilt
 				}
 				case ProgramArgs.Command.Tree:
 				{
-					var lex = new Lexer(arg);
-					var parse = new Parser(lex, arg);
+					var comp = new Compiler(arg);
+					comp.Build();
 
-					parse.ParseFile();
-					if (!parse.HasErrors)
+					if (!comp.Parser.HasErrors)
 					{
-						foreach (var stmt in parse.Statements)
+						foreach (var stmt in comp.Parser.Statements)
 						{
 							Dump(stmt, expanded: arg.ExpandedDump);
 						}
 					}
 
-					parse.WriteErrors();
+					Console.WriteLine();
+					comp.Parser.WriteErrors();
+					Console.WriteLine();
+					if (!arg.NoTime)
+						TimerReadout(comp.Timers);
 
 					break;
 				}
