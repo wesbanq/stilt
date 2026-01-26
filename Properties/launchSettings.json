@@ -11,6 +11,10 @@
     "perf": {
       "commandName": "Project",
       "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example1.stilt -t"
+    },
+    "test": {
+      "commandName": "Project",
+      "commandLineArgs": "tree -i C:\\Users\\wes\\UserData\\repo\\dev\\stilt\\ExamplePrograms\\Example5.stilt -t -ex"
     }
   }
 }

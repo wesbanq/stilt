@@ -5,7 +5,7 @@
 
 var a = 10
 var b = 20
-const c = 30
+const var c = 30
 
 var x = a + b * c - 5
 var y = (a + b) * (c - 5)

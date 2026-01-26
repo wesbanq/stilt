@@ -75,7 +75,7 @@ namespace stilt.AST
 			parent = null;
 			return FindFirst(e =>
 			{
-				return e.Precedence <= precedence;
+				return e.Bracketed || e.Precedence <= precedence;
 			}, out parent);
 		}
 
@@ -84,7 +84,7 @@ namespace stilt.AST
 			//reverse preorder walk
 			parent = supposedParent;
 
-			if (/*Bracketed ||/**/predicate.Invoke(this))
+			if (predicate.Invoke(this))
 			{
 				return this;
 			}
