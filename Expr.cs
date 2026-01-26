@@ -303,7 +303,7 @@ namespace stilt.AST
 		public List<Expr> Exprs = [];
 		public int ExprLength = 2;
 
-		public Expr[]? GetChildren()
+		public Expr?[] GetChildren()
 		{
 			return ExprLength < Exprs.Count ? [null, .. Exprs] : [.. Exprs];
 		}

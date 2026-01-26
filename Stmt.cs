@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Diagnostics.CodeAnalysis;
@@ -24,10 +24,10 @@ namespace stilt.AST
 				{
 					if (typeof(IRanged).IsAssignableFrom(fld.FieldType))
 					{
-						var ranged = fld.GetValue(this) as IRanged;
+					var ranged = fld.GetValue(this) as IRanged;
 
-						if (ranged.FullRange is null) continue;
-						sum = sum is null ? ranged.FullRange : sum + ranged.FullRange;
+					if (ranged?.FullRange is null) continue;
+					sum = sum is null ? ranged.FullRange : sum + ranged.FullRange;
 					}
 				}
 
@@ -68,6 +68,8 @@ namespace stilt.AST
 			var tokenText = token.Range.Text.Trim();
 			var executorStr = Regex.Match(tokenText, """as +(.*) +{""").ToString().Trim();
 			var comStr = Regex.Match(tokenText, """{(?:.*\s)*}""").ToString()?.Split('\n');
+			if (comStr == null)
+				throw new ArgumentException("Invalid execute statement format");
 			for (var i = 0; i < comStr.Length; i++)
 			{
 				comStr[i] = comStr[i].Trim();

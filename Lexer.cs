@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
@@ -21,8 +21,16 @@ namespace stilt
 
 			foreach (var name in typeof(TokenType).GetEnumNames())
 			{
-				symbols.Add(typeof(TokenType).GetField(name).GetCustomAttributes<SymbolAttribute>()?.Where(a => !a.IsRegex).Select(a => Regex.Escape(a.Symbol)).ToArray());
-				regex.Add(typeof(TokenType).GetField(name).GetCustomAttributes<SymbolAttribute>()?.Where(a => a.IsRegex).Select(a => a.Symbol).ToArray());
+				var field = typeof(TokenType).GetField(name);
+				if (field != null)
+				{
+					var symbolArray = field.GetCustomAttributes<SymbolAttribute>()?.Where(a => !a.IsRegex).Select(a => Regex.Escape(a.Symbol)).ToArray();
+					var regexArray = field.GetCustomAttributes<SymbolAttribute>()?.Where(a => a.IsRegex).Select(a => a.Symbol).ToArray();
+					if (symbolArray != null)
+						symbols.Add(symbolArray);
+					if (regexArray != null)
+						regex.Add(regexArray);
+				}
 			}
 		}
 
@@ -145,7 +153,7 @@ namespace stilt
 		public Lexer(ProgramArgs args)
 		{
 			Args = args;
-			Filepath = args.MainCodeFilepath;
+			Filepath = args.MainCodeFilepath!;
 			Text = new(Filepath);
 		}
 	}

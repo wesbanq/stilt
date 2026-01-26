@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -39,7 +39,7 @@ namespace stilt.AST
 			return (Name + Source).GetHashCode();
 		}
 
-		protected Symbol(string name, Token token, string src = "<TEMP>")
+		protected Symbol(string name, Token? token, string src = "<TEMP>")
 		{
 			Name = name;
 			Source = src;
@@ -95,10 +95,17 @@ namespace stilt.AST
 			if (left is null || right is null) return false;
 			if (left.ArgumentCount != right.ArgumentCount) return false;
 
-			for (int i = 0; i < left.ArgumentCount; i++)
+			if (left.Arguments != null && right.Arguments != null)
 			{
-				if (left.Arguments[i] != right.Arguments[i])
-					return false;
+				for (int i = 0; i < left.ArgumentCount; i++)
+				{
+					if (left.Arguments[i] != right.Arguments[i])
+						return false;
+				}
+			}
+			else if (left.Arguments != right.Arguments)
+			{
+				return false;
 			}
 
 			return left.Name.Equals(right.Name) && left.Source.Equals(right.Source);
@@ -116,6 +123,22 @@ namespace stilt.AST
 			return this == other;
 		}
 
+		public override int GetHashCode()
+		{
+			var hash = new HashCode();
+			hash.Add(Name);
+			hash.Add(Source);
+			hash.Add(ArgumentCount);
+			if (Arguments != null)
+			{
+				for (int i = 0; i < Arguments.Length; i++)
+				{
+					hash.Add(Arguments[i]);
+				}
+			}
+			return hash.ToHashCode();
+		}
+
 		public bool InheritsFrom(TypeSymbol from)
 		{
 			var currentType = this;
@@ -128,13 +151,13 @@ namespace stilt.AST
 			return false;
 		}
 
-		public TypeSymbol(string n, Token t = null, TypeSymbol? inherits = null, int argumentCount = 0)
+		public TypeSymbol(string n, Token? t = null, TypeSymbol? inherits = null, int argumentCount = 0)
 			: base(n, t)
 		{
 			ArgumentCount = argumentCount;
 			_inherits = inherits;
 		}
-		public TypeSymbol(string n, string s, Token t = null, TypeSymbol? inherits = null, int argumentCount = 0)
+		public TypeSymbol(string n, string s, Token? t = null, TypeSymbol? inherits = null, int argumentCount = 0)
 			: base(n, t, s)
 		{
 			ArgumentCount = argumentCount;
