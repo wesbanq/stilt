@@ -570,13 +570,13 @@ namespace stilt
 					var comp = new Compiler(arg);
 					comp.Build();
 
-					if (!comp.Parser.HasErrors)
-					{
+					// if (!comp.Parser.HasErrors)
+					// {
 						foreach (var stmt in comp.Parser.Statements)
 						{
 							Dump(stmt, expanded: arg.ExpandedDump);
 						}
-					}
+					// }
 
 					Console.WriteLine();
 					comp.Parser.WriteErrors();

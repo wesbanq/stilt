@@ -76,7 +76,7 @@ var comp2 = x >= y <= z
 var comp3 = a == b != c
 
 # Ternary-like expressions (if as ternary operator)
-var ternary = if a > b { a } else { b }
+var ternary = if a > b then a else b
 
 ## Control Flow ##
 
@@ -151,15 +151,15 @@ var arr3 = [
 ]
 
 var dict1 = {
-	"key1": "value1",
-	"key2": "value2"
+	"key1" = "value1",
+	"key2" = "value2"
 }
 
 var dict2 = {
-	"a": a,
-	"b": b,
-	"sum": add(a, b),
-	"product": multiply(a, b, c)
+	"a" = a,
+	"b" = b,
+	"sum" = add(a, b),
+	"product" = multiply(a, b, c)
 }
 
 ## Operator Precedence Tests ##
@@ -223,9 +223,9 @@ execute {
 	tp @p ~1 ~2 ~3
 }
 
-execute as player {
+execute as @p {
 	say "Executing as player"
-	give @s diamond 64
+	give @n diamond 64
 }
 
 ## Return Statements ##
@@ -291,4 +291,4 @@ var final = add(
 		complexCalc(x, y, z),
 		divide(multiply(2, 3), add(4, 5))
 	)
-) * (a > b ? 1 : -1) + (c < d() ? e() : f())
+) * (if a > b then 1 else -1) + (if c < d() then e() else f())

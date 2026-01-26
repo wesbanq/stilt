@@ -42,7 +42,7 @@ namespace stilt
 		{
 			//preprocessor needs to keep the same amount of lines to make sure the error reports are at the correct positions
 			const string commentRegex1 = """#.*""";
-			const string commentRegex2 = """##(?>.*\s)+?##""";
+			const string commentRegex2 = """##(?s:.*?)##""";
 			const string commentRegex3 = """\r\n""";
 			const string removeTabs = """\t""";
 			const string newTab = "    ";
