@@ -145,7 +145,7 @@ namespace stilt
 
 			switch (expr)
 			{
-				case CommaExpr op:
+				case IOperator op:
 				{
 					List<IdentityExpr> res = [];
 					foreach (var child in op.GetChildren())
@@ -254,7 +254,7 @@ namespace stilt
 			{
 				case TokenType.Identifier:
 				{
-					var newSym = new VarSymbol(currentToken.Range.Text);
+					var newSym = new VarSymbol(currentToken.Range.Text, t: currentToken);
 					newExpr = new IdentityExpr()
 					{
 						InnerRange = currentToken.Range,
@@ -479,6 +479,16 @@ namespace stilt
 			}
 			
 			InsertIntoExprTree(ref rootExpr, newExpr);
+			
+			// Check if the next token is a statement terminator before advancing
+			var nextToken = Lex.PeekNext();
+			if (nextToken.Which is TokenType.EOF or TokenType.Then or TokenType.Else or TokenType.Elif
+				or TokenType.CloseBracket or TokenType.StmtSeparator 
+				or TokenType.CloseCurlyBracket or TokenType.CloseSquareBracket)
+			{
+				return;
+			}
+			
 			ParseExpr(ref rootExpr, Lex.Next());
 		}
 
@@ -554,7 +564,7 @@ namespace stilt
 				throw new MalformedDecl(call.FullRange);
 		}
 
-		protected void ParseStmt(ref Stmt newStmt, Scope currentScope)
+		protected Stmt? ParseStmt(Scope currentScope)
 		{
 			var firstToken = Lex.CurrentToken;
 
@@ -568,6 +578,8 @@ namespace stilt
 				specifiers.Add(firstToken);
 				firstToken = Lex.Next();
 			}
+
+			Stmt? newStmt = null;
 
 			switch (firstToken.Which)
 			{
@@ -608,9 +620,9 @@ namespace stilt
 				case TokenType.FuncDecl:
 				{
 					ParseExpr(ref newExpr, Lex.Next());
-					ParseStmt(ref newStmt, currentScope);
+					var innerStmt = ParseStmt(currentScope);
 
-					newStmt = ParseFuncDecl(currentScope, newStmt, newExpr);
+					newStmt = ParseFuncDecl(currentScope, innerStmt, newExpr);
 					AddToScope([(newStmt as FuncDeclStmt).Name], currentScope);
 
 					break;
@@ -634,25 +646,26 @@ namespace stilt
 				{
 					ParseExpr(ref newExpr, Lex.Next());
 					Scope newScope = new(currentScope);
-					ParseStmt(ref newStmt, newScope);
+					var nextIfStmt = ParseStmt(newScope);
 
 					var ifStmt = new IfStmt()
 					{
 						Scope = currentScope,
 						Condition = newExpr,
-						NextIf = newStmt,
+						NextIf = nextIfStmt,
 					};
 
 					var lastIf = ifStmt;
-					while (Lex.Next().Which == TokenType.Elif)
+					while (Lex.CurrentToken.Which == TokenType.Elif)
 					{
+						newExpr = null;
 						ParseExpr(ref newExpr, Lex.Next());
-						ParseStmt(ref newStmt, newScope);
+						var elifStmt = ParseStmt(newScope);
 						var newIf = new IfStmt()
 						{
 							Scope = currentScope,
 							Condition = newExpr,
-							NextIf = newStmt,
+							NextIf = elifStmt,
 						};
 						lastIf.NextElse = newIf;
 						lastIf = newIf;
@@ -660,8 +673,9 @@ namespace stilt
 
 					if (Lex.CurrentToken.Which == TokenType.Else)
 					{
-						ParseStmt(ref newStmt, newScope);
-						lastIf.NextElse = newStmt;
+						Lex.Next();
+						var elseStmt = ParseStmt(newScope);
+						lastIf.NextElse = elseStmt;
 					}
 
 					newStmt = ifStmt;
@@ -676,7 +690,8 @@ namespace stilt
 					};
 					Lex.Next();
 
-					return;
+					newStmt.InnerRange = firstToken.Range;
+					return newStmt;
 				}
 				case TokenType.OpenCurlyBracket:
 				{
@@ -684,11 +699,8 @@ namespace stilt
 
 					Lex.Next();
 					var innerStmt = ParseBranch(newScope, false);
-					Lex.Next();
-
-					if (Lex.CurrentToken.Which is TokenType.EOF)
-						throw new SyntaxError(firstToken.Range, "This bracket is missing a closing counterpart.", ErrorSeverity.Critical);
-
+					//Lex.Next();
+					
 					newStmt = new CompoundStmt()
 					{
 						Scope = newScope,
@@ -704,7 +716,7 @@ namespace stilt
 					break;
 				}
 				case TokenType.MacroDecl:
-					throw new SyntaxError(firstToken.Range, "Macros can only be defined inside type declarations.");
+					throw new SyntaxError(firstToken.Range, "Macros can only be defined inside of a type.");
 				default:
 				//ExpressionStmt
 				{
@@ -728,12 +740,12 @@ namespace stilt
 			if (newStmt is not DeclStmt && specifiers.Count > 0)
 				throw new UnexpectedSpecifier(specifiers[0].Range);
 
-			if (Lex.CurrentToken.Which is not (TokenType.StmtSeparator or TokenType.CloseCurlyBracket or TokenType.EOF))
-				throw new RunonStatement(Lex.CurrentToken.Range);
+			//if (Lex.CurrentToken.Which is not (TokenType.StmtSeparator or TokenType.CloseCurlyBracket or TokenType.EOF or TokenType.Else or TokenType.Elif))
+			//	throw new RunonStatement(Lex.CurrentToken.Range);
 
 			newStmt?.InnerRange = firstToken.Range;
 
-			return;
+			return newStmt;
 		}
 
 		protected LinkedList<Stmt> ParseBranch(Scope parentScope, bool topLevel)
@@ -743,36 +755,40 @@ namespace stilt
 
 			while (true)
 			{
-				Stmt newStmt = null;
+				Stmt? newStmt = null;
 				if (Args.Throw)
 				{
-					ParseStmt(ref newStmt, parentScope);
+					newStmt = ParseStmt(parentScope);
 
 					if (newStmt != null)
 						innerStmts.AddLast(newStmt);
 					
-					if (Lex.CurrentToken.Which is TokenType.EOF) 
+					if (Lex.CurrentToken.Which == TokenType.EOF) 
 					{
 						if (topLevel)
 							break;
 						else
 							throw new SyntaxError(firstToken.Range, "Unclosed bracket.");
 					}
-					if (Lex.CurrentToken.Which is TokenType.CloseCurlyBracket)
+					if (Lex.CurrentToken.Which == TokenType.CloseCurlyBracket)
 					{
 						if (!topLevel)
+						{
+							Lex.Next();
 							break;
+						}
 						else
 							throw new UnexpectedToken(Lex.CurrentToken.Range, Lex.CurrentToken);
 					}
 
-					Lex.Next();
+					if (newStmt is not CompoundStmt && Lex.CurrentToken.Which != TokenType.OpenCurlyBracket)
+						Lex.Next();
 				}
 				else
 				{
 					try
 					{
-						ParseStmt(ref newStmt, parentScope);
+						newStmt = ParseStmt(parentScope);
 					}
 					catch (SyntaxError se)
 					{
@@ -788,14 +804,14 @@ namespace stilt
 					if (newStmt != null)
 							innerStmts.AddLast(newStmt);
 
-					if (Lex.CurrentToken.Which is TokenType.EOF)
+					if (Lex.CurrentToken.Which == TokenType.EOF)
 					{
 						if (topLevel)
 							break;
 						else
 							throw new SyntaxError(firstToken.Range, "Unclosed bracket.");
 					}
-					if (Lex.CurrentToken.Which is TokenType.CloseCurlyBracket)
+					if (Lex.CurrentToken.Which == TokenType.CloseCurlyBracket)
 					{
 						if (!topLevel)
 							break;

@@ -222,7 +222,10 @@ _pkginfo.txt
 *.appx
 *.appxbundle
 *.appxupload
+
 .editorconfig
+.vscode/
+[Pp]roperties
 
 # Visual Studio cache files
 # files ending in .cache can be ignored
