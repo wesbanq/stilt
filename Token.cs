@@ -276,7 +276,7 @@ namespace stilt
 		Type,
 
 		[Symbol("then")]
-		Conditional,
+		Then,
 
 		[Unimplemented]
 		[BinaryOperator(15)]

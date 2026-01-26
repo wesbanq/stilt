@@ -329,7 +329,7 @@ namespace stilt.AST
 
 	public class AssignExpr : BinaryExpr
 	{
-		public TokenType? Operation; // For compound assignment operators like +=, -=
+		public TokenType? Operation;
 
 		public AssignExpr(int p, FileRange? r, Token? o = null) 
 			: base(p, r, o)

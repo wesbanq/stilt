@@ -87,7 +87,7 @@ namespace stilt
 				{
 					if (parent is IOperator sParent)
 					{
-						if (toReplace == null && newExpr.Bracketed)
+						if (toReplace == null && (newExpr.Bracketed || newExpr is (UnaryExpr or TernaryExpr)))
 							sParent.InsertChild(newExpr);
 						else
 							throw new MalformedExpr(newExpr.FullRange);
@@ -386,6 +386,8 @@ namespace stilt
 					break;
 				}
 				case TokenType.EOF:
+				case TokenType.Then:
+				case TokenType.Else:
 				case TokenType.CloseBracket:
 				case TokenType.StmtSeparator:
 				case TokenType.CloseCurlyBracket:
@@ -434,12 +436,32 @@ namespace stilt
 					{
 						Expr? parent = null;
 						var a = rootExpr?.FindFirstPrecedenceOrNull(expr.Precedence, out parent);
-						if (a == null && expr is UnaryExpr)
+						if (expr is UnaryExpr unary)
 						{
-							newExpr = expr;
+							if (a != null)
+								unary.Prefix = false;
+							newExpr = unary;
 							break;
 						}
-						else
+						else if (expr is TernaryExpr ternary)
+						{
+							Expr leftExpr = null;
+							ParseExpr(ref leftExpr, Lex.Next());
+							if (Lex.CurrentToken.Which != TokenType.Then)
+								throw new SyntaxError(currentToken.Range, "Unclosed ternary expression.");
+
+							Expr middleExpr = null;
+							ParseExpr(ref middleExpr, Lex.Next());
+							if (Lex.CurrentToken.Which != TokenType.Else)
+								throw new SyntaxError(currentToken.Range, "Unclosed ternary expression.");
+
+							ternary.Left = leftExpr;
+							ternary.Middle = middleExpr;
+
+							newExpr = ternary;
+							break;
+						}
+						else if (a != null)
 						{
 							newExpr = expr;
 							break;
@@ -549,7 +571,6 @@ namespace stilt
 
 			switch (firstToken.Which)
 			{
-				//TODO switch away from using expressions for declarations
 				case TokenType.VarDecl:
 				{
 					var varToken = Lex.Next();
