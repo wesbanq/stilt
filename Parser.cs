@@ -865,12 +865,16 @@ namespace stilt
 					if (Lex.CurrentToken.Which == TokenType.CloseCurlyBracket)
 					{
 						if (!topLevel)
+						{
+							Lex.Next();
 							break;
+						}
 						else
 							throw new UnexpectedToken(Lex.CurrentToken.Range, Lex.CurrentToken);
 					}
 
-					Lex.Next();
+					if (newStmt is not CompoundStmt && Lex.CurrentToken.Which != TokenType.OpenCurlyBracket)
+						Lex.Next();
 				}
 			}
 
