@@ -1,3 +1,4 @@
+#pragma warning disable CS8601
 using stilt.AST;
 using System;
 using System.ComponentModel.DataAnnotations;
@@ -31,7 +32,7 @@ namespace stilt
 			CompilationIssues.Add(err);
 		}
 
-		protected void InsertIntoExprTree(ref Expr rootExpr, Expr? newExpr)
+		protected void InsertIntoExprTree(ref Expr? rootExpr, Expr? newExpr)
 		{
 			if (rootExpr == null && newExpr != null)
 			{
@@ -40,6 +41,10 @@ namespace stilt
 				rootExpr = newExpr;
 				return;
 			}
+
+			//get rid of null derefence warnings
+			if (newExpr == null || rootExpr == null)
+				return;
 
 			//add more comments to explain all of this later
 			var toReplace = rootExpr.FindFirstPrecedenceOrNull(newExpr.Precedence, out var parent);
@@ -51,7 +56,7 @@ namespace stilt
 					rootExpr = newExpr;
 				}
 				else
-					throw new MalformedExpr(newExpr.FullRange);
+					throw new MalformedExpr(newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
 			}
 
 			if (newExpr is IOperator spreadable)
@@ -90,10 +95,16 @@ namespace stilt
 						if (toReplace == null && (newExpr.Bracketed || newExpr is (UnaryExpr or TernaryExpr)))
 							sParent.InsertChild(newExpr);
 						else
-							throw new MalformedExpr(newExpr.FullRange);
+						{
+							var range = newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange");
+							throw new MalformedExpr(range);
+						}
 					}
 					else
-						throw new MalformedExpr(newExpr.FullRange);
+					{
+						var range = newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange");
+						throw new MalformedExpr(range);
+					}
 
 					return;
 				}
@@ -105,7 +116,7 @@ namespace stilt
 				if (parent is IOperator newSpreadable)
 					newSpreadable.InsertChild(newExpr);
 				else
-					throw new MalformedExpr(newExpr.FullRange);
+					throw new MalformedExpr(newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
 			}
 		}
 
@@ -160,12 +171,12 @@ namespace stilt
 				}
 				default:
 				{
-					throw new MalformedExpr(expr.FullRange);
+					throw new MalformedExpr(expr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
 				}
 			}
 		}
 
-		protected bool ExpectingOperator(ref Expr expr)
+		protected bool ExpectingOperator(ref Expr? expr)
 		{
 			if (expr is null)
 				return false;
@@ -179,8 +190,11 @@ namespace stilt
 			if (currentToken.Which is TokenType.EOF)
 				throw new UnexpectedEOF(currentToken.Range);
 			
-			Expr newExpr = null;
+			Expr? newExpr = null;
 			ParseExpr(ref newExpr, currentToken);
+			
+			if (newExpr == null)
+				throw new MalformedExpr(currentToken.Range);
 			
 			return newExpr is CommaExpr commaExpr
 				? new ArrayLiteralExpr(currentToken.Range, [.. commaExpr.GetChildren()])
@@ -192,17 +206,20 @@ namespace stilt
 			if (currentToken.Which is TokenType.EOF)
 				throw new UnexpectedEOF(currentToken.Range);
 
-			Expr newExpr = null;
+			Expr? newExpr = null;
 			Dictionary<Symbol, Expr> dict = [];
 			ParseExpr(ref newExpr, currentToken);
 			var list = ParseArrayLiteral(currentToken).Value as List<Expr>;
+			
+			if (list == null)
+				throw new MalformedExpr(currentToken.Range);
 			
 			foreach (var expr in list)
 			{
 				if (expr is AssignExpr assign)
 				{
 					if (assign.Operation != null)
-						throw new SyntaxError(assign.InnerRange, "Self-assingment operators are not permitted inside tables");
+						throw new SyntaxError(assign.InnerRange ?? assign.FullRange ?? throw new InvalidOperationException("Assign expression has no range"), "Self-assingment operators are not permitted inside tables");
 
 					Symbol newSym;
 					//keys in tables may not neccessarily be strings
@@ -217,19 +234,19 @@ namespace stilt
 						}
 						case StringLiteralExpr str:
 						{
-							//think of something for types
-							newSym = new VarSymbol(str.Value as String, Lex.Filepath, Builtins.Any);
+							//think of something for other string literal types
+							newSym = new VarSymbol((str.Value as String) ?? throw new MalformedExpr(str.FullRange ?? str.InnerRange ?? throw new InvalidOperationException("String literal has no range")), Lex.Filepath, Builtins.Any);
 							break;
 						}
 						default:
 						{
-							throw new SyntaxError(assign.FullRange, "Invalid key in table");
+							throw new SyntaxError(assign.FullRange ?? throw new InvalidOperationException("Assign expression has no FullRange"), "Invalid key in table");
 						}
 					}
 					dict.Add(newSym, expr);
 				}
 				else
-					throw new SyntaxError(expr.InnerRange, "Only assingnment-type expressions allowed inside a table literal");
+					throw new SyntaxError(expr.InnerRange ?? expr.FullRange ?? throw new InvalidOperationException("Expression has no range"), "Only assingnment-type expressions allowed inside a table literal");
 			}
 
 			return new(currentToken.Range, dict);
@@ -246,9 +263,9 @@ namespace stilt
 			return mantissa * (Math.Pow(10, exponent));
 		}
 
-		protected void ParseExpr(ref Expr rootExpr, Token currentToken)
+		protected void ParseExpr(ref Expr? rootExpr, Token currentToken)
 		{
-			Expr newExpr = null;
+			Expr? newExpr = null;
 
 			switch (currentToken.Which)
 			{
@@ -306,6 +323,8 @@ namespace stilt
 					}
 					if (numBase != 10)
 					{
+						if (tokenText is null || tokenText.Length < 2)
+							throw new SyntaxError(currentToken.Range, "Invalid numeric literal format");
 						tokenText = tokenText.Substring(2);
 					}
 
@@ -357,9 +376,11 @@ namespace stilt
 
 					if (ExpectingOperator(ref rootExpr))
 					{
-						if (newExpr == null && currentToken.Which == TokenType.OpenSquareBracket)
+						if (newExpr is null && currentToken.Which == TokenType.OpenSquareBracket)
 							throw new SyntaxError(currentToken.Range, "No valid expression given as an index");
 						var opExpr = CreateOperatorExpr<BinaryOperatorAttribute>(currentToken).First() as BinaryExpr;
+						if (opExpr is null)
+							throw new MalformedExpr(currentToken.Range);
 						opExpr.Right = newExpr;
 						opExpr.Bracketed = true;
 						newExpr = opExpr;
@@ -408,13 +429,16 @@ namespace stilt
 					{
 						Lex.Next();
 						var assignToken = new Token { Which = TokenType.Assign, Range = currentToken.Range + Lex.CurrentToken.Range };
+						var assignAttr = Program.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign);
+						if (assignAttr is null)
+							throw new UnexpectedToken(currentToken.Range, currentToken);
 						var assignExpr = new AssignExpr(
-							Program.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign).Precedence,
+							assignAttr.Precedence,
 							assignToken.Range,
 							assignToken
 						)
 						{
-							Operation = currentToken.Which
+							Operation = currentToken.Which,
 						};
 
 						if (possibleExprs.Count != 1)
@@ -438,19 +462,19 @@ namespace stilt
 						var a = rootExpr?.FindFirstPrecedenceOrNull(expr.Precedence, out parent);
 						if (expr is UnaryExpr unary)
 						{
-							if (a != null)
+							if (a is not null)
 								unary.Prefix = false;
 							newExpr = unary;
 							break;
 						}
 						else if (expr is TernaryExpr ternary)
 						{
-							Expr leftExpr = null;
+							Expr? leftExpr = null;
 							ParseExpr(ref leftExpr, Lex.Next());
 							if (Lex.CurrentToken.Which != TokenType.Then)
 								throw new SyntaxError(currentToken.Range, "Unclosed ternary expression.");
 
-							Expr middleExpr = null;
+							Expr? middleExpr = null;
 							ParseExpr(ref middleExpr, Lex.Next());
 							if (Lex.CurrentToken.Which != TokenType.Else)
 								throw new SyntaxError(currentToken.Range, "Unclosed ternary expression.");
@@ -461,7 +485,7 @@ namespace stilt
 							newExpr = ternary;
 							break;
 						}
-						else if (a != null)
+						else if (a is not null)
 						{
 							newExpr = expr;
 							break;
@@ -499,15 +523,17 @@ namespace stilt
 				var foundSymbol = scope.FindSymbolByName(sym.Name);
 				if (foundSymbol is not null)
 				{
+					var range = sym.Identifier?.Range 
+						?? throw new Exception();
 					if (foundSymbol.IsBuiltin)
-						NewError(new ShadowedBuiltinSymbol(sym.Identifier.Range, sym));
+						NewError(new ShadowedBuiltinSymbol(range, sym));
 					else if (scope.Symbols.Any(s => s.Name == sym.Name))
 					{
-						NewError(new RedeclaredSymbol(sym.Identifier.Range, sym));
+						NewError(new RedeclaredSymbol(range, sym));
 						continue;
 					}
 					else
-						NewError(new ShadowedSymbol(sym.Identifier.Range, sym));
+						NewError(new ShadowedSymbol(range, sym));
 				}
 				scope.AddSymbol(sym);
 			}
@@ -516,7 +542,7 @@ namespace stilt
 		protected VarDeclStmt ParseVarDecl(Scope scope, bool isConst, Expr idExpr, Expr? valExpr = null)
 		{
 			if (valExpr is null && isConst)
-				throw new SyntaxError(idExpr.FullRange, $"No value given to initialize constant.");
+				throw new SyntaxError(idExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"), $"No value given to initialize constant.");
 			
 			var ids = GetIdentities(idExpr) ?? throw new Exception();
 			List<Symbol> syms = [.. ids.Select(i =>
@@ -548,11 +574,14 @@ namespace stilt
 			if (call is CallExpr callExpr && callExpr.Left is IdentityExpr id)
 			{
 				if (callExpr.Right is not (CommaExpr or IdentityExpr or null) || callExpr.Left is not IdentityExpr)
-					throw new MalformedDecl(callExpr.FullRange);
+					throw new MalformedDecl(callExpr.FullRange ?? throw new InvalidOperationException("Call expression has no FullRange"));
 
 				var arguments = GetIdentities(callExpr.Right).Select(e => e.Identity).ToList();
 
-				var decl = new FuncDeclStmt((callExpr.Left as IdentityExpr).Identity.Name, Lex.Filepath, innerStmt)
+				var leftId = callExpr.Left as IdentityExpr;
+				if (leftId == null)
+					throw new MalformedDecl(callExpr.FullRange ?? throw new InvalidOperationException("Call expression has no FullRange"));
+				var decl = new FuncDeclStmt(leftId.Identity.Name, Lex.Filepath, innerStmt)
 				{
 					Scope = newScope,
 				};
@@ -561,14 +590,14 @@ namespace stilt
 				return decl;
 			}
 			else
-				throw new MalformedDecl(call.FullRange);
+				throw new MalformedDecl(call.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
 		}
 
 		protected Stmt? ParseStmt(Scope currentScope)
 		{
 			var firstToken = Lex.CurrentToken;
 
-			Expr newExpr = null;
+			Expr? newExpr = null;
 			List<Token> specifiers = [];
 
 			while (firstToken.IsSpecifier)
@@ -597,14 +626,18 @@ namespace stilt
 						case AssignExpr assign:
 						{
 							if (assign.Operation is not (null or TokenType.Type))
-								throw new SyntaxError(assign.InnerRange, "Cannot use self-assignment operators in variable definition");
+								throw new SyntaxError(assign.InnerRange ?? assign.FullRange ?? throw new InvalidOperationException("Assign expression has no range"), "Cannot use self-assignment operators in variable definition");
 
+							if (assign.Left == null)
+								throw new MalformedExpr(assign.FullRange ?? throw new InvalidOperationException("Assign expression has no FullRange"));
 							newStmt = ParseVarDecl(currentScope, isConst, assign.Left, assign.Right);
 							break;
 						}
 						case CommaExpr:
 						case IdentityExpr:
 						{
+							if (newExpr == null)
+								throw new MalformedExpr(firstToken.Range);
 							newStmt = ParseVarDecl(currentScope, isConst, newExpr);
 							break;
 						}
@@ -613,7 +646,9 @@ namespace stilt
 							throw new MalformedExpr(firstToken.Range);
 						}
 					}
-					AddToScope((newStmt as VarDeclStmt).Name, currentScope);
+					
+					if (newStmt is VarDeclStmt varDecl)
+						AddToScope(varDecl.Name, currentScope);
 
 					break;
 				}
@@ -621,9 +656,14 @@ namespace stilt
 				{
 					ParseExpr(ref newExpr, Lex.Next());
 					var innerStmt = ParseStmt(currentScope);
+					if (innerStmt == null)
+						throw new SyntaxError(firstToken.Range, "Expected statement after function declaration");
+					if (newExpr == null)
+						throw new MalformedExpr(firstToken.Range);
 
 					newStmt = ParseFuncDecl(currentScope, innerStmt, newExpr);
-					AddToScope([(newStmt as FuncDeclStmt).Name], currentScope);
+					if (newStmt is FuncDeclStmt funcDecl)
+						AddToScope([funcDecl.Name], currentScope);
 
 					break;
 				}
@@ -634,37 +674,47 @@ namespace stilt
 				}
 				case TokenType.Return:
 				{
-					ParseExpr(ref newExpr, Lex.Next());
+					Expr? returnExpr = null;
+					ParseExpr(ref returnExpr, Lex.Next());
 					newStmt = new ReturnStmt()
 					{ 
 						Scope = currentScope,
-						Value = newExpr,
+						Value = returnExpr,
 					};
 					break;
 				}
 				case TokenType.If:
 				{
-					ParseExpr(ref newExpr, Lex.Next());
+					Expr? conditionExpr = null;
+					ParseExpr(ref conditionExpr, Lex.Next());
+					if (conditionExpr == null)
+						throw new MalformedExpr(firstToken.Range);
 					Scope newScope = new(currentScope);
 					var nextIfStmt = ParseStmt(newScope);
+					if (nextIfStmt == null)
+						throw new SyntaxError(firstToken.Range, "Expected statement after if condition");
 
 					var ifStmt = new IfStmt()
 					{
 						Scope = currentScope,
-						Condition = newExpr,
+						Condition = conditionExpr,
 						NextIf = nextIfStmt,
 					};
 
 					var lastIf = ifStmt;
 					while (Lex.CurrentToken.Which == TokenType.Elif)
 					{
-						newExpr = null;
-						ParseExpr(ref newExpr, Lex.Next());
+						Expr? elifCondition = null;
+						ParseExpr(ref elifCondition, Lex.Next());
+						if (elifCondition == null)
+							throw new MalformedExpr(firstToken.Range);
 						var elifStmt = ParseStmt(newScope);
+						if (elifStmt == null)
+							throw new SyntaxError(firstToken.Range, "Expected statement after elif condition");
 						var newIf = new IfStmt()
 						{
 							Scope = currentScope,
-							Condition = newExpr,
+							Condition = elifCondition,
 							NextIf = elifStmt,
 						};
 						lastIf.NextElse = newIf;
@@ -743,7 +793,8 @@ namespace stilt
 			//if (Lex.CurrentToken.Which is not (TokenType.StmtSeparator or TokenType.CloseCurlyBracket or TokenType.EOF or TokenType.Else or TokenType.Elif))
 			//	throw new RunonStatement(Lex.CurrentToken.Range);
 
-			newStmt?.InnerRange = firstToken.Range;
+			if (newStmt != null)
+				newStmt.InnerRange = firstToken.Range;
 
 			return newStmt;
 		}

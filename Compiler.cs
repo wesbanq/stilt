@@ -1,4 +1,4 @@
-﻿using System.Diagnostics;
+using System.Diagnostics;
 using System.Reflection;
 using System.Timers;
 
@@ -79,16 +79,16 @@ namespace stilt
 			return (line, column);
 		}
 
-		public static FileRange? operator +(FileRange left, FileRange right)
+		public static FileRange? operator +(FileRange? left, FileRange? right)
 		{
-			if (!left.SameFile(right))
-				throw new ArgumentException();
-
 			if (left == null)
 				return right;
 
 			if (right == null)
 				return left;
+
+			if (!left.SameFile(right))
+				throw new ArgumentException();
 
 			if (left.Before(right))
 				return new FileRange(left.Start, right.End, left.Filename, left._text);
@@ -231,15 +231,15 @@ namespace stilt
 		//something to keep track of all compilation steps betwwen all files
 		//temporary solution for one file
 		public List<Timer> Timers = [];
-		public Parser Parser;
-		public Lexer Lexer;
+		public Parser? Parser;
+		public Lexer? Lexer;
 
 		public void Build()
 		{
 			Timers.Add(new("Compilation"));
 			Timers[0].StartTimer();
 
-			Console.WriteLine($"Currently building: {Args.MainCodeFilepath}");
+			Console.WriteLine($"Currently building: {Args.MainCodeFilepath!}");
 			
 			Lexer = new Lexer(Args);
 			Parser = new Parser(Lexer, Args);

@@ -10,7 +10,7 @@ namespace stilt
 	{
 		public Command Action;
 		public int DebugLevel;
-		public string MainCodeFilepath;
+		public string? MainCodeFilepath;
 		public List<Option> UsedOptions = [];
 		public bool Throw = false;
 		public bool ExpandedDump = false;
@@ -134,19 +134,19 @@ namespace stilt
 			for (int i = 1; i < args.Length; i++)
 			{
 				var current = WhichOption(args[i]);
-				var currentAttribute = typeof(Option).GetField(current.ToString()).GetCustomAttribute<OptionAttribute>();
+				var currentAttribute = typeof(Option).GetField(current.ToString())?.GetCustomAttribute<OptionAttribute>();
 				var nextAttribute = args.Length > i+1 ? Program.GetAttrFromDescription<Option, OptionAttribute>(args[i+1]) : null;
 
-				if (current != Option.None)
+				if (current != Option.None && currentAttribute != null)
 				{
-					if (((currentAttribute?.Kind != OptionType.Flag
+					if (((currentAttribute.Kind != OptionType.Flag
 						&& nextAttribute?.Kind == null)
-						|| currentAttribute?.Kind == OptionType.Flag)
+						|| currentAttribute.Kind == OptionType.Flag)
 						&& !UsedOptions.Contains(current)
 						)
 					{
 						GiveValueTo(currentAttribute.AssociatedPropertyName,
-							nextAttribute == null && currentAttribute?.Kind != OptionType.Flag ? args[i + 1] : "");
+							nextAttribute == null && currentAttribute.Kind != OptionType.Flag ? args[i + 1] : "");
 						UsedOptions.Add(current);
 					}
 				}
@@ -254,10 +254,12 @@ namespace stilt
 	{
 		private string _name;
 
-		public Stopwatch Stopwatch { get; private set; }
-		public string Time => Stopwatch.IsRunning 
+		public Stopwatch? Stopwatch { get; private set; }
+		public string Time => Stopwatch != null && Stopwatch.IsRunning 
 			? $"{_name} has been running for ({Stopwatch.Elapsed.TotalSeconds}s)." 
-			: $"{_name} finished in ({Stopwatch.Elapsed.TotalSeconds}s).";
+			: Stopwatch != null
+			? $"{_name} finished in ({Stopwatch.Elapsed.TotalSeconds}s)."
+			: $"{_name} has not been started.";
 
 		public void StartTimer()
 		{
@@ -330,7 +332,7 @@ namespace stilt
 			foreach (var field in typeof(T).GetFields())
 			{
 				if (field.GetCustomAttribute<A>()?.Name == toFind)
-					return (T)field.GetValue(null);
+					return (T)field.GetValue(null)!;
 			}
 			//return default;
 			throw new ArgumentException($"Enum value with description '{toFind}' not found.");
@@ -544,7 +546,7 @@ namespace stilt
 					compiler.Build();
 
 					Console.WriteLine();
-					compiler.Parser.WriteErrors();
+					compiler.Parser!.WriteErrors();
 					Console.WriteLine();
 					if (!arg.NoTime)
 						TimerReadout(compiler.Timers);
@@ -561,7 +563,7 @@ namespace stilt
 				}
 				case ProgramArgs.Command.Preprocess:
 				{
-					var code = File.ReadAllText(arg.MainCodeFilepath);
+					var code = File.ReadAllText(arg.MainCodeFilepath!);
 					Console.Write(Lexer.Preprocess(code));
 					break;
 				}
@@ -572,14 +574,14 @@ namespace stilt
 
 					// if (!comp.Parser.HasErrors)
 					// {
-						foreach (var stmt in comp.Parser.Statements)
+						foreach (var stmt in comp.Parser!.Statements)
 						{
 							Dump(stmt, expanded: arg.ExpandedDump);
 						}
 					// }
 
 					Console.WriteLine();
-					comp.Parser.WriteErrors();
+					comp.Parser!.WriteErrors();
 					Console.WriteLine();
 					if (!arg.NoTime)
 						TimerReadout(comp.Timers);

@@ -1,4 +1,4 @@
-﻿using stilt.AST;
+using stilt.AST;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -75,14 +75,14 @@ namespace stilt.Errors
 		public Token Got;
 
 		public UnexpectedToken(FileRange pos, TokenType expected, Token? got)
-			: base(pos, $"Unexpected token: '{got.Which}'.\nExpected: '{expected}'.")
+			: base(pos, $"Unexpected token: '{got?.Which}'.\nExpected: '{expected}'.")
 		{
 			Expected = expected;
-			Got = got;
+			Got = got ?? throw new ArgumentNullException(nameof(got));
 		}
 
 		public UnexpectedToken(FileRange? pos, Token got)
-			: base(pos, $"Unexpected token: '{Program.Escape(got.Which.ToString())}'.")
+			: base(pos ?? got.Range, $"Unexpected token: '{Program.Escape(got.Which.ToString())}'.")
 		{ }
 	}
 
