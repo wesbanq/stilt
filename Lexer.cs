@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text.RegularExpressions;
+using stilt.Errors;
 
 namespace stilt
 {
@@ -100,7 +101,9 @@ namespace stilt
 
 		public void SkipStmt()
 		{
-			do { Next(); } while (CurrentToken.Which is not (TokenType.EOF or TokenType.StmtSeparator or TokenType.CloseCurlyBracket));
+			do { Next(); } while (CurrentToken.Which is not 
+				(TokenType.EOF or TokenType.StmtSeparator or TokenType.CloseCurlyBracket or TokenType.OpenCurlyBracket)
+			);
 		}
 
 		public Token Prev()
@@ -112,9 +115,24 @@ namespace stilt
 
 		public Token Next()
 		{
-			if (CurrentPos < Tokens.Count-1)
+			if (CurrentPos < Tokens.Count - 1)
 				CurrentPos++;
 			return CurrentToken;
+		}
+
+		public Token ExpectNext(TokenType expected)
+		{
+			var next = Next();
+			if (next.Which != expected)
+				throw new UnexpectedToken(next.Range, expected, next);
+			return next;
+		}
+
+		public Token Expect(TokenType expected)
+		{
+			if (CurrentToken.Which != expected)
+				throw new UnexpectedToken(CurrentToken.Range, expected, CurrentToken);
+			return Next();
 		}
 
 		public Token PeekNext(int n = 1)

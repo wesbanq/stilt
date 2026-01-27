@@ -53,6 +53,40 @@ namespace stilt.AST
 		public Stmt? NextElse;
 	}
 
+	public class LoopStmt : Stmt
+	{
+		public Stmt Body;
+	}
+
+	public class PostconditionLoopStmt : LoopStmt
+	{
+		public Expr Condition;
+	}
+
+	public class PreconditionLoopStmt : LoopStmt
+	{
+		public Expr Condition;
+	}
+
+	public class ForLoopStmt : LoopStmt
+	{
+		public VarDeclStmt? LoopVariable;
+		public Expr? Condition;
+		public Expr? Iterator;
+	}
+
+	public class ForeachLoopStmt : LoopStmt
+	{
+		public required VarDeclStmt LoopVariable;
+		public required Expr Iterator;
+	}
+
+	public class BreakStmt : Stmt
+	{ }
+
+	public class ContinueStmt : Stmt
+	{ }
+
 	public class ExpressionStmt : Stmt
 	{
 		public required Expr Expression;

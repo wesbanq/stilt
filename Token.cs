@@ -103,7 +103,7 @@ namespace stilt
 		Decrement,
 
 		// Assignment Operators
-		[BinaryOperator(15)]
+		[BinaryOperator(14)]
 		[Symbol("=")]
 		Assign,
 
@@ -180,12 +180,12 @@ namespace stilt
 
 		// Signal Operators
 		[Unimplemented]
-		[BinaryOperator(15)]
+		[BinaryOperator(14)]
 		[Symbol("->")]
 		ConnectSignal,
 
 		[Unimplemented]
-		[BinaryOperator(15)]
+		[BinaryOperator(14)]
 		[Symbol("<-")]
 		EmitSignal,
 
@@ -219,10 +219,10 @@ namespace stilt
 		ScientificNumericLiteral,
 
 		// Delimiters
-		[Symbol("""[\r\n;]+""", true)]
+		[Symbol("""[\r\n]+|;""", true)]
 		StmtSeparator,
 
-		[BinaryOperator(14)]
+		[BinaryOperator(15)]
 		[Symbol(",")]
 		Comma,
 
@@ -279,12 +279,12 @@ namespace stilt
 		Then,
 
 		[Unimplemented]
-		[BinaryOperator(15)]
+		[BinaryOperator(14)]
 		[Symbol("|>")]
 		Update,
 
 		[Unimplemented]
-		[BinaryOperator(15)]
+		[BinaryOperator(14)]
 		[Symbol("!>")]
 		Overwrite,
 
@@ -294,12 +294,12 @@ namespace stilt
 		Composition,
 
 		[Unimplemented]
-		[BinaryOperator(15)]
+		[BinaryOperator(14)]
 		[Symbol("><")]
 		SwapValue,
 
 		[Unimplemented]
-		[BinaryOperator(15)]
+		[BinaryOperator(14)]
 		[Symbol("=>")]
 		CopyTo,
 
@@ -313,9 +313,6 @@ namespace stilt
 		// Declarations
 		[Symbol("func")]
 		FuncDecl,
-
-		[Symbol("macro")]
-		MacroDecl,
 
 		[Unimplemented]
 		[Symbol("enum")]
@@ -425,7 +422,21 @@ namespace stilt
 		[Symbol("for")]
 		For,
 
-		[Unimplemented]
+		[Symbol("foreach")]
+		Foreach,
+
+		[Symbol("continue")]
+		Continue,
+
+		[Symbol("repeat")]
+		Repeat,
+
+		[Symbol("until")]
+		Until,
+
+		[Symbol("break")]
+		Break,
+
 		[Symbol("in")]
 		In,
 

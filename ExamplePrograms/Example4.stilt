@@ -1,6 +1,6 @@
 #var a = (1+2)+d()+3*2
 #var b = -2 + 4
-#var c = if j then 2 else 3
+var c = if j then 2 else 3
 #var d = 5 + -(2+3)
 
 {
@@ -17,7 +17,17 @@
 var m =0
 }
 
+while a < 2 {
+	break
+} var p = 2
 
+for ;;; {
+	break
+}
+
+foreach var a, g in b {
+	break
+}
 
 ##
 a*3+3+(1+2+(3*2))*3+4
