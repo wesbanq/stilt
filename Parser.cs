@@ -63,22 +63,24 @@ namespace stilt
 			{
 				if (toReplace != null)
 				{
+					//with the old CommaExpr foundSym tuple of 3 will evaluate to foundSym type of ((Type, Type), Type) instead of (Type, Type, Type)
+					//there might be foundSym better way to accomplishing this with BinaryExpr
+					//by looking if the child CommaExpr is bracketed during type eval
+					if (toReplace is CommaExpr rootComma && newExpr is CommaExpr)
+					{
+						++rootComma.ExprLength;
+						return;
+					}
+
 					spreadable.InsertChild(toReplace);
 					if (parent != null)
 					{
-						//with the old CommaExpr foundSym tuple of 3 will evaluate to foundSym type of ((Type, Type), Type) instead of (Type, Type, Type)
-						//there might be foundSym better way to accomplishing this with BinaryExpr
-						//by looking if the child CommaExpr is bracketed during type eval
-						if (toReplace is CommaExpr rootComma && newExpr is CommaExpr)
-						{
-							++rootComma.ExprLength;
-							return;
-						}
-
 						if (parent is IOperator op)
 						{
 							op.ReplaceChild(toReplace, newExpr);
 						}
+						else
+							throw new MalformedExpr(toReplace?.FullRange ?? newExpr?.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
 					}
 					else
 					{
@@ -194,7 +196,7 @@ namespace stilt
 			ParseExpr(ref newExpr, currentToken);
 			
 			if (newExpr == null)
-				throw new MalformedExpr(currentToken.Range);
+				throw new SyntaxError(currentToken.Range, "Empty table literal.");
 			
 			return newExpr is CommaExpr commaExpr
 				? new ArrayLiteralExpr(currentToken.Range, [.. commaExpr.GetChildren()])
@@ -324,7 +326,7 @@ namespace stilt
 					if (numBase != 10)
 					{
 						if (tokenText is null || tokenText.Length < 2)
-							throw new SyntaxError(currentToken.Range, "Invalid numeric literal format");
+							throw new SyntaxError(currentToken.Range, "Invalid numeric literal format.");
 						tokenText = tokenText.Substring(2);
 					}
 
@@ -359,7 +361,7 @@ namespace stilt
 					}
 					catch
 					{
-						throw new SyntaxError(currentToken.Range, "Could not parse numeric literal");
+						throw new SyntaxError(currentToken.Range, "Could not parse numeric literal.");
 					}
 
 					break;
@@ -377,7 +379,7 @@ namespace stilt
 					if (ExpectingOperator(ref rootExpr))
 					{
 						if (newExpr is null && currentToken.Which == TokenType.OpenSquareBracket)
-							throw new SyntaxError(currentToken.Range, "No valid expression given as an index");
+							throw new SyntaxError(currentToken.Range, "No valid expression given as an index.");
 						var opExpr = CreateOperatorExpr<BinaryOperatorAttribute>(currentToken).First() as BinaryExpr;
 						if (opExpr is null)
 							throw new MalformedExpr(currentToken.Range);
@@ -406,6 +408,7 @@ namespace stilt
 
 					break;
 				}
+				case TokenType.In:
 				case TokenType.EOF:
 				case TokenType.Then:
 				case TokenType.Else:
@@ -503,16 +506,6 @@ namespace stilt
 			}
 			
 			InsertIntoExprTree(ref rootExpr, newExpr);
-			
-			// Check if the next token is a statement terminator before advancing
-			var nextToken = Lex.PeekNext();
-			if (nextToken.Which is TokenType.EOF or TokenType.Then or TokenType.Else or TokenType.Elif
-				or TokenType.CloseBracket or TokenType.StmtSeparator 
-				or TokenType.CloseCurlyBracket or TokenType.CloseSquareBracket)
-			{
-				return;
-			}
-			
 			ParseExpr(ref rootExpr, Lex.Next());
 		}
 
@@ -539,8 +532,38 @@ namespace stilt
 			}
 		}
 
-		protected VarDeclStmt ParseVarDecl(Scope scope, bool isConst, Expr idExpr, Expr? valExpr = null)
+		protected VarDeclStmt ParseVarDecl(Scope scope, bool isConst, Expr expr)
 		{
+			Expr? idExpr = null;
+			Expr? valExpr = null;
+
+			switch (expr)
+			{
+				case AssignExpr assign:
+				{
+					if (assign.Operation is not (null or TokenType.Type))
+						throw new SyntaxError(assign.InnerRange ?? assign.FullRange ?? throw new InvalidOperationException("Assign expression has no range"), "Cannot use self-assignment operators in variable definition");
+
+					if (assign.Left == null)
+						throw new MalformedExpr(assign.FullRange ?? throw new InvalidOperationException("Assign expression has no FullRange"));
+					
+					idExpr = assign.Left;
+					valExpr = assign.Right;
+					break;
+				}
+				case CommaExpr:
+				case IdentityExpr:
+				{
+					idExpr = expr;
+					valExpr = null;
+					break;
+				}
+				default:
+				{
+					throw new MalformedExpr(expr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
+				}
+			}
+
 			if (valExpr is null && isConst)
 				throw new SyntaxError(idExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"), $"No value given to initialize constant.");
 			
@@ -593,6 +616,136 @@ namespace stilt
 				throw new MalformedDecl(call.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
 		}
 
+		protected Stmt? ParseLoopStmt(Scope currentScope, Token firstToken)
+		{
+			Scope newScope = new(currentScope);
+			Stmt? newStmt = null;
+
+			switch (firstToken.Which)
+			{
+				case TokenType.While:
+				{
+					Expr? conditionExpr = null;
+					ParseExpr(ref conditionExpr, Lex.Next());
+					if (conditionExpr is null)
+						throw new MalformedExpr(firstToken.Range);
+					
+					var bodyStmt = ParseStmt(newScope);
+					if (bodyStmt is null)
+						throw new SyntaxError(firstToken.Range, "Expected statement after while condition");
+					
+					newStmt = new PreconditionLoopStmt()
+					{
+						Scope = newScope,
+						Condition = conditionExpr,
+						Body = bodyStmt,
+					};
+
+					break;
+				}
+				case TokenType.For:
+				{
+					VarDeclStmt? loopVar = null;
+					Expr? conditionExpr = null;
+					Expr? iteratorExpr = null;
+					
+					var nextToken = Lex.Next();
+
+					if (nextToken.Which == TokenType.VarDecl)
+					{
+						loopVar = (ParseStmt(newScope) as VarDeclStmt)
+							?? throw new UnexpectedToken(nextToken.Range, TokenType.VarDecl, nextToken);
+					}
+					
+					nextToken = Lex.Expect(TokenType.StmtSeparator);
+					ParseExpr(ref conditionExpr, nextToken);
+
+					nextToken = Lex.Expect(TokenType.StmtSeparator);
+					ParseExpr(ref iteratorExpr, nextToken);
+					
+					nextToken = Lex.Expect(TokenType.StmtSeparator);
+
+					var bodyStmt = ParseStmt(newScope);
+
+					newStmt = new ForLoopStmt()
+					{
+						Scope = newScope,
+						LoopVariable = loopVar,
+						Condition = conditionExpr,
+						Iterator = iteratorExpr,
+						Body = bodyStmt,
+					};
+
+					break;
+				}
+				case TokenType.Foreach:
+				{
+					firstToken = Lex.ExpectNext(TokenType.VarDecl);
+					firstToken = Lex.ExpectNext(TokenType.Identifier);
+					
+					Expr? loopVar = null;
+					ParseExpr(ref loopVar, firstToken);
+					if (loopVar is null)
+						throw new SyntaxError(firstToken.Range, "Expected variable declaration.");
+
+					var lopVar = ParseVarDecl(newScope, false, loopVar);
+					firstToken = Lex.Expect(TokenType.In);
+					
+					Expr? iteratorExpr = null;
+					ParseExpr(ref iteratorExpr, firstToken);
+					if (iteratorExpr is null)
+						throw new SyntaxError(firstToken.Range, "Expected expression after foreach iterator.");
+					
+					//firstToken = Lex.Expect(TokenType.StmtSeparator);
+					//FIX newline b4 { will error 
+					var bodyStmt = ParseStmt(newScope)
+						/*?? throw new SyntaxError(firstToken.Range, "Expected statement after foreach header")*/;
+                    
+					newStmt = new ForeachLoopStmt()
+					{
+						Scope = newScope,
+						LoopVariable = lopVar,
+						Iterator = iteratorExpr,
+						Body = bodyStmt,
+					};
+
+					break;
+				}
+				case TokenType.Repeat:
+				{
+					Lex.Next();
+					var bodyStmt = ParseStmt(newScope);
+					
+					if (Lex.CurrentToken.Which == TokenType.Until)
+					{
+						Expr? conditionExpr = null;
+						ParseExpr(ref conditionExpr, Lex.Next());
+						if (conditionExpr is null)
+							throw new MalformedExpr(firstToken.Range);
+						
+						newStmt = new PostconditionLoopStmt()
+						{
+							Scope = newScope,
+							Condition = conditionExpr,
+							Body = bodyStmt,
+						};
+					}
+					else
+					{
+						newStmt = new LoopStmt()
+						{
+							Scope = newScope,
+							Body = bodyStmt,
+						};
+					}
+
+					break;
+				}
+			}
+
+			return newStmt;
+		}
+
 		protected Stmt? ParseStmt(Scope currentScope)
 		{
 			var firstToken = Lex.CurrentToken;
@@ -614,38 +767,15 @@ namespace stilt
 			{
 				case TokenType.VarDecl:
 				{
-					var varToken = Lex.Next();
-					if (varToken.Which != TokenType.Identifier && varToken.Which != TokenType.OpenBracket)
-						throw new UnexpectedToken(varToken.Range, TokenType.Identifier, varToken);
+					var varToken = Lex.ExpectNext(TokenType.Identifier);
 					var isConst = specifiers.Any(t => t.Which == TokenType.ConstSpec);
 
 					ParseExpr(ref newExpr, varToken);
 
-					switch (newExpr)
-					{
-						case AssignExpr assign:
-						{
-							if (assign.Operation is not (null or TokenType.Type))
-								throw new SyntaxError(assign.InnerRange ?? assign.FullRange ?? throw new InvalidOperationException("Assign expression has no range"), "Cannot use self-assignment operators in variable definition");
-
-							if (assign.Left == null)
-								throw new MalformedExpr(assign.FullRange ?? throw new InvalidOperationException("Assign expression has no FullRange"));
-							newStmt = ParseVarDecl(currentScope, isConst, assign.Left, assign.Right);
-							break;
-						}
-						case CommaExpr:
-						case IdentityExpr:
-						{
-							if (newExpr == null)
-								throw new MalformedExpr(firstToken.Range);
-							newStmt = ParseVarDecl(currentScope, isConst, newExpr);
-							break;
-						}
-						default:
-						{
-							throw new MalformedExpr(firstToken.Range);
-						}
-					}
+					if (newExpr == null)
+						throw new MalformedExpr(firstToken.Range);
+					
+					newStmt = ParseVarDecl(currentScope, isConst, newExpr);
 					
 					if (newStmt is VarDeclStmt varDecl)
 						AddToScope(varDecl.Name, currentScope);
@@ -681,6 +811,30 @@ namespace stilt
 						Scope = currentScope,
 						Value = returnExpr,
 					};
+					break;
+				}
+				case TokenType.Break:
+				{
+					newStmt = new BreakStmt()
+					{
+						Scope = currentScope,
+					};
+					break;
+				}
+				case TokenType.Continue:
+				{
+					newStmt = new ContinueStmt()
+					{
+						Scope = currentScope,
+					};
+					break;
+				}
+				case TokenType.For:
+				case TokenType.While:
+				case TokenType.Repeat:
+				case TokenType.Foreach:
+				{
+					newStmt = ParseLoopStmt(currentScope, firstToken);
 					break;
 				}
 				case TokenType.If:
@@ -765,8 +919,6 @@ namespace stilt
 				{
 					break;
 				}
-				case TokenType.MacroDecl:
-					throw new SyntaxError(firstToken.Range, "Macros can only be defined inside of a type.");
 				default:
 				//ExpressionStmt
 				{
@@ -796,6 +948,7 @@ namespace stilt
 			if (newStmt != null)
 				newStmt.InnerRange = firstToken.Range;
 
+			//CONTAINERSTMT
 			return newStmt;
 		}
 
@@ -840,6 +993,24 @@ namespace stilt
 					try
 					{
 						newStmt = ParseStmt(parentScope);
+
+						if (Lex.CurrentToken.Which == TokenType.EOF)
+						{
+							if (topLevel)
+								break;
+							else
+								throw new SyntaxError(firstToken.Range, "Unclosed bracket.");
+						}
+						if (Lex.CurrentToken.Which == TokenType.CloseCurlyBracket)
+						{
+							if (!topLevel)
+							{
+								Lex.Next();
+								break;
+							}
+							else
+								throw new UnexpectedToken(Lex.CurrentToken.Range, Lex.CurrentToken);
+						}
 					}
 					catch (SyntaxError se)
 					{
@@ -853,25 +1024,7 @@ namespace stilt
 					}
 
 					if (newStmt != null)
-							innerStmts.AddLast(newStmt);
-
-					if (Lex.CurrentToken.Which == TokenType.EOF)
-					{
-						if (topLevel)
-							break;
-						else
-							throw new SyntaxError(firstToken.Range, "Unclosed bracket.");
-					}
-					if (Lex.CurrentToken.Which == TokenType.CloseCurlyBracket)
-					{
-						if (!topLevel)
-						{
-							Lex.Next();
-							break;
-						}
-						else
-							throw new UnexpectedToken(Lex.CurrentToken.Range, Lex.CurrentToken);
-					}
+						innerStmts.AddLast(newStmt);
 
 					if (newStmt is not CompoundStmt && Lex.CurrentToken.Which != TokenType.OpenCurlyBracket)
 						Lex.Next();

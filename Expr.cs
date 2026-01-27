@@ -305,7 +305,7 @@ namespace stilt.AST
 
 		public Expr?[] GetChildren()
 		{
-			return ExprLength < Exprs.Count ? [null, .. Exprs] : [.. Exprs];
+			return ExprLength > Exprs.Count ? [null, .. Exprs] : [.. Exprs];
 		}
 
 		public void InsertChild(Expr what)
