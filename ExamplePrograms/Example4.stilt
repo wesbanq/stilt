@@ -21,7 +21,8 @@ while a < 2 {
 	break
 } var p = 2
 
-for ;;; {
+for ;;; 
+{
 	break
 }
 

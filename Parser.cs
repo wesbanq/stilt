@@ -616,6 +616,14 @@ namespace stilt
 				throw new MalformedDecl(call.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
 		}
 
+		protected void ConsumeStmtSeparatorIfPresent()
+		{
+			if (Lex.CurrentToken.Which == TokenType.StmtSeparator)
+			{
+				Lex.Next();
+			}
+		}
+
 		protected Stmt? ParseLoopStmt(Scope currentScope, Token firstToken)
 		{
 			Scope newScope = new(currentScope);
@@ -630,6 +638,7 @@ namespace stilt
 					if (conditionExpr is null)
 						throw new MalformedExpr(firstToken.Range);
 					
+					ConsumeStmtSeparatorIfPresent();
 					var bodyStmt = ParseStmt(newScope);
 					if (bodyStmt is null)
 						throw new SyntaxError(firstToken.Range, "Expected statement after while condition");
@@ -665,6 +674,7 @@ namespace stilt
 					
 					nextToken = Lex.Expect(TokenType.StmtSeparator);
 
+					ConsumeStmtSeparatorIfPresent();
 					var bodyStmt = ParseStmt(newScope);
 
 					newStmt = new ForLoopStmt()
@@ -698,6 +708,7 @@ namespace stilt
 					
 					//firstToken = Lex.Expect(TokenType.StmtSeparator);
 					//FIX newline b4 { will error 
+					ConsumeStmtSeparatorIfPresent();
 					var bodyStmt = ParseStmt(newScope)
 						/*?? throw new SyntaxError(firstToken.Range, "Expected statement after foreach header")*/;
                     
@@ -714,6 +725,7 @@ namespace stilt
 				case TokenType.Repeat:
 				{
 					Lex.Next();
+					ConsumeStmtSeparatorIfPresent();
 					var bodyStmt = ParseStmt(newScope);
 					
 					if (Lex.CurrentToken.Which == TokenType.Until)
@@ -785,6 +797,7 @@ namespace stilt
 				case TokenType.FuncDecl:
 				{
 					ParseExpr(ref newExpr, Lex.Next());
+					ConsumeStmtSeparatorIfPresent();
 					var innerStmt = ParseStmt(currentScope);
 					if (innerStmt == null)
 						throw new SyntaxError(firstToken.Range, "Expected statement after function declaration");
@@ -844,6 +857,7 @@ namespace stilt
 					if (conditionExpr == null)
 						throw new MalformedExpr(firstToken.Range);
 					Scope newScope = new(currentScope);
+					ConsumeStmtSeparatorIfPresent();
 					var nextIfStmt = ParseStmt(newScope);
 					if (nextIfStmt == null)
 						throw new SyntaxError(firstToken.Range, "Expected statement after if condition");
@@ -862,6 +876,7 @@ namespace stilt
 						ParseExpr(ref elifCondition, Lex.Next());
 						if (elifCondition == null)
 							throw new MalformedExpr(firstToken.Range);
+						ConsumeStmtSeparatorIfPresent();
 						var elifStmt = ParseStmt(newScope);
 						if (elifStmt == null)
 							throw new SyntaxError(firstToken.Range, "Expected statement after elif condition");
@@ -878,6 +893,7 @@ namespace stilt
 					if (Lex.CurrentToken.Which == TokenType.Else)
 					{
 						Lex.Next();
+						ConsumeStmtSeparatorIfPresent();
 						var elseStmt = ParseStmt(newScope);
 						lastIf.NextElse = elseStmt;
 					}
