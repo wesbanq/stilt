@@ -68,6 +68,30 @@ namespace stilt
 				, linebreakRegex, " ");
 		}
 
+		/// <summary>Compiled regex + metadata for O(n) single-pass lexing. isSymbol: true = literal/symbol (wins ties over regex).</summary>
+		private sealed record LexRule(Regex Regex, TokenType Type, bool IsSymbol);
+
+		private static List<LexRule> BuildLexRules()
+		{
+			GetSymbolAttribute(out var symbols, out var regex);
+			var options = RegexOptions.NonBacktracking;
+			var rules = new List<LexRule>();
+			for (int i = 0; i < symbols.Count; i++)
+			{
+				if (symbols[i] is null || symbols[i].Length == 0) continue;
+				foreach (var pat in symbols[i])
+					rules.Add(new LexRule(new Regex(pat, options), (TokenType)i, true));
+			}
+			for (int i = 0; i < regex.Count; i++)
+			{
+				if (regex[i] is null || regex[i].Length == 0) continue;
+				foreach (var pat in regex[i])
+					rules.Add(new LexRule(new Regex(pat, options), (TokenType)i, false));
+			}
+			return rules;
+		}
+
+		/// <summary>Legacy: get all regex matches over full code (used only for comparison / fallback).</summary>
 		protected List<Token> GetTokenMatches(string code, List<string[]> rules)
 		{
 			List<Token> tokens = [];
@@ -172,16 +196,50 @@ namespace stilt
 			CurrentPos = t;
 		}
 
+		private static List<LexRule>? _lexRules;
+		private static List<LexRule> LexRules => _lexRules ??= BuildLexRules();
+
 		public void Lex()
 		{
-			GetSymbolAttribute(out var symbols, out var regex);
-			Tokens = [.. FileRange.RemoveOverlaps(
-				GetTokenMatches(Text.ToString(), symbols),
-				GetTokenMatches(Text.ToString(), regex)
-			)
-			.OrderBy(t => t.Range.Start)
-			.ThenBy(t => t.Range.End)];
+			var code = Text.ToString();
+			var tokens = new List<Token>();
+			var pos = 0;
 
+			while (pos < code.Length)
+			{
+				int bestLen = 0;
+				TokenType bestType = 0;
+				bool bestIsSymbol = false;
+
+				foreach (var rule in LexRules)
+				{
+					var m = rule.Regex.Match(code, pos);
+					if (!m.Success || m.Index != pos) continue;
+					var len = m.Length;
+					var better = len > bestLen
+						|| (len == bestLen && rule.IsSymbol && !bestIsSymbol);
+					if (better)
+					{
+						bestLen = len;
+						bestType = rule.Type;
+						bestIsSymbol = rule.IsSymbol;
+					}
+				}
+
+				if (bestLen > 0)
+				{
+					tokens.Add(new Token
+					{
+						Which = bestType,
+						Range = new FileRange(pos, pos + bestLen, Filepath, Text),
+					});
+					pos += bestLen;
+				}
+				else
+					pos += 1;
+			}
+
+			Tokens = tokens;
 			Tokens.Add(new Token()
 			{
 				Which = TokenType.EOF,
