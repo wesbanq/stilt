@@ -70,11 +70,6 @@ var bit1 = a << 2
 var bit2 = b >> 3
 var bit3 = a && b || c ^^ d
 
-# Comparison chains
-var comp1 = a < b < c
-var comp2 = x >= y <= z
-var comp3 = a == b != c
-
 # Ternary-like expressions (if as ternary operator)
 var ternary = if a > b then a else b
 
