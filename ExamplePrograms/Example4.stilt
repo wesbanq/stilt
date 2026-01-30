@@ -2,7 +2,7 @@
 #var b = -2 + 4
 #var c = if j then 2 else 3
 #var d = 5 + -(2+3)
-
+##
 {
 	var e = 3
 }
@@ -29,9 +29,9 @@ for ;;;
 foreach var a, g in b {
 	break
 }
-
-a.b.c
-
+##
+a.b.c?.d
+##
 func f() {
 	return 5
 } var u = 5
@@ -41,3 +41,4 @@ func f() {
 repeat {
 
 } until 1
+##
