@@ -86,8 +86,8 @@ namespace stilt.AST
 		public int ArgumentCount = 0;
 		public TypeSymbol[]? Arguments;
 
-		//public bool IsComplete => Base == null ? true : ArgumentCount == Arguments?.Length;
-		//public bool IsSimple => Base == null;
+		//public bool IsComplete => Base is null ? true : ArgumentCount == Arguments?.Length;
+		//public bool IsSimple => Base is null;
 
 		public static bool operator ==(TypeSymbol? left, TypeSymbol? right)
 		{
@@ -95,7 +95,7 @@ namespace stilt.AST
 			if (left is null || right is null) return false;
 			if (left.ArgumentCount != right.ArgumentCount) return false;
 
-			if (left.Arguments != null && right.Arguments != null)
+			if (left.Arguments is not null && right.Arguments is not null)
 			{
 				for (int i = 0; i < left.ArgumentCount; i++)
 				{
@@ -129,7 +129,7 @@ namespace stilt.AST
 			hash.Add(Name);
 			hash.Add(Source);
 			hash.Add(ArgumentCount);
-			if (Arguments != null)
+			if (Arguments is not null)
 			{
 				for (int i = 0; i < Arguments.Length; i++)
 				{
@@ -142,7 +142,7 @@ namespace stilt.AST
 		public bool InheritsFrom(TypeSymbol from)
 		{
 			var currentType = this;
-			while (currentType != null)
+			while (currentType is not null)
 			{
 				if (currentType == from)
 					return true;
@@ -170,7 +170,7 @@ namespace stilt.AST
 			ArgumentCount = basedef.ArgumentCount;
 			Arguments = arguments;
 
-			if (Arguments != null && Arguments.Length != ArgumentCount)
+			if (Arguments is not null && Arguments.Length != ArgumentCount)
 				throw new ArgumentException();
 		}
 	}

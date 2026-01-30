@@ -44,7 +44,7 @@ namespace stilt
 			//TODO redo this entirely
 			//var fields = GetType().GetFields();
 			//var a = Array.Find(fields, f => f.Name == opt);
-			//if (a == null)
+			//if (a is null)
 			//	throw new ArgumentException($"Non-existent argument: {opt}");
 
 			//a.SetValue(this, a.FieldType.);
@@ -137,23 +137,23 @@ namespace stilt
 				var currentAttribute = typeof(Option).GetField(current.ToString())?.GetCustomAttribute<OptionAttribute>();
 				var nextAttribute = args.Length > i+1 ? Program.GetAttrFromDescription<Option, OptionAttribute>(args[i+1]) : null;
 
-				if (current != Option.None && currentAttribute != null)
+				if (current != Option.None && currentAttribute is not null)
 				{
 					if (((currentAttribute.Kind != OptionType.Flag
-						&& nextAttribute?.Kind == null)
+						&& nextAttribute?.Kind is null)
 						|| currentAttribute.Kind == OptionType.Flag)
 						&& !UsedOptions.Contains(current)
 						)
 					{
 						GiveValueTo(currentAttribute.AssociatedPropertyName,
-							nextAttribute == null && currentAttribute.Kind != OptionType.Flag ? args[i + 1] : "");
+							nextAttribute is null && currentAttribute.Kind != OptionType.Flag ? args[i + 1] : "");
 						UsedOptions.Add(current);
 					}
 				}
 				else if (WhichOption(args[i - 1]) == Option.None)
 				{
 					var a = Program.GetAttributeFromEnum<Command, ActionAttribute>(Action);
-					if (a != null && a.Required != null)
+					if (a is not null && a.Required is not null)
 					{
 						foreach (var b in a.Required)
 						{
@@ -255,9 +255,9 @@ namespace stilt
 		private string _name;
 
 		public Stopwatch? Stopwatch { get; private set; }
-		public string Time => Stopwatch != null && Stopwatch.IsRunning 
+		public string Time => Stopwatch is not null && Stopwatch.IsRunning 
 			? $"{_name} has been running for ({Stopwatch.Elapsed.TotalSeconds}s)." 
-			: Stopwatch != null
+			: Stopwatch is not null
 			? $"{_name} finished in ({Stopwatch.Elapsed.TotalSeconds}s)."
 			: $"{_name} has not been started.";
 
@@ -360,7 +360,7 @@ namespace stilt
 		{
 			//TODO
 			//turn into json file
-			if (obj == null)
+			if (obj is null)
 			{
 				Console.WriteLine("null");
 				return;
@@ -423,7 +423,7 @@ namespace stilt
 		{
 			var indent = new string('\t', level + 1);
 
-			if (value == null)
+			if (value is null)
 			{
 				Console.WriteLine($"{indent}{name} = null");
 				return;
