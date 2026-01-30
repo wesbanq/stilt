@@ -139,6 +139,10 @@ namespace stilt
 						new CallExpr(op.Precedence, token.Range, token),
 					BinaryOperatorAttribute when token.Which == TokenType.Comma => 
 						new CommaExpr(op.Precedence, token.Range, token),
+					BinaryOperatorAttribute when token.Which == TokenType.Access => 
+						new AccessExpr(op.Precedence, token.Range, token),
+					BinaryOperatorAttribute when token.Which == TokenType.NullAccess => 
+						new NullAccessExpr(op.Precedence, token.Range, token),
 					BinaryOperatorAttribute when token.Which == TokenType.Assign => 
 						new AssignExpr(op.Precedence, token.Range, token),
 					BinaryOperatorAttribute => new BinaryExpr(op.Precedence, token.Range, token),

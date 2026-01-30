@@ -83,7 +83,7 @@ namespace stilt
 		[Symbol("%")]
 		Modulo,
 
-		[BinaryOperator(1)]
+		[BinaryOperator(2)]
 		[Symbol("**")]
 		Exponent,
 
@@ -219,7 +219,7 @@ namespace stilt
 		ScientificNumericLiteral,
 
 		// Delimiters
-		[Symbol("""[\r\n]+|;""", true)]
+		[Symbol("""\n+|;""", true)]
 		StmtSeparator,
 
 		[BinaryOperator(15)]
@@ -258,7 +258,7 @@ namespace stilt
 
 		[Unimplemented]
 		[Symbol("@")]
-		CurrentExecutor,
+		Target,
 
 		[Unimplemented]
 		[Symbol("$")]
@@ -271,6 +271,10 @@ namespace stilt
 		[BinaryOperator(1)]
 		[Symbol("?.")]
 		NullAccess,
+
+		[BinaryOperator(1)]
+		[Symbol("??")]
+		NullCoalescing,
 
 		[Symbol(":")]
 		Type,

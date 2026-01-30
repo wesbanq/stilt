@@ -310,6 +310,11 @@ namespace stilt.AST
 
 		public void InsertChild(Expr what)
 		{
+			// var children = GetChildren();
+			// if (children.Length == 0 || children[0] is null)
+			// 	throw new InvalidOperationException("Internal error: Attempted to insert a child into an expression node that is already full.");
+			// children[0] = what;
+			// Exprs = [.. children];
 			Exprs = [.. Exprs.Prepend(what)];
 		}
 
@@ -323,6 +328,20 @@ namespace stilt.AST
 		}
 
 		public CommaExpr(int p, FileRange? r = null, Token? o = null) 
+			: base(p, r, o)
+		{ }
+	}
+
+	public class AccessExpr : CommaExpr
+	{
+		public AccessExpr(int p, FileRange? r = null, Token? o = null)
+			: base(p, r, o)
+		{ }
+	}
+	
+	public class NullAccessExpr : CommaExpr
+	{
+		public NullAccessExpr(int p, FileRange? r = null, Token? o = null)
 			: base(p, r, o)
 		{ }
 	}
