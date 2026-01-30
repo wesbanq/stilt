@@ -266,7 +266,7 @@ namespace stilt
 			var mantissa = Convert.ToDouble(tokenText[..splitIndex], CultureInfo.InvariantCulture);
 			var exponent = Convert.ToInt64(tokenText[(splitIndex+1)..], CultureInfo.InvariantCulture);
 
-			return mantissa * (Math.Pow(10, exponent));
+			return mantissa * Math.Pow(10, exponent);
 		}
 
 		protected void ParseExpr(ref Expr? rootExpr, Token currentToken)

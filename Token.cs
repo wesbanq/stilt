@@ -93,12 +93,10 @@ namespace stilt
 		Range,
 
 		[UnaryOperator(1)]
-		[BinaryOperator(1)]
 		[Symbol("++")]
 		Increment,
 
 		[UnaryOperator(1)]
-		[BinaryOperator(1)]
 		[Symbol("--")]
 		Decrement,
 
