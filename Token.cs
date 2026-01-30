@@ -101,7 +101,7 @@ namespace stilt
 		Decrement,
 
 		// Assignment Operators
-		[BinaryOperator(14)]
+		[BinaryOperator(16)]
 		[Symbol("=")]
 		Assign,
 

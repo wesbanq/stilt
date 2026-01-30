@@ -134,6 +134,13 @@ namespace stilt
 			return CurrentToken;
 		}
 
+		public Token GoPast(TokenType type)
+		{
+			while (!CurrentIs(type) && !CurrentIs(TokenType.EOF))
+				Next();
+			return Next();
+		}
+
 		public Token ExpectNext(TokenType expected)
 		{
 			var next = Next();

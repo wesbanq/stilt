@@ -36,8 +36,9 @@ namespace stilt
 		{
 			if (rootExpr is null && newExpr is not null)
 			{
-				if (newExpr is IOperator && newExpr is not UnaryExpr && newExpr is not CommaExpr)
-					throw new Exception();
+				if (!newExpr.Bracketed && newExpr is not UnaryExpr && newExpr is not CommaExpr && newExpr is IOperator)
+					throw new MalformedExpr(newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
+					// throw new Exception();
 				rootExpr = newExpr;
 				return;
 			}
@@ -162,6 +163,10 @@ namespace stilt
 
 			switch (expr)
 			{
+				case CommaExpr comma:
+				{
+					return [.. comma.GetChildren().SelectMany(GetIdentities)];
+				}
 				case IOperator op:
 				{
 					List<IdentityExpr> res = [];
@@ -722,16 +727,16 @@ namespace stilt
 				}
 				case TokenType.Repeat:
 				{
-					Lex.Next();
+					Lex.GoPast(TokenType.Repeat);
 					Lex.SkipStmtSeparator();
 					var bodyStmt = ParseStmt(newScope);
 
 					if (Lex.NextIs(TokenType.Until))
 					{
-						Lex.Next();
+						Lex.GoPast(TokenType.Until);
 						Lex.SkipStmtSeparator();
 						Expr? conditionExpr = null;
-						ParseExpr(ref conditionExpr, Lex.Next());
+						ParseExpr(ref conditionExpr, Lex.CurrentToken);
 						if (conditionExpr is null)
 							throw new MalformedExpr(firstToken.Range);
 						
@@ -779,10 +784,10 @@ namespace stilt
 			{
 				case TokenType.VarDecl:
 				{
-					var varToken = Lex.ExpectNext(TokenType.Identifier);
+					Lex.GoPast(TokenType.VarDecl);
 					var isConst = specifiers.Any(t => t.Which == TokenType.ConstSpec);
 
-					ParseExpr(ref newExpr, varToken);
+					ParseExpr(ref newExpr, Lex.CurrentToken);
 
 					if (newExpr is null)
 						throw new MalformedExpr(firstToken.Range);
@@ -796,7 +801,7 @@ namespace stilt
 				}
 				case TokenType.FuncDecl:
 				{
-					ParseExpr(ref newExpr, Lex.Next());
+					ParseExpr(ref newExpr, Lex.GoPast(TokenType.FuncDecl));
 					Lex.SkipStmtSeparator();
 					var innerStmt = ParseStmt(currentScope);
 					if (innerStmt is null)
@@ -818,7 +823,7 @@ namespace stilt
 				case TokenType.Return:
 				{
 					Expr? returnExpr = null;
-					ParseExpr(ref returnExpr, Lex.Next());
+					ParseExpr(ref returnExpr, Lex.GoPast(TokenType.Return));
 					newStmt = new ReturnStmt()
 					{ 
 						Scope = currentScope,
@@ -853,7 +858,7 @@ namespace stilt
 				case TokenType.If:
 				{
 					Expr? conditionExpr = null;
-					ParseExpr(ref conditionExpr, Lex.Next());
+					ParseExpr(ref conditionExpr, Lex.GoPast(TokenType.If));
 					if (conditionExpr is null)
 						throw new MalformedExpr(firstToken.Range);
 					Scope newScope = new(currentScope);
@@ -872,8 +877,9 @@ namespace stilt
 					var lastIf = ifStmt;
 					while (Lex.NextIs(TokenType.Elif))
 					{
+						var elifToken = Lex.GoPast(TokenType.Elif);
 						Expr? elifCondition = null;
-						ParseExpr(ref elifCondition, Lex.Next());
+						ParseExpr(ref elifCondition, elifToken);
 						if (elifCondition is null)
 							throw new MalformedExpr(firstToken.Range);
 						Lex.SkipStmtSeparator();
@@ -892,14 +898,10 @@ namespace stilt
 
 					if (Lex.NextIs(TokenType.Else))
 					{
-						Lex.Next();
-						Lex.SkipStmtSeparator();
-						var elseStmt = ParseStmt(newScope);
-						lastIf.NextElse = elseStmt;
+						Lex.GoPast(TokenType.Else);
+						lastIf.NextElse = ParseStmt(newScope);
 					}
-
 					newStmt = ifStmt;
-
 					break;
 				}
 				case TokenType.ExecuteStmt:
@@ -908,7 +910,7 @@ namespace stilt
 					{
 						Scope = currentScope,
 					};
-					Lex.Next();
+					Lex.GoPast(TokenType.ExecuteStmt);
 
 					newStmt.InnerRange = firstToken.Range;
 					return newStmt;

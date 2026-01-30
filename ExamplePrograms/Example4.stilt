@@ -4,6 +4,9 @@ var c = if j then 2 else 3
 var d = 5 + -(2+3)
 2 + d++ * 6
 d++
+
+((a + b) * c) / (d() + e())
+a + b,
 ##
 {
 	var e = 3
