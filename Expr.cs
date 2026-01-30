@@ -44,7 +44,7 @@ namespace stilt.AST
 			//first find any null children and only then check 4 precedence
 			parent = null;
 			FindFirstNull(out parent);
-			if (parent != null)
+			if (parent is not null)
 				return null;
 			else 
 				return FindFirstPrecedence(precedence, out parent);
@@ -57,11 +57,11 @@ namespace stilt.AST
 			{
 				if (e is IOperator spreadable)
 				{
-					return !e.Bracketed && spreadable.GetChildren().Any(c => c == null);
+					return !e.Bracketed && spreadable.GetChildren().Any(c => c is null);
 				}
 				return false;
 			}, out parent);
-			if (firstNull != null)
+			if (firstNull is not null)
 			{
 				parent = firstNull;
 				return null;
@@ -100,7 +100,7 @@ namespace stilt.AST
 				foreach (var child in spreadable.GetChildren())
 				{
 					var res = child?.FindFirst(predicate, out parent, this);
-					if (res != null)
+					if (res is not null)
 					{
 						return res;
 					}
@@ -162,19 +162,19 @@ namespace stilt.AST
 			}
 
 			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
-			if (range == null)
+			if (range is null)
 				throw new InvalidOperationException("Internal error: Attempted to replace a child node that does not exist in the expression tree.");
 			throw new SyntaxError(range, "Internal error: Attempted to replace a child node that does not exist in the expression tree.");
 		}
 		public void InsertChild(Expr what)
 		{
-			if (Leaf == null)
+			if (Leaf is null)
 			{
 				Leaf = what;
 				return;
 			}
 			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
-			if (range == null)
+			if (range is null)
 				throw new InvalidOperationException("Internal error: Attempted to insert a child into an expression node that is already full.");
 			throw new SyntaxError(range, "Internal error: Attempted to insert a child into an expression node that is already full.");
 		}
@@ -207,25 +207,25 @@ namespace stilt.AST
 			}
 
 			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
-			if (range == null)
+			if (range is null)
 				throw new InvalidOperationException("Internal error: Attempted to replace a child node that does not exist in the expression tree.");
 			throw new SyntaxError(range, "Internal error: Attempted to replace a child node that does not exist in the expression tree.");
 		}
 		public void InsertChild(Expr what)
 		{
-			if (Left == null)
+			if (Left is null)
 			{
 				Left = what;
 				return;
 			}
-			if (Right == null)
+			if (Right is null)
 			{
 				Right = what;
 				return;
 			}
 			
 			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
-			if (range == null)
+			if (range is null)
 				throw new InvalidOperationException("Internal error: Attempted to insert a child into an expression node that is already full.");
 			throw new SyntaxError(range, "Internal error: Attempted to insert a child into an expression node that is already full.");
 		}
@@ -264,31 +264,31 @@ namespace stilt.AST
 			}
 
 			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
-			if (range == null)
+			if (range is null)
 				throw new InvalidOperationException("Internal error: Attempted to replace a child node that does not exist in the expression tree.");
 			throw new SyntaxError(range, "Internal error: Attempted to replace a child node that does not exist in the expression tree.");
 		}
 
 		public void InsertChild(Expr what)
 		{
-			if (Left == null)
+			if (Left is null)
 			{
 				Left = what;
 				return;
 			}
-			if (Middle == null)
+			if (Middle is null)
 			{
 				Middle = what;
 				return;
 			}
-			if (Right == null)
+			if (Right is null)
 			{
 				Right = what;
 				return;
 			}
 
 			var range = what?.FullRange ?? this.FullRange ?? InnerRange;
-			if (range == null)
+			if (range is null)
 				throw new InvalidOperationException("Internal error: Attempted to insert a child into an expression node that is already full.");
 			throw new SyntaxError(range, "Internal error: Attempted to insert a child into an expression node that is already full.");
 		}

@@ -81,10 +81,10 @@ namespace stilt
 
 		public static FileRange? operator +(FileRange? left, FileRange? right)
 		{
-			if (left == null)
+			if (left is null)
 				return right;
 
-			if (right == null)
+			if (right is null)
 				return left;
 
 			if (!left.SameFile(right))
@@ -181,7 +181,7 @@ namespace stilt
 
 		public override string ToString()
 		{
-			if (Range != null)
+			if (Range is not null)
 			{
 				var (lineS, columnS) = Range.StartLineAndColumn;
 				var (lineE, columnE) = Range.EndLineAndColumn;

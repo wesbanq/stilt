@@ -102,7 +102,7 @@ namespace stilt.AST
 			var tokenText = token.Range.Text.Trim();
 			var executorStr = Regex.Match(tokenText, """as +(.*) +{""").ToString().Trim();
 			var comStr = Regex.Match(tokenText, """{(?:.*\s)*}""").ToString()?.Split('\n');
-			if (comStr == null)
+			if (comStr is null)
 				throw new ArgumentException("Invalid execute statement format");
 			for (var i = 0; i < comStr.Length; i++)
 			{

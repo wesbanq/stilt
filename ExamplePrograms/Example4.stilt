@@ -1,6 +1,6 @@
 #var a = (1+2)+d()+3*2
 #var b = -2 + 4
-var c = if j then 2 else 3
+#var c = if j then 2 else 3
 #var d = 5 + -(2+3)
 
 {
@@ -30,10 +30,14 @@ foreach var a, g in b {
 	break
 }
 
-##
-a*3+3+(1+2+(3*2))*3+4
+a.b.c
 
 func f() {
 	return 5
 } var u = 5
-##
+
+
+
+repeat {
+
+} until 1

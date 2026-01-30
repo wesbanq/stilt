@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
@@ -11,16 +11,16 @@ namespace stilt.AST
 
 		public bool IsInScope(Symbol sym)
 		{
-			return FindSymbolByName(sym.Name) != null;
+			return FindSymbolByName(sym.Name) is not null;
 		}
 
 		public Symbol? FindSymbolByName(string name)
 		{
 			var currentScope = this;
-			while (currentScope != null)
+			while (currentScope is not null)
 			{
 				var found = currentScope.Symbols.Find(s => s.Name == name);
-				if (found != null) return found;
+				if (found is not null) return found;
 				currentScope = currentScope.Parent;
 			}
 

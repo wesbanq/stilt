@@ -13,7 +13,9 @@ namespace stilt
 		public readonly ProgramArgs Args;
 		public FileText Text;
 
-		public Token CurrentToken => Tokens.Count > CurrentPos ? Tokens[CurrentPos] : throw new Exception();
+		public Token CurrentToken => Tokens.Count > CurrentPos 
+			? Tokens[CurrentPos] 
+			: throw new UnexpectedEOF(Text.EOF);
 		
 		public static void GetSymbolAttribute(out List<string[]> symbols, out List<string[]> regex)
 		{
@@ -23,13 +25,13 @@ namespace stilt
 			foreach (var name in typeof(TokenType).GetEnumNames())
 			{
 				var field = typeof(TokenType).GetField(name);
-				if (field != null)
+				if (field is not null)
 				{
 					var symbolArray = field.GetCustomAttributes<SymbolAttribute>()?.Where(a => !a.IsRegex).Select(a => Regex.Escape(a.Symbol)).ToArray();
 					var regexArray = field.GetCustomAttributes<SymbolAttribute>()?.Where(a => a.IsRegex).Select(a => a.Symbol).ToArray();
-					if (symbolArray != null)
+					if (symbolArray is not null)
 						symbols.Add(symbolArray);
-					if (regexArray != null)
+					if (regexArray is not null)
 						regex.Add(regexArray);
 				}
 			}
@@ -68,11 +70,11 @@ namespace stilt
 
 		protected List<Token> GetTokenMatches(string code, List<string[]> rules)
 		{
-			List<Token> tokens = new();
+			List<Token> tokens = [];
 
 			for (int i = 0; i < rules.Count; ++i)
 			{
-				if (rules[i] == null || rules[i].Length == 0) continue;
+				if (rules[i] is null || rules[i].Length == 0) continue;
 				foreach (var rule in rules[i])
 				{
 					var matchCollection = Regex.Matches(code, rule, RegexOptions.NonBacktracking);
@@ -106,6 +108,18 @@ namespace stilt
 			);
 		}
 
+		public bool CurrentIs(TokenType type) => CurrentToken.Which == type;
+
+		public bool NextIs(TokenType type) => 
+			PeekNext(1).Which == type || 
+			(PeekNext(1).Which == TokenType.StmtSeparator && PeekNext(2).Which == type);
+
+		public void SkipStmtSeparator()
+		{
+			if (CurrentIs(TokenType.StmtSeparator))
+				Next();
+		}
+
 		public Token Prev()
 		{
 			if (CurrentPos > 0)
@@ -123,14 +137,14 @@ namespace stilt
 		public Token ExpectNext(TokenType expected)
 		{
 			var next = Next();
-			if (next.Which != expected)
+			if (!CurrentIs(expected))
 				throw new UnexpectedToken(next.Range, expected, next);
 			return next;
 		}
 
 		public Token Expect(TokenType expected)
 		{
-			if (CurrentToken.Which != expected)
+			if (!CurrentIs(expected))
 				throw new UnexpectedToken(CurrentToken.Range, expected, CurrentToken);
 			return Next();
 		}
