@@ -223,10 +223,6 @@ _pkginfo.txt
 *.appxbundle
 *.appxupload
 
-.editorconfig
-.vscode/
-[Pp]roperties
-
 # Visual Studio cache files
 # files ending in .cache can be ignored
 *.[Cc]ache
@@ -365,3 +361,9 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Custom files
+.editorconfig
+.vscode/
+[Pp]roperties/
+*.json
