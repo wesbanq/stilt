@@ -101,5 +101,15 @@
 			"cwd": "${workspaceFolder}",
 			"console": "internalConsole"
 		},
+		{
+			"name": "Tree - Example6 (-t -ex)",
+			"type": "coreclr",
+			"request": "launch",
+			"preLaunchTask": "build",
+			"program": "${workspaceFolder}/bin/Debug/net10.0/stilt.dll",
+			"args": ["tree", "-i", "ExamplePrograms/Example6.stilt", "-t", "-ex"],
+			"cwd": "${workspaceFolder}",
+			"console": "internalConsole"
+		},
 	]
 }
