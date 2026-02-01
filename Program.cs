@@ -1,3 +1,5 @@
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using stilt.AST;
 using System.Diagnostics;
 using System.Reflection;
@@ -15,6 +17,7 @@ namespace stilt
 		public bool Throw = false;
 		public bool ExpandedDump = false;
 		public bool NoTime = false;
+		public string? JsonDumpFilepath = null;
 
 		public static void PrintHelp()
 		{
@@ -82,6 +85,13 @@ namespace stilt
 				case "NoTime":
 				{
 					NoTime = true;
+					break;
+				}
+				case "JsonDumpPath":
+				{
+					JsonDumpFilepath = Path.GetFullPath(value);
+					if (!Directory.Exists(Path.GetDirectoryName(JsonDumpFilepath)))
+						throw new ArgumentParsingException("Given a non-existing directory for option {0}: {1}", opt, JsonDumpFilepath);
 					break;
 				}
 				default:
@@ -246,6 +256,9 @@ namespace stilt
 
 			[Option("-nt", "NoTime", "Don't show total compilation time.", OptionType.Flag)]
 			NoTime,
+
+			[Option("-j", "JsonDumpPath", "Dump the output to a JSON file (for debugging)")]
+			JsonDumpFilepath,
 		}
 
 	}
@@ -518,6 +531,60 @@ namespace stilt
 			}
 		}
 
+		public enum ExclusionPreset
+		{
+			None,
+			Base,
+			Ast,
+			Lexer
+		}
+
+		private static IEnumerable<string>? GetExcludedPropertyNames(ExclusionPreset preset)
+		{
+			IEnumerable<string> baseProps = ["FullRange", "InnerRange", "TextLines", "StartLineAndColumn", "EndLineAndColumn", "Length"];
+			return preset switch
+			{
+				ExclusionPreset.None => null,
+				ExclusionPreset.Base => baseProps,
+				ExclusionPreset.Ast => baseProps.Concat(new[] { "Scope", "RootScope", "Args" }),
+				ExclusionPreset.Lexer => baseProps.Concat(new[] { "Filepath", "Args", "CurrentToken", "CurrentPos", "Text" }),
+				_ => null
+			};
+		}
+
+		private static void WriteObjectToJson(object? obj, string filepath, ExclusionPreset preset = ExclusionPreset.None)
+		{
+			var settings = new JsonSerializerSettings
+			{
+				ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
+				Formatting = Formatting.Indented
+			};
+			if (GetExcludedPropertyNames(preset) is { } names && names.Any())
+			{
+				settings.ContractResolver = new ExcludePropertiesContractResolver(names);
+			}
+			string json = JsonConvert.SerializeObject(obj, settings);
+			File.WriteAllText(filepath, json);
+		}
+
+		private sealed class ExcludePropertiesContractResolver : DefaultContractResolver
+		{
+			private readonly HashSet<string> _exclude;
+
+			internal ExcludePropertiesContractResolver(IEnumerable<string> propertyNames)
+			{
+				_exclude = new HashSet<string>(propertyNames, StringComparer.Ordinal);
+			}
+
+			protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
+			{
+				var prop = base.CreateProperty(member, memberSerialization);
+				if (prop.PropertyName is { } name && _exclude.Contains(name))
+					prop.ShouldSerialize = _ => false;
+				return prop;
+			}
+		}
+
 		static int Main(string[] args)
 		{
 			ProgramArgs arg;
@@ -551,6 +618,14 @@ namespace stilt
 					if (!arg.NoTime)
 						TimerReadout(compiler.Timers);
 
+					if (arg.JsonDumpFilepath is not null)
+						WriteObjectToJson(compiler.Parser!.Statements, Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+					if (arg.JsonDumpFilepath is not null)
+						WriteObjectToJson(compiler.Lexer!.Tokens, Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+					if (arg.JsonDumpFilepath is not null)
+						WriteObjectToJson(compiler.Parser!.CompilationIssues
+							, Path.Combine(arg.JsonDumpFilepath, "parser_compilation_issues.json"));
+
 					break;
 				}
 				case ProgramArgs.Command.Tokenize:
@@ -559,6 +634,10 @@ namespace stilt
 					lex.Lex();
 					Token t = lex.CurrentToken;
 					do Console.WriteLine($"{lex.CurrentPos}: {t.Which}"); while ((t = lex.Next()).Which != TokenType.EOF);
+					
+					if (arg.JsonDumpFilepath is not null)
+						WriteObjectToJson(lex.Tokens, Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+						
 					break;
 				}
 				case ProgramArgs.Command.Preprocess:
@@ -586,6 +665,9 @@ namespace stilt
 					if (!arg.NoTime)
 						TimerReadout(comp.Timers);
 
+					if (arg.JsonDumpFilepath is not null)
+						WriteObjectToJson(comp.Parser!.Statements, Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+					
 					break;
 				}
 			}
