@@ -152,6 +152,14 @@ namespace stilt.AST
 			Name = new TypeSymbol(name, source, inherits: new(name, source, inherits: inherits))
 			{ Declaration = this };
 		}
+
+		[SetsRequiredMembers]
+		public TypeDeclStmt(TypeSymbol typeSym, Stmt v)
+		{
+			Value = v;
+			Name = typeSym;
+			typeSym.Declaration = this;
+		}
 	}
 
 	public class FuncDeclStmt : DeclStmt

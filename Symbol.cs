@@ -12,6 +12,7 @@ namespace stilt.AST
 		//stop using filepaths
 		public string Source;
 		public Stmt? Declaration;
+		public List<TokenType> Specifiers = [];
 		public Token? Identifier;
 
 		public bool IsBuiltin => Source.StartsWith("<BUILTIN>");
@@ -78,6 +79,8 @@ namespace stilt.AST
 
 	public class TypeSymbol : Symbol
 	{
+		public List<Symbol> Members = [];
+
 		public TypeSymbol? Base;
 
 		public TypeSymbol? Inherits => Base is null ? _inherits : Base.Inherits;

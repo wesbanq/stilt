@@ -7,7 +7,7 @@ namespace stilt
 {
 	public class Lexer
 	{
-		protected List<Token> Tokens;
+		public List<Token> Tokens;
 		public int CurrentPos = 0;
 		public readonly string Filepath;
 		public readonly ProgramArgs Args;

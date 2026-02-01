@@ -817,9 +817,41 @@ namespace stilt
 
 					break;
 				}
-				//TODO
 				case TokenType.TypeDecl:
 				{
+					Lex.GoPast(TokenType.TypeDecl);
+					var nameToken = Lex.CurrentToken;
+					var typeName = nameToken.Range.Text;
+
+					if (!Lex.NextIs(TokenType.OpenCurlyBracket))
+						throw new UnexpectedToken(nameToken.Range, TokenType.OpenCurlyBracket, nameToken);
+					Lex.GoPast(TokenType.OpenCurlyBracket);
+					Lex.SkipStmtSeparator();
+
+					var typeSym = new TypeSymbol(typeName, Lex.Filepath, nameToken);
+					Scope typeScope = new(currentScope);
+
+					var selfSym = new VarSymbol("self", typeSym) { Source = Lex.Filepath, Specifiers = [TokenType.PrivateSpec] };
+					typeScope.AddSymbol(selfSym);
+					var bodyStmts = ParseBranch(typeScope);
+
+					var body = new CompoundStmt() { Scope = typeScope, Statements = bodyStmts };
+					foreach (var stmt in bodyStmts)
+					{
+						if (stmt is VarDeclStmt vd)
+						{
+							foreach (var sym in vd.Name)
+								typeSym.Members.Add(sym);
+						}
+						else if (stmt is FuncDeclStmt fd)
+							typeSym.Members.Add(fd.Name);
+						else if (stmt is not null)
+							throw new SyntaxError(stmt.FullRange ?? throw new InvalidOperationException("Statement has no FullRange"), "Only variable declarations and function declarations are allowed in type bodies.");
+					}
+
+					newStmt = new TypeDeclStmt(typeSym, body) { Scope = currentScope };
+					AddToScope([typeSym], currentScope);
+
 					break;
 				}
 				case TokenType.Return:

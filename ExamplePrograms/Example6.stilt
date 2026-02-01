@@ -1,0 +1,11 @@
+type A 
+{
+    var a
+    var b = 2
+
+    func g()
+    {} var o = 3
+    var h
+} type B {
+    var a
+}
