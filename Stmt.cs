@@ -100,18 +100,31 @@ namespace stilt.AST
 		public ExecuteStmt(Token token)
 		{
 			var tokenText = token.Range.Text.Trim();
-			var executorStr = Regex.Match(tokenText, """as +(.*) +{""").ToString().Trim();
-			var comStr = Regex.Match(tokenText, """{(?:.*\s)*}""").ToString()?.Split('\n');
-			if (comStr is null)
-				throw new ArgumentException("Invalid execute statement format");
-			for (var i = 0; i < comStr.Length; i++)
+			// New syntax: "execute\n/line1\n/line2" or "execute as <target>\n/line1\n/line2"
+			string? executorStr = null;
+			var firstNewline = tokenText.IndexOf('\n');
+			if (firstNewline >= 0)
 			{
-				comStr[i] = comStr[i].Trim();
+				var firstLine = tokenText[..firstNewline].Trim();
+				if (firstLine.StartsWith("execute as ", StringComparison.Ordinal))
+					executorStr = firstLine["execute as ".Length..].Trim();
 			}
 
-			Commands = comStr;
-			if (executorStr is not null && executorStr.Length > 0)
-				Executor = new(executorStr);
+			// Collect lines that look like \s*\/.* (optional whitespace, slash, rest = command)
+			var commandLines = new List<string>();
+			var lineRegex = new Regex(@"^\s*/(.*)$", RegexOptions.Multiline);
+			foreach (Match m in lineRegex.Matches(tokenText))
+			{
+				var cmd = m.Groups[1].Value.Trim();
+				if (cmd.Length > 0)
+					commandLines.Add(cmd);
+			}
+			if (commandLines.Count == 0)
+				throw new ArgumentException("Invalid execute statement format: no command lines");
+
+			Commands = [.. commandLines];
+			if (!string.IsNullOrEmpty(executorStr))
+				Executor = new VarSymbol(executorStr);
 		}
 	}
 

@@ -2,10 +2,9 @@ var a = 2
 var b = 4
 
 if a < b {
-	execute {
-		say "Hello, world!"
-		tp @p ~2 ~1 ~2
-	}
+	execute
+		/say "Hello, world!"
+		/tp @p ~2 ~1 ~2
 } else {
 	a++
 }

@@ -22,6 +22,8 @@ namespace stilt
 		public List<CompilationMessage> CompilationIssues = [];
 		public bool HasErrors => CompilationIssues.Any(m => m.Severity >= ErrorSeverity.Error);
 
+		private int _depth = 0;
+
 		public void WriteErrors()
 		{
 			CompilationIssues.ForEach(m => m.Print());
@@ -863,9 +865,13 @@ namespace stilt
 						throw new MalformedExpr(firstToken.Range);
 					Scope newScope = new(currentScope);
 					Lex.SkipStmtSeparator();
+
+					var compounds = 0;
 					var nextIfStmt = ParseStmt(newScope);
 					if (nextIfStmt is null)
 						throw new SyntaxError(firstToken.Range, "Expected statement after if condition");
+					if (nextIfStmt is CompoundStmt compound)
+						++compounds;
 
 					var ifStmt = new IfStmt()
 					{
@@ -884,6 +890,9 @@ namespace stilt
 							throw new MalformedExpr(firstToken.Range);
 						Lex.SkipStmtSeparator();
 						var elifStmt = ParseStmt(newScope);
+						if (elifStmt is CompoundStmt)
+							++compounds;
+						
 						if (elifStmt is null)
 							throw new SyntaxError(firstToken.Range, "Expected statement after elif condition");
 						var newIf = new IfStmt()
@@ -900,8 +909,15 @@ namespace stilt
 					{
 						Lex.GoPast(TokenType.Else);
 						lastIf.NextElse = ParseStmt(newScope);
+						if (lastIf.NextElse is CompoundStmt)
+							++compounds;
 					}
 					newStmt = ifStmt;
+					_depth -= compounds - 
+						(lastIf.NextElse is CompoundStmt || 
+						(lastIf.NextElse is null && lastIf.NextIf is CompoundStmt)
+						? 1 : 0);
+					
 					break;
 				}
 				case TokenType.ExecuteStmt:
@@ -910,7 +926,6 @@ namespace stilt
 					{
 						Scope = currentScope,
 					};
-					Lex.GoPast(TokenType.ExecuteStmt);
 
 					newStmt.InnerRange = firstToken.Range;
 					return newStmt;
@@ -920,7 +935,7 @@ namespace stilt
 					Scope newScope = new(currentScope);
 
 					Lex.Next();
-					var innerStmt = ParseBranch(newScope, false);
+					var innerStmt = ParseBranch(newScope);
 					//Lex.Next();
 					
 					newStmt = new CompoundStmt()
@@ -971,9 +986,10 @@ namespace stilt
 			return newStmt;
 		}
 
-		protected LinkedList<Stmt> ParseBranch(Scope parentScope, bool topLevel)
+		protected LinkedList<Stmt> ParseBranch(Scope parentScope)
 		{
 			var firstToken = Lex.CurrentToken;
+			var startingDepth = ++_depth;
 			LinkedList<Stmt> innerStmts = [];
 
 			while (true)
@@ -985,22 +1001,29 @@ namespace stilt
 
 					if (newStmt is not null)
 						innerStmts.AddLast(newStmt);
-					
-					if (Lex.CurrentIs(TokenType.EOF)) 
+
+					if (Lex.CurrentIs(TokenType.EOF))
 					{
-						if (topLevel)
-							break;
-						else
+						if (startingDepth != 1)
 							throw new SyntaxError(firstToken.Range, "Unclosed bracket.");
+						break;
 					}
-					if (Lex.CurrentIs(TokenType.CloseCurlyBracket) && newStmt is null)
+					if (Lex.CurrentIs(TokenType.CloseCurlyBracket))
 					{
-						if (!topLevel)
+						// _depth > startingDepth: this '}' closes a nested block (inner ParseBranch
+						// returned without consuming it). Consume it and decrement; keep parsing.
+						if (_depth > startingDepth)
 						{
-							break;
+							Lex.Next();
+							--_depth;
+							continue;
 						}
-						else
-							throw new UnexpectedToken(Lex.CurrentToken.Range, Lex.CurrentToken);
+						// _depth == startingDepth: this '}' closes this branch. End on it; do not
+						// decrement here so the caller can consume and decrement.
+						if (_depth == startingDepth)
+							break;
+						// _depth < startingDepth: invalid (extra '}' or corrupted state)
+						throw new SyntaxError(Lex.CurrentToken.Range, "Unmatched closing bracket.");
 					}
 
 					Lex.Next();
@@ -1014,21 +1037,28 @@ namespace stilt
 						if (newStmt is not null)
 							innerStmts.AddLast(newStmt);
 						
-						if (Lex.CurrentIs(TokenType.EOF)) 
+						if (Lex.CurrentIs(TokenType.EOF))
 						{
-							if (topLevel)
-								break;
-							else
+							if (startingDepth != 1)
 								throw new SyntaxError(firstToken.Range, "Unclosed bracket.");
+							break;
 						}
-						if (Lex.CurrentIs(TokenType.CloseCurlyBracket) && newStmt is null)
+						if (Lex.CurrentIs(TokenType.CloseCurlyBracket))
 						{
-							if (!topLevel)
+							// _depth > startingDepth: this '}' closes a nested block (inner ParseBranch
+							// returned without consuming it). Consume it and decrement; keep parsing.
+							if (_depth > startingDepth)
 							{
-								break;
+								Lex.Next();
+								--_depth;
+								continue;
 							}
-							else
-								throw new UnexpectedToken(Lex.CurrentToken.Range, Lex.CurrentToken);
+							// _depth == startingDepth: this '}' closes this branch. End on it; do not
+							// decrement here so the caller can consume and decrement.
+							if (_depth == startingDepth)
+								break;
+							// _depth < startingDepth: invalid (extra '}' or corrupted state)
+							throw new SyntaxError(Lex.CurrentToken.Range, "Unmatched closing bracket.");
 						}
 
 						Lex.Next();
@@ -1052,7 +1082,7 @@ namespace stilt
 
 		public void ParseFile()
 		{
-			Statements = ParseBranch(RootScope, true);
+			Statements = ParseBranch(RootScope);
 		}
 
 		public Parser(Lexer lex, ProgramArgs args)
