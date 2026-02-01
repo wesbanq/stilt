@@ -558,7 +558,7 @@ namespace stilt
 					var lex = new Lexer(arg);
 					lex.Lex();
 					Token t = lex.CurrentToken;
-					do Dump(t); while ((t = lex.Next()).Which != TokenType.EOF);
+					do Console.WriteLine($"{lex.CurrentPos}: {t.Which}"); while ((t = lex.Next()).Which != TokenType.EOF);
 					break;
 				}
 				case ProgramArgs.Command.Preprocess:

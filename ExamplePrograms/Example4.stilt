@@ -1,49 +1,13 @@
-var a = (1+2)+d()+3*2
-var b = -2 + 4
-var c = if j then 2 else 3
-var d = 5 + -(2+3)
-2 + d++ * 6
-d++
+{var a}{var b}
 
-((a + b) * c) / (d() + e())
-a + b,
-##
-{
-	var e = 3
-}
+{var a
+}{var b}
 
-{
-	var f = 2
-	{var g = 3
-	} var h = 4
-}{var i = 1} var j = 2
-{var k = 2
-}var l = 5{
-var m =0
-}
-
-while a < 2 {
-	break
-} var p = 2
-
-for ;;; 
-{
-	break
-}
-
-foreach var a, g in b {
-	break
-}
-##
-#a.b.c?.d
-##
-func f() {
-	return 5
-} var u = 5
+{var a}{
+	var b}var c
 
 
+{{{var p}}}
+var e
 
-repeat {
-
-} until 1
-##
+if a {if b {} else {}} else {}

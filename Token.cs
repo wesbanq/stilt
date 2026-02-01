@@ -343,7 +343,7 @@ namespace stilt
 
 		[Unimplemented]
 		[Symbol("target")]
-		TargetFuncDecl,
+		TargetDecl,
 
 		[Unimplemented]
 		[Symbol("signal")]
@@ -353,8 +353,8 @@ namespace stilt
 		[Symbol("select")]
 		SelectStmt,
 
-		[Symbol("""execute *{(?:.*\s)*?}""", true)]
-		[Symbol("""execute +as +.* *{(?:.*\s)*?}""", true)]
+		[Symbol("""execute(?:\s*\/.*\n)*""", true)]
+		[Symbol("""execute +as +.*?\n(?:\s*\/.*)*""", true)]
 		ExecuteStmt,
 
 		// Keywords

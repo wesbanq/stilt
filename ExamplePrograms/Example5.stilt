@@ -213,15 +213,13 @@ var mixed3 = a < b && c > d() || e() == f() && g() != h()
 
 ## Execute Statements ##
 
-execute {
-	say "Hello from complex test"
-	tp @p ~1 ~2 ~3
-}
+execute
+	/say "Hello from complex test"
+	/tp @p ~1 ~2 ~3
 
-execute as @p {
-	say "Executing as player"
-	give @n diamond 64
-}
+execute as @p
+	/say "Executing as player"
+	/give @n diamond 64
 
 ## Return Statements ##
 
