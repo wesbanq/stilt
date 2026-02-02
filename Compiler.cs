@@ -1,6 +1,4 @@
 using System.Diagnostics;
-using System.Reflection;
-using System.Timers;
 
 namespace stilt
 {
@@ -225,29 +223,107 @@ namespace stilt
 	public enum ErrorSeverity
 	{ Info, Warning, Error, Critical }
 
+	public class CompiledFile
+	{
+		public string Filepath;
+		public FileText Text;
+		public Lexer Lexer;
+		public Parser Parser;
+		public Dictionary<TimedEvents, Timer> Timers = [];
+		public List<CompilationMessage> Errors => Parser.CompilationIssues;
+		public enum TimedEvents
+		{ Compilation, Lexing, Parsing, Linking }
+
+		public void Compile(ProgramArgs args)
+		{
+			Lexer = new Lexer(args, Filepath, Text);
+			Timers.Add(TimedEvents.Lexing, new Timer("Lexing"));
+			Timers[TimedEvents.Lexing].Run(() =>
+			{
+				Lexer.Lex();
+			});
+
+			Parser = new Parser(args, Lexer);
+			Timers.Add(TimedEvents.Parsing, new Timer("Parsing"));
+			Timers[TimedEvents.Parsing].Run(() =>
+			{
+				Parser.ParseFile();
+			});
+		}
+
+		public CompiledFile(string filepath)
+		{
+			Filepath = filepath;
+			Text = new(Filepath);
+		}
+	}
+
 	public class Compiler
 	{
 		public ProgramArgs Args;
-		//something to keep track of all compilation steps betwwen all files
-		//temporary solution for one file
-		public List<Timer> Timers = [];
-		public Parser? Parser;
-		public Lexer? Lexer;
+		public List<CompiledFile> Files = [];
+		public Linker? Linker;
+		public Dictionary<CompiledFile.TimedEvents, Timer> Timers = [];
+
+		public void WriteTimerReadout()
+		{
+			Console.WriteLine("Compilation Timers:");
+			foreach (var timer in Timers)
+			{
+				Console.WriteLine(timer.Value.Time);
+			}
+			foreach (var file in Files)
+			{
+				Console.WriteLine($"{file.Filepath}:");
+				foreach (var timer in file.Timers)
+				{
+					Console.WriteLine(timer.Value.Time);
+				}
+			}
+		}
+
+		public void PrintBuildErrors()
+		{
+			foreach (var file in Files)
+			{
+				file.Errors.ForEach(e => e.Print());
+			}
+			Linker?.Errors.ForEach(e => e.Print());
+		}
+
+		public static CompiledFile BuildFile(ProgramArgs args, string filepath)
+		{
+			var file = new CompiledFile(filepath);
+			file.Compile(args);
+			return file;
+		}
 
 		public void Build()
 		{
-			Timers.Add(new("Compilation"));
-			Timers[0].StartTimer();
+			Timers.Add(CompiledFile.TimedEvents.Compilation, new Timer("Compilation"));
+			Timers[CompiledFile.TimedEvents.Compilation].StartTimer();
 
-			Console.WriteLine($"Currently building: {Args.MainCodeFilepath!}");
-			
-			Lexer = new Lexer(Args);
-			Parser = new Parser(Lexer, Args);
+			Timers[CompiledFile.TimedEvents.Compilation].Run(() =>
+			{
+				foreach (var filepath in Args.MainCodeFilepaths!)
+				{
+					if (filepath is not null)
+					{
+						var file = BuildFile(Args, filepath);
+						Files.Add(file);
+					}
+				}
+			});
 
-			Timers.Add(new("Lexing", () => Lexer.Lex()));
-			Timers.Add(new("Parsing", () => Parser.ParseFile()));
+			Timers.Add(CompiledFile.TimedEvents.Linking, new Timer("Linking"));
+			Linker = new Linker(
+				Args,
+                [.. Files.Select(f => f.Parser.RootScope)],
+                [.. Files.Select(f => f.Parser.Statements)]
+            );
+			Timers[CompiledFile.TimedEvents.Linking].Run(() => Linker.Link());
 
-			Timers[0].StopTimer();
+			Timers[CompiledFile.TimedEvents.Compilation].StopTimer();
 		}
 
 		public Compiler(ProgramArgs args)
