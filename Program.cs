@@ -12,7 +12,7 @@ namespace stilt
 	{
 		public Command Action;
 		public int DebugLevel;
-		public string? MainCodeFilepath;
+		public string[]? MainCodeFilepaths = null;
 		public List<Option> UsedOptions = [];
 		public bool Throw = false;
 		public bool ExpandedDump = false;
@@ -60,7 +60,7 @@ namespace stilt
 					DebugLevel = n;
 					break;
 				}
-				case "MainCodeFilepath":
+				case "MainCodeFilepaths":
 				{
 					value = Path.GetFullPath(value);
 					if (!File.Exists(value))
@@ -69,7 +69,9 @@ namespace stilt
 						Console.WriteLine("The given file does not end in '.stilt'. " +
 						"The code will still be compiled, but importing it for use in other files may be problematic." +
 						"Consider changing the file's extension to .stilt.");
-					MainCodeFilepath = value;
+					
+					MainCodeFilepaths ??= [];
+					MainCodeFilepaths = [.. MainCodeFilepaths, value];
 					break;
 				}
 				case "Throw":
@@ -147,18 +149,18 @@ namespace stilt
 				var currentAttribute = typeof(Option).GetField(current.ToString())?.GetCustomAttribute<OptionAttribute>();
 				var nextAttribute = args.Length > i+1 ? Program.GetAttrFromDescription<Option, OptionAttribute>(args[i+1]) : null;
 
-				if (current != Option.None && currentAttribute is not null)
+				if (currentAttribute?.Kind == OptionType.ValueMultiple)
 				{
-					if (((currentAttribute.Kind != OptionType.Flag
-						&& nextAttribute?.Kind is null)
-						|| currentAttribute.Kind == OptionType.Flag)
-						&& !UsedOptions.Contains(current)
-						)
+					++i;
+					for (; i < args.Length; ++i)
 					{
-						GiveValueTo(currentAttribute.AssociatedPropertyName,
-							nextAttribute is null && currentAttribute.Kind != OptionType.Flag ? args[i + 1] : "");
-						UsedOptions.Add(current);
+						var newCurrent = WhichOption(args[i]);
+						
+						if (newCurrent != Option.None) break;
+						GiveValueTo(currentAttribute.AssociatedPropertyName, args[i]);
 					}
+					UsedOptions.Add(current);
+					continue;
 				}
 				else if (WhichOption(args[i - 1]) == Option.None)
 				{
@@ -170,8 +172,9 @@ namespace stilt
 							if (!UsedOptions.Contains(b))
 							{
 								GiveValueTo(
-									Program.GetAttributeFromEnum<Option, OptionAttribute>(b)?.AssociatedPropertyName ?? ""
-									, args[i]);
+									Program.GetAttributeFromEnum<Option, OptionAttribute>(b)
+										?.AssociatedPropertyName ?? "", args[i]
+								);
 								UsedOptions.Add(b);
 							}
 						}
@@ -218,7 +221,7 @@ namespace stilt
 		}
 
 		public enum OptionType
-		{ ValueRequired, ValueOptional, Flag }
+		{ ValueRequired, ValueMultiple, ValueOptional, Flag }
 
 		public enum Command
 		{
@@ -245,7 +248,7 @@ namespace stilt
 			[Option("-d", "DebugLevel", "Set debug level (for compiler developers)"/*, OptionType.ValueOptional*/)]
 			DebugLvl,
 
-			[Option("-i", "MainCodeFilepath", "Sets the main code filepath to use")]
+			[Option("-i", "MainCodeFilepaths", "Sets the main code filepath to use", OptionType.ValueMultiple)]
 			InputFile,
 
 			[Option("-t", "Throw", "Crash the program instead of printing the error (for debugging)", OptionType.Flag)]
@@ -268,11 +271,11 @@ namespace stilt
 		private string _name;
 
 		public Stopwatch? Stopwatch { get; private set; }
-		public string Time => Stopwatch is not null && Stopwatch.IsRunning 
-			? $"{_name} has been running for ({Stopwatch.Elapsed.TotalSeconds}s)." 
-			: Stopwatch is not null
-			? $"{_name} finished in ({Stopwatch.Elapsed.TotalSeconds}s)."
-			: $"{_name} has not been started.";
+		public string Time => Stopwatch is null
+			? $"{_name} has not been started."
+			: Stopwatch.IsRunning
+			? $"{_name} has been running for ({Stopwatch.Elapsed.TotalSeconds}s)."
+			: $"{_name} finished in ({Stopwatch.Elapsed.TotalSeconds}s).";
 
 		public void StartTimer()
 		{
@@ -523,21 +526,8 @@ namespace stilt
 			return sb.ToString();
 		}
 
-		public static void TimerReadout(List<Timer> timers)
-		{
-			foreach (var timer in timers)
-			{
-				Console.WriteLine(timer.Time);
-			}
-		}
-
 		public enum ExclusionPreset
-		{
-			None,
-			Base,
-			Ast,
-			Lexer
-		}
+		{ None, Base, Ast, Lexer }
 
 		private static IEnumerable<string>? GetExcludedPropertyNames(ExclusionPreset preset)
 		{
@@ -613,36 +603,35 @@ namespace stilt
 					compiler.Build();
 
 					Console.WriteLine();
-					compiler.Parser!.WriteErrors();
+					compiler.PrintBuildErrors();
 					Console.WriteLine();
 					if (!arg.NoTime)
-						TimerReadout(compiler.Timers);
+						compiler.WriteTimerReadout();
 
 					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(compiler.Parser!.Statements, Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+						WriteObjectToJson(compiler.Files.Select(p => p.Parser.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
 					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(compiler.Lexer!.Tokens, Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+						WriteObjectToJson(compiler.Files.Select(f => f.Lexer.Tokens).ToList(), Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
 					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(compiler.Parser!.CompilationIssues
-							, Path.Combine(arg.JsonDumpFilepath, "parser_compilation_issues.json"));
+						WriteObjectToJson(compiler.Files.Select(f => f.Parser.CompilationIssues).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_compilation_issues.json"));
 
 					break;
 				}
 				case ProgramArgs.Command.Tokenize:
 				{
-					var lex = new Lexer(arg);
-					lex.Lex();
+					var file = Compiler.BuildFile(arg, arg.MainCodeFilepaths!.First());
+					var lex = file.Lexer;
 					Token t = lex.CurrentToken;
 					do Console.WriteLine($"{lex.CurrentPos}: {t.Which}"); while ((t = lex.Next()).Which != TokenType.EOF);
-					
+
 					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(lex.Tokens, Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+						WriteObjectToJson(file.Lexer.Tokens, Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
 						
 					break;
 				}
 				case ProgramArgs.Command.Preprocess:
 				{
-					var code = File.ReadAllText(arg.MainCodeFilepath!);
+					var code = File.ReadAllText(arg.MainCodeFilepaths!.First());
 					Console.Write(Lexer.Preprocess(code));
 					break;
 				}
@@ -651,22 +640,24 @@ namespace stilt
 					var comp = new Compiler(arg);
 					comp.Build();
 
-					// if (!comp.Parser.HasErrors)
-					// {
-						foreach (var stmt in comp.Parser!.Statements)
+					
+					foreach (var file in comp.Files)
+					{
+						Console.WriteLine($"Module: {file.Filepath}");
+						foreach (var stmt in file.Parser.Statements.ToArray())
 						{
 							Dump(stmt, expanded: arg.ExpandedDump);
 						}
-					// }
+					}
 
 					Console.WriteLine();
-					comp.Parser!.WriteErrors();
+					comp.PrintBuildErrors();
 					Console.WriteLine();
 					if (!arg.NoTime)
-						TimerReadout(comp.Timers);
+						comp.WriteTimerReadout();
 
 					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(comp.Parser!.Statements, Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+						WriteObjectToJson(comp.Files.Select(f => f.Parser.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
 					
 					break;
 				}
