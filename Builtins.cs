@@ -17,6 +17,7 @@ namespace stilt
 		public static readonly TypeSymbol NBT = new("NBT", "<BUILTIN>");
 		public static readonly TypeSymbol Attribute = new("Attribute", "<BUILTIN>");
 		public static readonly TypeSymbol Tag = new("Tag", "<BUILTIN>");
+		public static readonly TypeSymbol Module = new("Module", "<BUILTIN>");
 		public static readonly TypeSymbol Decorator = new("Decorator", "<BUILTIN>");
 		public static readonly TypeSymbol Array = new("Array", "<BUILTIN>", argumentCount: 1);
 		public static readonly TypeSymbol Table = new("Table", "<BUILTIN>", argumentCount: 1);

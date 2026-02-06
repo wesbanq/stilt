@@ -18,8 +18,9 @@ namespace stilt
 		public LinkedList<Stmt> Statements = new();
 		public Scope RootScope = Builtins.BuiltinScope;
 		public ProgramArgs Args;
-
 		public List<CompilationMessage> CompilationIssues = [];
+		public List<Symbol> AllImportedSymbols = [];
+
 		public bool HasErrors => CompilationIssues.Any(m => m.Severity >= ErrorSeverity.Error);
 
 		private int _depth = 0;
@@ -210,7 +211,7 @@ namespace stilt
 				throw new SyntaxError(currentToken.Range, "Empty table literal.");
 			
 			return newExpr is CommaExpr commaExpr
-				? new ArrayLiteralExpr(currentToken.Range, [.. commaExpr.GetChildren()])
+				? new ArrayLiteralExpr(currentToken.Range, [.. commaExpr.GetChildren().OfType<Expr>()])
 				: new ArrayLiteralExpr(currentToken.Range, [newExpr]);
 		}
 
@@ -629,6 +630,50 @@ namespace stilt
 				throw new MalformedDecl(call.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
 		}
 
+		protected ImportStmt ParseImport(Scope scope, Token firstToken)
+		{
+			// import "filepath" as name
+			// import "filepath"  (uses filename as name)
+			
+			Lex.GoPast(TokenType.Import);
+			var pathToken = Lex.CurrentToken;
+
+			if (pathToken.Which is not TokenType.StringLiteral)
+				throw new UnexpectedToken(pathToken.Range, TokenType.StringLiteral, pathToken);
+
+			var filepath = pathToken.Range.Text.Trim('"', '\'');
+			Lex.Next();
+
+			string moduleName;
+			if (Lex.CurrentIs(TokenType.As))
+			{
+				Lex.GoPast(TokenType.As);
+				var nameToken = Lex.CurrentToken;
+				if (nameToken.Which is not TokenType.Identifier)
+					throw new UnexpectedToken(nameToken.Range, TokenType.Identifier, nameToken);
+				moduleName = nameToken.Range.Text;
+				Lex.Next();
+			}
+			else
+			{
+				// Use filename as module name (without extension if .stilt)
+				moduleName = Path.GetFileNameWithoutExtension(filepath);
+				// Validate it's a valid identifier
+				if (!System.Text.RegularExpressions.Regex.IsMatch(moduleName, @"^[a-zA-Z_]\w*$"))
+					throw new SyntaxError(pathToken.Range, $"Filename '{moduleName}' is not a valid identifier. Use 'as <name>' to specify a module name.");
+			}
+
+			var resolvedPath = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(Lex.Filepath) ?? "", filepath));
+
+			return new ImportStmt
+			{
+				Scope = scope,
+				Filepath = resolvedPath,
+				ModuleName = moduleName,
+				InnerRange = firstToken.Range
+			};
+		}
+
 		protected Stmt? ParseLoopStmt(Scope currentScope, Token firstToken)
 		{
 			Scope newScope = new(currentScope);
@@ -863,6 +908,18 @@ namespace stilt
 						Scope = currentScope,
 						Value = returnExpr,
 					};
+					break;
+				}
+				case TokenType.Import:
+				{
+					var newScope = new Scope(currentScope);
+					newStmt = ParseImport(newScope, firstToken);
+					if (newStmt is ImportStmt importStmt)
+					{
+						var moduleSym = new VarSymbol(importStmt.ModuleName, Lex.Filepath, Builtins.Module);
+						moduleSym.Declaration = importStmt;
+						AddToScope([moduleSym], newScope);
+					}
 					break;
 				}
 				case TokenType.Break:
@@ -1117,15 +1174,9 @@ namespace stilt
 			Statements = ParseBranch(RootScope);
 		}
 
-		public Parser(Lexer lex, ProgramArgs args)
+		public Parser(ProgramArgs args, Lexer lex)
 		{
 			Lex = lex;
-			Args = args;
-		}
-		public Parser(Lexer lex, Scope rootScope, ProgramArgs args)
-		{
-			Lex = lex;
-			RootScope = rootScope;
 			Args = args;
 		}
 	}

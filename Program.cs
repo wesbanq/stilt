@@ -8,6 +8,7 @@ using System.Text;
 
 namespace stilt
 {
+	//TODO switch to NuArgs
 	public class ProgramArgs
 	{
 		public Command Action;
@@ -44,13 +45,6 @@ namespace stilt
 
 		void GiveValueTo(string opt, string value)
 		{
-			//TODO redo this entirely
-			//var fields = GetType().GetFields();
-			//var a = Array.Find(fields, f => f.Name == opt);
-			//if (a is null)
-			//	throw new ArgumentException($"Non-existent argument: {opt}");
-
-			//a.SetValue(this, a.FieldType.);
 			switch (opt)
 			{
 				case "DebugLevel":
@@ -263,7 +257,6 @@ namespace stilt
 			[Option("-j", "JsonDumpPath", "Dump the output to a JSON file (for debugging)")]
 			JsonDumpFilepath,
 		}
-
 	}
 
 	public class Timer
@@ -578,8 +571,6 @@ namespace stilt
 		static int Main(string[] args)
 		{
 			ProgramArgs arg;
-			//TODO
-			//implement ValueOptional
 			try
 			{
 				arg = new ProgramArgs(args);

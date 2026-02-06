@@ -27,6 +27,30 @@ namespace stilt.AST
 			return null;
 		}
 
+		public VarSymbol? FindVarByName(string name)
+		{
+			var currentScope = this;
+			while (currentScope is not null)
+			{
+				var found = currentScope.Symbols.Find(s => s is VarSymbol && s.Name == name) as VarSymbol;
+				if (found is not null) return found;
+				currentScope = currentScope.Parent;
+			}
+			return null;
+		}
+
+		public TypeSymbol? FindTypeByName(string name)
+		{
+			var currentScope = this;
+			while (currentScope is not null)
+			{
+				var found = currentScope.Symbols.Find(s => s is TypeSymbol && s.Name == name) as TypeSymbol;
+				if (found is not null) return found;
+				currentScope = currentScope.Parent;
+			}
+			return null;
+		}
+
 		public void AddSymbol(Symbol sym)
 		{
 			Symbols.Add(sym);

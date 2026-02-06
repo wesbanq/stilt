@@ -131,19 +131,19 @@ namespace stilt.AST
 	public abstract class DeclStmt : Stmt
 	{
 		public Symbol Name;
+		public Stmt Value;
 		public List<TokenType> Specifiers = [];
 	}
 
 	public class VarDeclStmt : DeclStmt
 	{
 		public new List<Symbol> Name;
-		public required Expr? Value;
+		public new Expr? Value;
 		public bool IsConst = false;
 	}
 
 	public class TypeDeclStmt : DeclStmt
 	{
-		public required Stmt Value;
 
 		[SetsRequiredMembers]
 		public TypeDeclStmt(string name, string source, Stmt v, TypeSymbol? inherits = null)
@@ -164,7 +164,6 @@ namespace stilt.AST
 
 	public class FuncDeclStmt : DeclStmt
 	{
-		public required Stmt Value;
 
 		[SetsRequiredMembers]
 		public FuncDeclStmt(string name, string source, Stmt v, TypeSymbol? args = null, TypeSymbol? returns = null)
@@ -173,5 +172,12 @@ namespace stilt.AST
 			Name = new VarSymbol(name, source, new TypeSymbol(Builtins.Callable, [args ?? Builtins.Any, returns ?? Builtins.Any]))
 			{ Declaration = this };
 		}
+	}
+
+	public class ImportStmt : Stmt
+	{
+		public required string Filepath;
+		public required string ModuleName;
+		public Scope? ImportedScope;
 	}
 }
