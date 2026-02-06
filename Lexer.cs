@@ -247,11 +247,11 @@ namespace stilt
 			});
 		}
 
-		public Lexer(ProgramArgs args)
+		public Lexer(ProgramArgs args, string filepath, FileText text)
 		{
 			Args = args;
-			Filepath = args.MainCodeFilepath!;
-			Text = new(Filepath);
+			Filepath = filepath;
+			Text = text;
 		}
 	}
 }

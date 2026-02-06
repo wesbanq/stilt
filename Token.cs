@@ -410,7 +410,6 @@ namespace stilt
 		[Symbol("with")]
 		With,
 
-		[Unimplemented]
 		[Symbol("as")]
 		As,
 
