@@ -11,7 +11,7 @@ namespace stilt
 	{
 		public ProgramArgs Args;
 		public List<Scope> Modules = [];
-		public List<LinkedList<Stmt>> Trees = [];
+		public List<List<Stmt>> Trees = [];
 		public List<CompilationMessage> Errors = [];
 
 		private Dictionary<string, Scope> _loadedModules = [];
@@ -368,7 +368,7 @@ namespace stilt
 			try
 			{
 				// Parse the imported file
-				var file = Compiler.BuildFile(Args, normalizedPath);
+				var file = Compiler.ParseFile(Args, normalizedPath);
 
 				// Add parser errors to our error list
 				Errors.AddRange(file.Parser.CompilationIssues);
@@ -398,7 +398,7 @@ namespace stilt
 			}
 		}
 
-		public Linker(ProgramArgs args, List<Scope> modules, List<LinkedList<Stmt>> trees)
+		public Linker(ProgramArgs args, List<Scope> modules, List<List<Stmt>> trees)
 		{
 			Modules = modules;
 			Trees = trees;

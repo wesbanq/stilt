@@ -36,49 +36,70 @@ namespace stilt.AST
 		}
 	}
 
-	public class CompoundStmt : Stmt
+	public interface IContainerStmt
 	{
-		public required LinkedList<Stmt> Statements;
+		public List<Stmt?> Contained { get; }
 	}
 
-	public class ReturnStmt : Stmt
+	public interface IExpressionStmt
 	{
-		public Expr? Value;
+		public List<Expr?> Expressions { get; }
 	}
 
-	public class IfStmt : Stmt
+	public class CompoundStmt : Stmt, IContainerStmt
+	{
+		public List<Stmt> Statements = [];
+		public List<Stmt?> Contained => Statements!;
+	}
+
+	public class ReturnStmt : Stmt, IExpressionStmt
+	{
+		public required Expr Value;
+		public List<Expr?> Expressions => [Value];
+	}
+
+	public class IfStmt : Stmt, IContainerStmt, IExpressionStmt
 	{
 		public required Expr Condition;
 		public required Stmt NextIf;
 		public Stmt? NextElse;
+		public List<Stmt?> Contained => [NextIf, NextElse];
+		public List<Expr?> Expressions => [Condition];
 	}
 
-	public class LoopStmt : Stmt
+	
+
+	public class LoopStmt : Stmt, IContainerStmt
 	{
 		public Stmt Body;
+		public List<Stmt?> Contained => [Body];
 	}
 
-	public class PostconditionLoopStmt : LoopStmt
+	public class PostconditionLoopStmt : LoopStmt, IExpressionStmt
 	{
 		public Expr Condition;
+		public List<Expr?> Expressions => [Condition];
 	}
 
-	public class PreconditionLoopStmt : LoopStmt
+	public class PreconditionLoopStmt : LoopStmt, IExpressionStmt
 	{
 		public Expr Condition;
+		public List<Expr?> Expressions => [Condition];
 	}
 
-	public class ForLoopStmt : LoopStmt
+	public class ForLoopStmt : LoopStmt, IExpressionStmt
 	{
 		public VarDeclStmt? LoopVariable;
 		public Expr? Condition;
 		public Expr? Iterator;
+		public List<Expr?> Expressions => [Condition, Iterator];
 	}
 
-	public class ForeachLoopStmt : LoopStmt
+	public class ForeachLoopStmt : LoopStmt, IExpressionStmt
 	{
 		public required VarDeclStmt LoopVariable;
 		public required Expr Iterator;
+		public List<Expr?> Expressions => [Iterator];
 	}
 
 	public class BreakStmt : Stmt
@@ -87,9 +108,10 @@ namespace stilt.AST
 	public class ContinueStmt : Stmt
 	{ }
 
-	public class ExpressionStmt : Stmt
+	public class ExpressionStmt : Stmt, IExpressionStmt
 	{
 		public required Expr Expression;
+		public List<Expr?> Expressions => [Expression];
 	}
 
 	public class ExecuteStmt : Stmt
@@ -128,18 +150,20 @@ namespace stilt.AST
 		}
 	}
 
-	public abstract class DeclStmt : Stmt
+	public abstract class DeclStmt : Stmt, IContainerStmt
 	{
 		public Symbol Name;
 		public Stmt Value;
 		public List<TokenType> Specifiers = [];
+		public List<Stmt?> Contained => [Value];
 	}
 
-	public class VarDeclStmt : DeclStmt
+	public class VarDeclStmt : DeclStmt, IExpressionStmt
 	{
 		public new List<Symbol> Name;
 		public new Expr? Value;
 		public bool IsConst = false;
+		public List<Expr?> Expressions => [Value];
 	}
 
 	public class TypeDeclStmt : DeclStmt

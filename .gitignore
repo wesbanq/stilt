@@ -367,3 +367,4 @@ FodyWeavers.xsd
 .vscode/
 [Pp]roperties/
 *.json
+/ExamplePrograms/IR

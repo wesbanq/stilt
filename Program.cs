@@ -5,6 +5,9 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Text;
+using stilt.IR;
+using System.Text.RegularExpressions;
+using System.Globalization;
 
 namespace stilt
 {
@@ -19,6 +22,7 @@ namespace stilt
 		public bool ExpandedDump = false;
 		public bool NoTime = false;
 		public string? JsonDumpFilepath = null;
+		public MCVersion TargetVersion = MCVersion.LatestJava;
 
 		public static void PrintHelp()
 		{
@@ -66,6 +70,12 @@ namespace stilt
 					
 					MainCodeFilepaths ??= [];
 					MainCodeFilepaths = [.. MainCodeFilepaths, value];
+					break;
+				}
+				case "TargetVersion":
+				{
+                    TargetVersion = MCVersion.ParseMCVersion(value) 
+						?? throw new ArgumentException($"Invalid target version: '{value}'");
 					break;
 				}
 				case "Throw":
@@ -233,6 +243,9 @@ namespace stilt
 
 			[Action("tree", [Option.InputFile])]
 			Tree,
+
+			[Action("ir", [Option.InputFile])]
+			IR,
 		}
 
 		public enum Option
@@ -256,6 +269,9 @@ namespace stilt
 
 			[Option("-j", "JsonDumpPath", "Dump the output to a JSON file (for debugging)")]
 			JsonDumpFilepath,
+
+			[Option("-v", "TargetVersion", "Set the target version of the language")]
+			TargetVersion,
 		}
 	}
 
@@ -301,6 +317,7 @@ namespace stilt
 
 	internal static class Program
 	{
+
 		public static A? GetAttributeFromEnum<T, A>(T value)
 				where T : Enum
 				where A : Attribute
@@ -440,8 +457,8 @@ namespace stilt
 
 			var valueType = value.GetType();
 
-			// Handle LinkedList<Stmt> specially
-			if (value is LinkedList<Stmt> stmtList)
+			// Handle List<Stmt> specially
+			if (value is List<Stmt> stmtList)
 			{
 				Console.WriteLine($"{indent}{name}:");
 				foreach (var item in stmtList)
@@ -501,22 +518,31 @@ namespace stilt
 
 		public static string Escape(string s)
 		{
-			if (s == "") return "";
-			var sb = new StringBuilder(s.Length);
-			foreach (char c in s)
-			{
-				sb.Append(c switch
-				{
-					'\n' => "\\n",
-					'\r' => "\\r",
-					'\t' => "\\t",
-					'\\' => "\\\\",
-					'"' => "\\\"",
-					_ when char.IsControl(c) => $"\\x{(int)c:X2}",
-					_ => c.ToString()
-				});
-			}
-			return sb.ToString();
+			return s
+				.Replace("\n", "\\n")
+				.Replace("\r\n", "\\r\\n")
+				.Replace("\t", "\\t")
+				.Replace("\"", "\\\"")
+				.Replace("\'", "\\\'")
+				.Replace("\\", "\\\\");
+		}
+
+		public static string Unescape(string s)
+		{
+			var str = s
+				.Replace("\\n", "\n")
+				.Replace("\\r\\n", "\r\n")
+				.Replace("\\t", "\t")
+				.Replace("\\\"", "\"")
+				.Replace("\\\'", "\'")
+				.Replace("\\\\", "\\");
+			
+			str = Regex.Replace(Regex.Replace(Regex.Replace(
+				str, @"\\u[\da-fA-F]{4}", m => { return ((char)int.Parse(m.Value.Substring(2), NumberStyles.HexNumber)).ToString(); }), 
+				@"\\U[\da-fA-F]{8}", m => { return ((char)int.Parse(m.Value.Substring(2), NumberStyles.HexNumber)).ToString(); }),
+				@"\\x[\da-fA-F]{2}", m => { return ((char)int.Parse(m.Value.Substring(2), NumberStyles.HexNumber)).ToString(); });
+
+			return str;
 		}
 
 		public enum ExclusionPreset
@@ -610,7 +636,7 @@ namespace stilt
 				}
 				case ProgramArgs.Command.Tokenize:
 				{
-					var file = Compiler.BuildFile(arg, arg.MainCodeFilepaths!.First());
+					var file = Compiler.ParseFile(arg, arg.MainCodeFilepaths!.First());
 					var lex = file.Lexer;
 					Token t = lex.CurrentToken;
 					do Console.WriteLine($"{lex.CurrentPos}: {t.Which}"); while ((t = lex.Next()).Which != TokenType.EOF);
@@ -650,6 +676,14 @@ namespace stilt
 					if (arg.JsonDumpFilepath is not null)
 						WriteObjectToJson(comp.Files.Select(f => f.Parser.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
 					
+					break;
+				}
+				case ProgramArgs.Command.IR:
+				{
+					var file = Compiler.ParseFile(arg, arg.MainCodeFilepaths!.First());
+					var ir = new IRGenerator();
+					ir.Generate(file);
+					Dump(ir, expanded: arg.ExpandedDump);
 					break;
 				}
 			}

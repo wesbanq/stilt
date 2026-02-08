@@ -223,18 +223,19 @@ namespace stilt
 	public enum ErrorSeverity
 	{ Info, Warning, Error, Critical }
 
-	public class CompiledFile
+	public enum TimedEvents
+	{ Compilation, Lexing, Parsing, Linking }
+
+	public class ParsedFile
 	{
 		public string Filepath;
-		public FileText Text;
+		public readonly FileText Text;
 		public Lexer Lexer;
 		public Parser Parser;
 		public Dictionary<TimedEvents, Timer> Timers = [];
 		public List<CompilationMessage> Errors => Parser.CompilationIssues;
-		public enum TimedEvents
-		{ Compilation, Lexing, Parsing, Linking }
 
-		public void Compile(ProgramArgs args)
+		public void Parse(ProgramArgs args)
 		{
 			Lexer = new Lexer(args, Filepath, Text);
 			Timers.Add(TimedEvents.Lexing, new Timer("Lexing"));
@@ -251,23 +252,114 @@ namespace stilt
 			});
 		}
 
-		public CompiledFile(string filepath)
+		public ParsedFile(string filepath)
 		{
 			Filepath = filepath;
 			Text = new(Filepath);
 		}
 	}
 
+	public enum MCPlatform
+	{
+		Java,
+		Bedrock,
+	}
+
+	public class MCVersion
+	{
+		public static readonly MCVersion LatestJava = new(MCPlatform.Java, 21, 9);
+		public static readonly MCVersion LatestBedrock = new(MCPlatform.Bedrock, 23, 0);
+
+		public MCPlatform Platform;
+		public int Major;
+		public int Minor;
+
+		public override string ToString() => $"{Platform}/1.{Major}.{Minor}";
+
+        public override bool Equals(object? obj)
+        {
+            return obj is MCVersion version && this == version;
+        }
+		public override int GetHashCode()
+		{
+			return HashCode.Combine(Platform, Major, Minor);
+		}
+
+		public static bool operator ==(MCVersion left, MCVersion right)
+		{
+			if (left is null && right is null)
+				return true;
+			if (left is null || right is null)
+				return false;
+			return left.Platform == right.Platform && left.Major == right.Major && left.Minor == right.Minor;
+		}
+		public static bool operator !=(MCVersion left, MCVersion right)
+		{
+			return !(left == right);
+		}
+		public static bool operator >(MCVersion left, MCVersion right)
+		{
+			return left.Major > right.Major || (left.Major == right.Major && left.Minor > right.Minor);
+		}
+		public static bool operator <(MCVersion left, MCVersion right)
+		{
+			return left.Major < right.Major || (left.Major == right.Major && left.Minor < right.Minor);
+		}
+		public static bool operator >=(MCVersion left, MCVersion right)
+		{
+			return left.Major > right.Major || (left.Major == right.Major && left.Minor >= right.Minor);
+		}
+		public static bool operator <=(MCVersion left, MCVersion right)
+		{
+			return left.Major < right.Major || (left.Major == right.Major && left.Minor <= right.Minor);
+		}
+
+		public static MCVersion? ParseMCVersion(string? version)
+		{
+			if (version is null)
+				return LatestJava;
+
+			const string javaPrefix = "java";
+			const string bedrockPrefix = "bedrock";
+
+			var parts = version.Split('/');
+			if (parts.Length != 2)
+				return null;
+			MCPlatform? platform = parts[0] == javaPrefix 
+				? MCPlatform.Java 
+				: parts[0] == bedrockPrefix
+				? MCPlatform.Bedrock
+				: null;
+			if (platform is null)
+				return null;
+			var versionParts = parts[1].Split('.');
+			if (versionParts.Length != 3)
+				return null;
+			if (!int.TryParse(versionParts[0], out var major))
+				return null;
+			if (!int.TryParse(versionParts[1], out var minor))
+				return null;
+
+			return new MCVersion(platform.Value, major, minor);
+		}
+
+		public MCVersion(MCPlatform platform, int major, int minor)
+		{
+			Platform = platform;
+			Major = major;
+			Minor = minor;
+		}
+	}
+
 	public class Compiler
 	{
 		public ProgramArgs Args;
-		public List<CompiledFile> Files = [];
+		public List<ParsedFile> Files = [];
 		public Linker? Linker;
-		public Dictionary<CompiledFile.TimedEvents, Timer> Timers = [];
+		public Dictionary<TimedEvents, Timer> Timers = [];
 
 		public void WriteTimerReadout()
 		{
-			Console.WriteLine("Compilation Timers:");
 			foreach (var timer in Timers)
 			{
 				Console.WriteLine(timer.Value.Time);
@@ -291,39 +383,39 @@ namespace stilt
 			Linker?.Errors.ForEach(e => e.Print());
 		}
 
-		public static CompiledFile BuildFile(ProgramArgs args, string filepath)
+		public static ParsedFile ParseFile(ProgramArgs args, string filepath)
 		{
-			var file = new CompiledFile(filepath);
-			file.Compile(args);
+			var file = new ParsedFile(filepath);
+			file.Parse(args);
 			return file;
 		}
 
 		public void Build()
 		{
-			Timers.Add(CompiledFile.TimedEvents.Compilation, new Timer("Compilation"));
-			Timers[CompiledFile.TimedEvents.Compilation].StartTimer();
+			Timers.Add(TimedEvents.Compilation, new Timer("Compilation"));
+			Timers[TimedEvents.Compilation].StartTimer();
 
-			Timers[CompiledFile.TimedEvents.Compilation].Run(() =>
+			Timers[TimedEvents.Compilation].Run(() =>
 			{
 				foreach (var filepath in Args.MainCodeFilepaths!)
 				{
 					if (filepath is not null)
 					{
-						var file = BuildFile(Args, filepath);
+						var file = ParseFile(Args, filepath);
 						Files.Add(file);
 					}
 				}
 			});
 
-			Timers.Add(CompiledFile.TimedEvents.Linking, new Timer("Linking"));
+			Timers.Add(TimedEvents.Linking, new Timer("Linking"));
 			Linker = new Linker(
 				Args,
                 [.. Files.Select(f => f.Parser.RootScope)],
                 [.. Files.Select(f => f.Parser.Statements)]
             );
-			Timers[CompiledFile.TimedEvents.Linking].Run(() => Linker.Link());
+			Timers[TimedEvents.Linking].Run(() => Linker.Link());
 
-			Timers[CompiledFile.TimedEvents.Compilation].StopTimer();
+			Timers[TimedEvents.Compilation].StopTimer();
 		}
 
 		public Compiler(ProgramArgs args)
