@@ -379,6 +379,17 @@ namespace stilt.AST
 		}
 	}
 
+	public class BoolLiteralExpr : LiteralExpr
+	{
+		[SetsRequiredMembers]
+		public BoolLiteralExpr(bool value, FileRange? r)
+			: base(r)
+		{
+			Value = value;
+			Type = Builtins.Bool;
+		}
+	}
+
 	public class NumLiteralExpr : LiteralExpr
 	{
 		[SetsRequiredMembers]
@@ -399,12 +410,21 @@ namespace stilt.AST
 
 	public class StringLiteralExpr : LiteralExpr
 	{
+		public bool Format = false;
+		public bool Tagged = false;
+		public bool Multi = false;
+		public bool Raw = false;
+
 		[SetsRequiredMembers]
-		public StringLiteralExpr(string str, FileRange? r)
+		public StringLiteralExpr(string str, FileRange? r, bool format = false, bool tagged = false, bool multi = false, bool raw = false)
 			: base(r)
 		{
 			Value = str;
-			Type = Builtins.String;
+			Format = format;
+			Tagged = tagged;
+			Multi = multi;
+			Raw = raw;
+			Type = tagged ? Builtins.TaggedString : Builtins.String;
 		}
 	}
 

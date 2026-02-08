@@ -132,7 +132,7 @@ namespace stilt
 			);
 		}
 
-		public bool CurrentIs(TokenType type) => CurrentToken.Which == type;
+		public bool CurrentIs(params TokenType[] types) => types.Contains(CurrentToken.Which);
 
 		public bool NextIs(TokenType type) => 
 			PeekNext(1).Which == type || 
@@ -165,19 +165,34 @@ namespace stilt
 			return Next();
 		}
 
-		public Token ExpectNext(TokenType expected)
+		public Token ExpectNext(params TokenType[] expected)
 		{
+			if (expected.Length == 0)
+				throw new ArgumentException("Expected at least one token type");
 			var next = Next();
-			if (!CurrentIs(expected))
-				throw new UnexpectedToken(next.Range, expected, next);
+			if (!expected.Contains(next.Which))
+				throw new UnexpectedToken(next.Range, expected.First(), next);
 			return next;
 		}
 
-		public Token Expect(TokenType expected)
+		public Token Expect(params TokenType[] expected)
 		{
-			if (!CurrentIs(expected))
-				throw new UnexpectedToken(CurrentToken.Range, expected, CurrentToken);
+			if (expected.Length == 0)
+				throw new ArgumentException("Expected at least one token type");
+			if (!expected.Contains(CurrentToken.Which))
+				throw new UnexpectedToken(CurrentToken.Range, expected.First(), CurrentToken);
 			return Next();
+		}
+
+		public Token ExpectThis(params TokenType[] expected)
+		{
+			if (expected.Length == 0)
+				throw new ArgumentException("Expected at least one token type");
+			if (!expected.Contains(CurrentToken.Which))
+				throw new UnexpectedToken(CurrentToken.Range, expected.First(), CurrentToken);
+			var result = CurrentToken; 
+			Next();
+			return result;
 		}
 
 		public Token PeekNext(int n = 1)

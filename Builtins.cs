@@ -11,8 +11,10 @@ namespace stilt
 
 		public static readonly TypeSymbol Any = new("Any", "<BUILTIN>");
 		public static readonly TypeSymbol None = new("None", "<BUILTIN>");
+		public static readonly TypeSymbol Bool = new("Bool", "<BUILTIN>");
 		public static readonly TypeSymbol Num = new("Num", "<BUILTIN>");
 		public static readonly TypeSymbol String = new("String", "<BUILTIN>");
+		public static readonly TypeSymbol TaggedString = new("TaggedString", "<BUILTIN>");
 		public static readonly TypeSymbol UUID = new("UUID", "<BUILTIN>");
 		public static readonly TypeSymbol NBT = new("NBT", "<BUILTIN>");
 		public static readonly TypeSymbol Attribute = new("Attribute", "<BUILTIN>");

@@ -125,4 +125,18 @@ namespace stilt.Errors
 			Severity = ErrorSeverity.Error;
 		}
 	}
+
+	public class GenerationError : CompilationMessage
+	{
+		public GenerationError(string msg)
+			: base(msg)
+		{ }
+	}
+
+	public class IRGenerationError : GenerationError
+	{
+		public IRGenerationError(string msg)
+			: base(msg)
+		{ }
+	}
 }

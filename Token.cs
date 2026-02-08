@@ -188,36 +188,38 @@ namespace stilt
 		EmitSignal,
 
 		// Literals
-		[Symbol("""(?:"(?:\\.|[^\\"])*"|'(?:\\.|[^\\'])*')""", true)]
+		[Symbol("null")]
+		Null,
+
+		[Symbol("true")]
+		True,
+
+		[Symbol("false")]
+		False,
+
+		[Symbol(@"[rftm]*(?:""(?:\.|[^\\""])*""|'(?:\.|[^'])*')", true)]
 		StringLiteral,
 
-		[Symbol("""r"(?:\\.|[^\\"])*"|r'(?:\\.|[^\\'])*'""", true)]
-		RawStringLiteral,
-
-		[Unimplemented]
-		[Symbol("""f"(?:\\.|[^\\"])*"|f'(?:\\.|[^\\'])*'""", true)]
-		FormatStringLiteral,
-
-		[Symbol("""(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[bsilfd]?""", true)]
+		[Symbol(@"(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[bsilfd]?", true)]
 		DecimalNumericLiteral,
 
-		[Symbol("""\d[\d_]*[bsilfd]?""", true)]
+		[Symbol(@"\d[\d_]*[bsilfd]?", true)]
 		WholeNumericLiteral,
 
-		[Symbol("""0x[\da-fA-F]+[\da-fA-F_]*[bsilfd]?""", true)]
+		[Symbol(@"0x[\da-fA-F]+[\da-fA-F_]*[bsilfd]?", true)]
 		HexNumericLiteral,
 
-		[Symbol("""0o[0-8]+[0-8_]*[bsilfd]?""", true)]
+		[Symbol(@"0o[0-8]+[0-8_]*[bsilfd]?", true)]
 		OctalNumericLiteral,
 
-		[Symbol("""0b[01]+[01_]*[bsilfd]?""", true)]
+		[Symbol(@"0b[01]+[01_]*[bsilfd]?", true)]
 		ByteNumericLiteral,
 
-		[Symbol("""(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[e|E][-|+]\d+[bsilfd]?""", true)]
+		[Symbol(@"(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[e|E][-|+]\d+[bsilfd]?", true)]
 		ScientificNumericLiteral,
 
 		// Delimiters
-		[Symbol("""\n+|;""", true)]
+		[Symbol(@"\n+|;", true)]
 		StmtSeparator,
 
 		[BinaryOperator(15)]
@@ -305,11 +307,11 @@ namespace stilt
 		[Symbol("=>")]
 		CopyTo,
 
-		[Symbol("""[a-zA-Z_]\w*""", true)]
+		[Symbol(@"[a-zA-Z_]\w*", true)]
 		Identifier,
 
 		[Unimplemented]
-		[Symbol("""\[\[.*\]\]""", true)]
+		[Symbol(@"\[\[.*\]\]", true)]
 		Decorator,
 
 		// Declarations
@@ -353,8 +355,8 @@ namespace stilt
 		[Symbol("select")]
 		SelectStmt,
 
-		[Symbol("""execute(?:\s*\/.*\n)*""", true)]
-		[Symbol("""execute +as +.*?\n(?:\s*\/.*)*""", true)]
+		[Symbol(@"execute(?:\s*\/.*\n)*", true)]
+		[Symbol(@"execute +as +.*?\n(?:\s*\/.*)*", true)]
 		ExecuteStmt,
 
 		// Keywords
@@ -449,7 +451,7 @@ namespace stilt
 		[Symbol("case")]
 		Case,
 
-		[Symbol("null")]
-		Null,
+		[Symbol("version")]
+		Version,
 	}
 }

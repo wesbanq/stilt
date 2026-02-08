@@ -15,7 +15,7 @@ namespace stilt
 	{
 		private Lexer Lex;
 
-		public LinkedList<Stmt> Statements = new();
+		public List<Stmt> Statements = [];
 		public Scope RootScope = Builtins.BuiltinScope;
 		public ProgramArgs Args;
 		public List<CompilationMessage> CompilationIssues = [];
@@ -294,15 +294,31 @@ namespace stilt
 					break;
 				}
 				case TokenType.StringLiteral:
-				//TODO format the string
-				case TokenType.RawStringLiteral:
-				case TokenType.FormatStringLiteral:
 				{
-					newExpr = new StringLiteralExpr(currentToken.Which switch 
-					{
-						TokenType.RawStringLiteral => Program.Escape(currentToken.Range.Text.Replace("\\\"", "\"").Replace("\\\'", "\'")),
-						_ => currentToken.Range.Text,
-					}, currentToken.Range);
+					var text = currentToken.Range.Text;
+					var firstQuote = text.IndexOfAny(['"', '\'']);
+					var specifiers = text[..firstQuote].Split('r', 'f', 't', 'm');
+					var raw = specifiers.Contains("r");
+					var format = specifiers.Contains("f");
+					var tagged = specifiers.Contains("t");
+					var multi = specifiers.Contains("m");
+
+					if (raw && (format || tagged || multi))
+						throw new SyntaxError(currentToken.Range, "Raw string literals cannot have format, tagged, or multi specifiers.");
+
+					var stringText = text[(firstQuote + 1)..^1];
+					if (!multi)
+						stringText = stringText.Replace("\n", "");
+					if (!raw)
+						stringText = Program.Unescape(stringText);
+
+					newExpr = new StringLiteralExpr(stringText, currentToken.Range, format, tagged, multi, raw);
+					break;
+				}
+				case TokenType.True:
+				case TokenType.False:
+				{
+					newExpr = new BoolLiteralExpr(currentToken.Which == TokenType.True, currentToken.Range);
 					break;
 				}
 				case TokenType.HexNumericLiteral:
@@ -443,8 +459,11 @@ namespace stilt
 					if (Lex.NextIs(TokenType.Assign))
 					{
 						Lex.Next();
-						Lex.SkipStmtSeparator();
-						var assignToken = new Token { Which = TokenType.Assign, Range = currentToken.Range + Lex.CurrentToken.Range };
+						var assignToken = new Token 
+						{ 
+							Which = TokenType.Assign, 
+							Range = currentToken.Range + Lex.CurrentToken.Range 
+						};
 						var assignAttr = Program.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign);
 						if (assignAttr is null)
 							throw new UnexpectedToken(currentToken.Range, currentToken);
@@ -456,9 +475,6 @@ namespace stilt
 						{
 							Operation = currentToken.Which,
 						};
-
-						if (possibleExprs.Count != 1)
-							throw new MalformedExpr(currentToken.Range);
 
 						newExpr = assignExpr;
 						break;
@@ -1019,6 +1035,82 @@ namespace stilt
 					newStmt.InnerRange = firstToken.Range;
 					return newStmt;
 				}
+				case TokenType.Version:
+				{
+					Lex.GoPast(TokenType.Version);
+					Lex.SkipStmtSeparator();
+					Lex.ExpectThis(TokenType.OpenCurlyBracket);
+					Lex.SkipStmtSeparator();
+
+					while (!Lex.CurrentIs(TokenType.CloseCurlyBracket))
+					{
+						Lex.SkipStmtSeparator();
+						var comparison = Lex.ExpectThis(
+							TokenType.Equals, 
+							TokenType.Greater, 
+							TokenType.GreaterOrEqual, 
+							TokenType.Lesser, 
+							TokenType.LesserOrEqual, 
+							TokenType.Unequals);
+						var versionToken = Lex.ExpectThis(TokenType.StringLiteral);
+						var version = MCVersion.ParseMCVersion(versionToken.Range.Text);
+						if (version is null)
+							throw new SyntaxError(versionToken.Range, $"Invalid version: '{versionToken.Range.Text}'");
+						var stmt = ParseStmt(currentScope);
+
+						switch (comparison.Which)
+						{
+							case TokenType.Equals:
+							{
+								if (Args.TargetVersion == version)
+									newStmt = stmt;
+								break;
+							}
+							case TokenType.Unequals:
+							{
+								if (Args.TargetVersion != version)
+									newStmt = stmt;
+								break;
+							}
+							case TokenType.Greater:
+							{
+								if (Args.TargetVersion.Platform == version.Platform && Args.TargetVersion > version)
+									newStmt = stmt;
+								break;
+							}
+							case TokenType.GreaterOrEqual:
+							{
+								if (Args.TargetVersion.Platform == version.Platform && Args.TargetVersion >= version)
+									newStmt = stmt;
+								break;
+							}
+							case TokenType.Lesser:
+							{
+								if (Args.TargetVersion.Platform == version.Platform && Args.TargetVersion < version)
+									newStmt = stmt;
+								break;
+							}
+							case TokenType.LesserOrEqual:
+							{
+								if (Args.TargetVersion.Platform == version.Platform && Args.TargetVersion <= version)
+									newStmt = stmt;
+								break;
+							}
+							default:
+							{
+								throw new UnexpectedToken(comparison.Range, comparison);
+							}
+						}
+
+						if (newStmt is not null)
+							break;
+					}
+
+					if (newStmt is null)
+						throw new SyntaxError(firstToken.Range, $"No version matched: '{Args.TargetVersion}'");
+
+					break;
+				}
 				case TokenType.OpenCurlyBracket:
 				{
 					Scope newScope = new(currentScope);
@@ -1075,11 +1167,11 @@ namespace stilt
 			return newStmt;
 		}
 
-		protected LinkedList<Stmt> ParseBranch(Scope parentScope)
+		protected List<Stmt> ParseBranch(Scope parentScope)
 		{
 			var firstToken = Lex.CurrentToken;
 			var startingDepth = ++_depth;
-			LinkedList<Stmt> innerStmts = [];
+			List<Stmt> innerStmts = [];
 
 			while (true)
 			{
@@ -1089,7 +1181,7 @@ namespace stilt
 					newStmt = ParseStmt(parentScope);
 
 					if (newStmt is not null)
-						innerStmts.AddLast(newStmt);
+						innerStmts.Add(newStmt);
 
 					if (Lex.CurrentIs(TokenType.EOF))
 					{
@@ -1124,7 +1216,7 @@ namespace stilt
 						newStmt = ParseStmt(parentScope);
 
 						if (newStmt is not null)
-							innerStmts.AddLast(newStmt);
+							innerStmts.Add(newStmt);
 						
 						if (Lex.CurrentIs(TokenType.EOF))
 						{
