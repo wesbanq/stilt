@@ -367,4 +367,6 @@ FodyWeavers.xsd
 .vscode/
 [Pp]roperties/
 *.json
-/ExamplePrograms/IR
+.cursor/
+.vs/
+.gitignore

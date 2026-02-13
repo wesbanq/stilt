@@ -1,277 +1,72 @@
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using stilt.AST;
+using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
 using stilt.IR;
 using System.Text.RegularExpressions;
 using System.Globalization;
+using NuArgs;
 
 namespace stilt
 {
-	//TODO switch to NuArgs
-	public class ProgramArgs
+	public enum ProgramCommand
 	{
-		public Command Action;
+		[Command<ProgramOption>("build", "Builds the given file.", [ProgramOption.InputFile])]
+		Build,
+		[Command<ProgramOption>("token", "Does only preprocessing and lexing", [ProgramOption.InputFile])]
+		Tokenize,
+		[Command<ProgramOption>("preprocess", "Does only preprocessing.", [ProgramOption.InputFile])]
+		Preprocess,
+		[Command<ProgramOption>("tree", "Does only preprocessing, lexing, and parsing.", [ProgramOption.InputFile])]
+		Tree,
+		[Command<ProgramOption>("ir", "Does only preprocessing, lexing, parsing, and IR generation.", [ProgramOption.InputFile])]
+		IR,
+	}
+
+	public enum ProgramOption
+	{
+		None = 0,
+		[Option("d", OptionType.SingleValue, "Set debug level (for debugging)")]
+		DebugLvl,
+		[Option("i", OptionType.MultipleValues, "Sets the main code filepath to use")]
+		InputFile,
+		[Option("t", OptionType.Flag, "Crash the program instead of printing the error (for debugging)")]
+		Throw,
+		[Option("ex", OptionType.Flag, "Additional info in dumps")]
+		Expanded,
+		[Option("nt", OptionType.Flag, "Don't show total compilation time.")]
+		NoTime,
+		[Option("j", OptionType.SingleValue, "Dump the output to a JSON file (for debugging)")]
+		JsonDumpFilepath,
+		[Option("v", OptionType.SingleValue, "Set the target version of the language")]
+		TargetMCVersion,
+	}
+
+	public class ProgramArgs : Args<ProgramOption, ProgramCommand>
+	{
+		[OptionTarget<ProgramOption>(ProgramOption.DebugLvl)]
 		public int DebugLevel;
+		[OptionTarget<ProgramOption>(ProgramOption.InputFile, nameof(BuiltInConverters.FilesVerifyPaths))]
 		public string[]? MainCodeFilepaths = null;
-		public List<Option> UsedOptions = [];
+		[OptionTarget<ProgramOption>(ProgramOption.Throw)]
 		public bool Throw = false;
+		[OptionTarget<ProgramOption>(ProgramOption.Expanded)]
 		public bool ExpandedDump = false;
+		[OptionTarget<ProgramOption>(ProgramOption.NoTime)]
 		public bool NoTime = false;
+		[OptionTarget<ProgramOption>(ProgramOption.JsonDumpFilepath, nameof(BuiltInConverters.File))]
 		public string? JsonDumpFilepath = null;
+		[OptionTarget<ProgramOption>(ProgramOption.TargetMCVersion, nameof(ConvertMCVersion))]
 		public MCVersion TargetVersion = MCVersion.LatestJava;
 
-		public static void PrintHelp()
-		{
-			//TODO dynamically generate help text for specific options/actions using reflection
-			Console.WriteLine("help text");
-		}
-
-		static Option WhichOption(string arg)
-		{
-			var fields = typeof(Option).GetFields();
-			for (int i = 1; i < fields.Length; i++)
-			{
-				var sym = fields[i].GetCustomAttributes<OptionAttribute>();
-				foreach (var s in sym)
-				{
-					if (String.Compare(s.Name, arg) == 0)
-					{
-						return (Option)(i - 1);
-					}
-				}
-			}
-			return Option.None;
-		}
-
-		void GiveValueTo(string opt, string value)
-		{
-			switch (opt)
-			{
-				case "DebugLevel":
-				{
-					if (!int.TryParse(value, out var n))
-						throw new ArgumentParsingException(opt, value);
-					DebugLevel = n;
-					break;
-				}
-				case "MainCodeFilepaths":
-				{
-					value = Path.GetFullPath(value);
-					if (!File.Exists(value))
-						throw new ArgumentParsingException("Given a non-existing file for option {0}: {1}", opt, value);
-					if (!value.EndsWith(".stilt"))
-						Console.WriteLine("The given file does not end in '.stilt'. " +
-						"The code will still be compiled, but importing it for use in other files may be problematic." +
-						"Consider changing the file's extension to .stilt.");
-					
-					MainCodeFilepaths ??= [];
-					MainCodeFilepaths = [.. MainCodeFilepaths, value];
-					break;
-				}
-				case "TargetVersion":
-				{
-                    TargetVersion = MCVersion.ParseMCVersion(value) 
-						?? throw new ArgumentException($"Invalid target version: '{value}'");
-					break;
-				}
-				case "Throw":
-				{
-					Throw = true;
-					break;
-				}
-				case "ExpandedDump":
-				{
-					ExpandedDump = true;
-					break;
-				}
-				case "NoTime":
-				{
-					NoTime = true;
-					break;
-				}
-				case "JsonDumpPath":
-				{
-					JsonDumpFilepath = Path.GetFullPath(value);
-					if (!Directory.Exists(Path.GetDirectoryName(JsonDumpFilepath)))
-						throw new ArgumentParsingException("Given a non-existing directory for option {0}: {1}", opt, JsonDumpFilepath);
-					break;
-				}
-				default:
-				{
-					throw new ArgumentException($"Non-existent argument: {opt}");
-				}
-			}
-		}
-
-		public class NotEnoughArgmunetsException : Exception
-		{
-			public NotEnoughArgmunetsException() : base("Not enough arguments passed") { }
-		}
-
-		public class ArgumentParsingException : Exception
-		{
-			public string OptionName { get; set; }
-			public string? GivenValue { get; set; }
-
-			public ArgumentParsingException(string optName, string givenValue)
-				: base($"Invalid value given to option '{optName}': '{givenValue}'")
-			{
-				OptionName = optName;
-				GivenValue = givenValue;
-			}
-
-			public ArgumentParsingException(string optName)
-				: base($"No value given to option '{optName}'")
-			{
-				OptionName = optName;
-			}
-
-			public ArgumentParsingException(string customMessage, string optName, string givenValue)
-				: base(String.Format(customMessage, optName, givenValue))
-			{
-				OptionName = optName;
-				GivenValue = givenValue;
-			}
-		}
-
-		public ProgramArgs(string[] args)
-		{
-			if (args.Length == 0)
-			{
-				throw new ArgumentParsingException("No action given.{0}{1}", "", "");
-			}
-
-			Action = Program.GetEnumFromDescription<Command, ActionAttribute>(args[0].ToLower());
-
-			for (int i = 1; i < args.Length; i++)
-			{
-				var current = WhichOption(args[i]);
-				var currentAttribute = typeof(Option).GetField(current.ToString())?.GetCustomAttribute<OptionAttribute>();
-				var nextAttribute = args.Length > i+1 ? Program.GetAttrFromDescription<Option, OptionAttribute>(args[i+1]) : null;
-
-				if (currentAttribute?.Kind == OptionType.ValueMultiple)
-				{
-					++i;
-					for (; i < args.Length; ++i)
-					{
-						var newCurrent = WhichOption(args[i]);
-						
-						if (newCurrent != Option.None) break;
-						GiveValueTo(currentAttribute.AssociatedPropertyName, args[i]);
-					}
-					UsedOptions.Add(current);
-					continue;
-				}
-				else if (WhichOption(args[i - 1]) == Option.None)
-				{
-					var a = Program.GetAttributeFromEnum<Command, ActionAttribute>(Action);
-					if (a is not null && a.Required is not null)
-					{
-						foreach (var b in a.Required)
-						{
-							if (!UsedOptions.Contains(b))
-							{
-								GiveValueTo(
-									Program.GetAttributeFromEnum<Option, OptionAttribute>(b)
-										?.AssociatedPropertyName ?? "", args[i]
-								);
-								UsedOptions.Add(b);
-							}
-						}
-					}
-				}
-			}
-		}
-
-		[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-		public class OptionAttribute : Attribute, IDescriptable
-		{
-			public string Name { get; set; }
-			public OptionType Kind;
-			public string AssociatedPropertyName;
-			public string HelpText;
-
-			public OptionAttribute(string optChar, string propName, string helpText, OptionType tpe = OptionType.ValueRequired)
-			{
-				Name = optChar;
-				Kind = tpe;
-				AssociatedPropertyName = propName;
-				HelpText = helpText;
-			}
-		}
-
-		public static A? GetEnumAttribute<T, A>(T opt)
-			where T : Enum
-			where A : Attribute
-		{
-			return typeof(T).GetField(opt.ToString())?.GetCustomAttribute<A>();
-		}
-
-		[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
-		public class ActionAttribute : Attribute, IDescriptable
-		{
-			public Option[]? Required;
-			public string Name { get; set; }
-
-			public ActionAttribute(string name, Option[]? required = null)
-			{
-				Required = required;
-				Name = name;
-			}
-		}
-
-		public enum OptionType
-		{ ValueRequired, ValueMultiple, ValueOptional, Flag }
-
-		public enum Command
-		{
-			[Action("help")]
-			Help,
-
-			[Action("build", [Option.InputFile])]
-			Build,
-
-			[Action("token", [Option.InputFile])]
-			Tokenize,
-
-			[Action("preprocess", [Option.InputFile])]
-			Preprocess,
-
-			[Action("tree", [Option.InputFile])]
-			Tree,
-
-			[Action("ir", [Option.InputFile])]
-			IR,
-		}
-
-		public enum Option
-		{
-			None = 0,
-
-			[Option("-d", "DebugLevel", "Set debug level (for compiler developers)"/*, OptionType.ValueOptional*/)]
-			DebugLvl,
-
-			[Option("-i", "MainCodeFilepaths", "Sets the main code filepath to use", OptionType.ValueMultiple)]
-			InputFile,
-
-			[Option("-t", "Throw", "Crash the program instead of printing the error (for debugging)", OptionType.Flag)]
-			Throw,
-
-			[Option("-ex", "ExpandedDump", "Additional info in dumps", OptionType.Flag)]
-			Expanded,
-
-			[Option("-nt", "NoTime", "Don't show total compilation time.", OptionType.Flag)]
-			NoTime,
-
-			[Option("-j", "JsonDumpPath", "Dump the output to a JSON file (for debugging)")]
-			JsonDumpFilepath,
-
-			[Option("-v", "TargetVersion", "Set the target version of the language")]
-			TargetVersion,
+		private static MCVersion ConvertMCVersion(string[] arg) {
+			var ver = MCVersion.ParseMCVersion(arg[0]);
+			if (ver is null)
+				throw new ArgumentParsingException(ArgumentParsingExceptionType.InvalidOptionValue, "-v", arg[0]);
+			return ver;
 		}
 	}
 
@@ -398,20 +193,7 @@ namespace stilt
 			var type = obj.GetType();
 			var indent = new string('\t', l);
 
-			// Handle arrays specially to avoid infinite loops
-			if (type.IsArray)
-			{
-				Console.WriteLine($"{indent}{type.Name}");
-				var array = (Array)obj;
-				for (int i = 0; i < array.Length; i++)
-				{
-					Console.WriteLine($"{indent}\t[{i}]:");
-					Dump(array.GetValue(i), l + 2, expanded, visited);
-				}
-				return;
-			}
-
-			// Check for circular references (only for reference types)
+			// Check for circular references (only for reference types) - do this before handling enumerables
 			if (!type.IsValueType)
 			{
 				if (visited.Contains(obj))
@@ -420,6 +202,20 @@ namespace stilt
 					return;
 				}
 				visited.Add(obj);
+			}
+
+			// Handle enumerable collections (arrays, lists, etc.) - but not strings
+			if (obj is IEnumerable enumerable && obj is not string)
+			{
+				Console.WriteLine($"{indent}{type.Name}");
+				int index = 0;
+				foreach (var item in enumerable)
+				{
+					Console.WriteLine($"{indent}\t[{index}]:");
+					Dump(item, l + 2, expanded, visited);
+					index++;
+				}
+				return;
 			}
 
 			Console.WriteLine($"{indent}{type.Name}");
@@ -457,32 +253,22 @@ namespace stilt
 
 			var valueType = value.GetType();
 
-			// Handle List<Stmt> specially
-			if (value is List<Stmt> stmtList)
+			// Handle enumerable collections (arrays, lists, linked lists, etc.) - but not strings
+			if (value is IEnumerable enumerable && value is not string)
 			{
 				Console.WriteLine($"{indent}{name}:");
-				foreach (var item in stmtList)
+				int index = 0;
+				foreach (var item in enumerable)
 				{
-					Dump(item, level + 1, expanded, visited);
+					Console.WriteLine($"{indent}\t[{index}]:");
+					Dump(item, level + 2, expanded, visited);
+					index++;
 				}
 				return;
 			}
 
-			// Handle arrays
-			if (valueType.IsArray)
-			{
-				Console.WriteLine($"{indent}{name}:");
-				var array = (Array)value;
-				for (int i = 0; i < array.Length; i++)
-				{
-					Console.WriteLine($"{indent}\t[{i}]:");
-					Dump(array.GetValue(i), level + 2, expanded, visited);
-				}
-				return;
-			}
-
-			// Handle simple types (primitives, enums, strings, string arrays)
-			if (valueType.IsPrimitive || valueType.IsEnum || value is string || value is string[])
+			// Handle simple types (primitives, enums, strings)
+			if (valueType.IsPrimitive || valueType.IsEnum || value is string)
 			{
 				var displayValue = value is string str ? $"\"{Escape(str)}\"" : value.ToString();
 				Console.WriteLine($"{indent}{name} = {displayValue}");
@@ -490,7 +276,7 @@ namespace stilt
 			}
 
 			// Handle types that should be hidden when not expanded
-			if (!expanded && (value is FileRange or FileText or Scope or List<Symbol> or Symbol))
+			if (!expanded && (value is FileRange or FileText or Scope or List<Symbol> or Symbol or Type))
 			{
 				Console.WriteLine($"{indent}{name}: <HIDDEN>");
 				return;
@@ -596,25 +382,12 @@ namespace stilt
 
 		static int Main(string[] args)
 		{
-			ProgramArgs arg;
-			try
-			{
-				arg = new ProgramArgs(args);
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine(e.Message);
-				return 1;
-			}
+			var arg = new ProgramArgs();
+			arg.ParseArgsOrExit(args);
 
-			switch (arg.Action)
+			switch (arg.Command)
 			{
-				case ProgramArgs.Command.Help:
-				{
-					ProgramArgs.PrintHelp();
-					break;
-				}
-				case ProgramArgs.Command.Build:
+				case ProgramCommand.Build:
 				{
 					var compiler = new Compiler(arg);
 					compiler.Build();
@@ -634,7 +407,7 @@ namespace stilt
 
 					break;
 				}
-				case ProgramArgs.Command.Tokenize:
+				case ProgramCommand.Tokenize:
 				{
 					var file = Compiler.ParseFile(arg, arg.MainCodeFilepaths!.First());
 					var lex = file.Lexer;
@@ -646,17 +419,16 @@ namespace stilt
 						
 					break;
 				}
-				case ProgramArgs.Command.Preprocess:
+				case ProgramCommand.Preprocess:
 				{
 					var code = File.ReadAllText(arg.MainCodeFilepaths!.First());
 					Console.Write(Lexer.Preprocess(code));
 					break;
 				}
-				case ProgramArgs.Command.Tree:
+				case ProgramCommand.Tree:
 				{
 					var comp = new Compiler(arg);
 					comp.Build();
-
 					
 					foreach (var file in comp.Files)
 					{
@@ -678,12 +450,18 @@ namespace stilt
 					
 					break;
 				}
-				case ProgramArgs.Command.IR:
+				case ProgramCommand.IR:
 				{
-					var file = Compiler.ParseFile(arg, arg.MainCodeFilepaths!.First());
-					var ir = new IRGenerator();
-					ir.Generate(file);
-					Dump(ir, expanded: arg.ExpandedDump);
+					var compiler = new Compiler(arg);
+					compiler.Build();
+					
+					if (compiler.Files.Count == 0)
+						throw new Exception("No files parsed");
+					
+					var file = compiler.Files.First();
+					var ir = new IRGenerator(arg, file);
+					ir.GenerateIR();
+					Dump(ir.MainBlock, expanded: arg.ExpandedDump);
 					break;
 				}
 			}
