@@ -13,6 +13,5 @@ Stilt is a small experimental language designed to compile into Minecraft datapa
 ## TODO
 
 - Switch to using tree-sitter
-- Integrate with NuArgs
 - MCString
 - Use FileSource for Symbols instead of "\<TEMP\>" and "\<BUILTIN\>"

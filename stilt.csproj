@@ -5,7 +5,6 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <NoWarn>$(NoWarn);CS8601</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +12,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Builtins\" />
+    <Folder Include="Builtins/" />
+    <!-- <Folder Remove="Dependencies/NuArgs/" /> -->
+    <!-- <ProjectReference Include="Dependencies/NuArgs/NuArgs.csproj" /> -->
   </ItemGroup>
 
 </Project>
