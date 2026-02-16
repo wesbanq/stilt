@@ -49,7 +49,6 @@ namespace stilt
 			var types = typeof(TokenType).GetFields();
 			return types[(int)t + 1].GetCustomAttributes<SymbolAttribute>().Select(o => o.Symbol).ToArray();
 		}
-
 	}
 
 	public enum TokenType

@@ -517,9 +517,6 @@ namespace stilt
 
 					break;
 				}
-				//TODO
-				//remove recursion from ParseExpr
-				//multiline exprs
 			}
 			
 			InsertIntoExprTree(ref rootExpr, newExpr);
@@ -530,23 +527,28 @@ namespace stilt
 		{
 			foreach (var sym in symbols)
 			{
-				var foundSymbol = scope.FindSymbolByName(sym.Name);
-				if (foundSymbol is not null)
-				{
-					var range = sym.Identifier?.Range 
-						?? throw new Exception();
-					if (foundSymbol.IsBuiltin)
-						NewError(new ShadowedBuiltinSymbol(range, sym));
-					else if (scope.Symbols.Any(s => s.Name == sym.Name))
-					{
-						NewError(new RedeclaredSymbol(range, sym));
-						continue;
-					}
-					else
-						NewError(new ShadowedSymbol(range, sym));
-				}
-				scope.AddSymbol(sym);
+				AddToScope(sym, scope);
 			}
+		}
+
+		protected void AddToScope(Symbol symbol, Scope scope)
+		{
+			var foundSymbol = scope.FindSymbolByName(symbol.Name);
+			if (foundSymbol is not null)
+			{
+				var range = symbol.Identifier?.Range 
+					?? throw new Exception();
+				if (foundSymbol.IsBuiltin)
+					NewError(new ShadowedBuiltinSymbol(range, symbol));
+				else if (scope.Symbols.Any(s => s.Name == symbol.Name))
+				{
+					NewError(new RedeclaredSymbol(range, symbol));
+					return;
+				}
+				else
+					NewError(new ShadowedSymbol(range, symbol));
+			}
+			scope.AddSymbol(symbol);
 		}
 
 		protected VarDeclStmt ParseVarDecl(Scope scope, bool isConst, Expr expr)
@@ -843,7 +845,7 @@ namespace stilt
 						throw new MalformedExpr(firstToken.Range);
 					
 					newStmt = ParseVarDecl(currentScope, isConst, newExpr);
-					
+
 					if (newStmt is VarDeclStmt varDecl)
 						AddToScope(varDecl.Name, currentScope);
 
@@ -861,7 +863,7 @@ namespace stilt
 
 					newStmt = ParseFuncDecl(currentScope, innerStmt, newExpr);
 					if (newStmt is FuncDeclStmt funcDecl)
-						AddToScope([funcDecl.Name], currentScope);
+						AddToScope(funcDecl.Name, currentScope);
 
 					break;
 				}
@@ -881,24 +883,38 @@ namespace stilt
 
 					var selfSym = new VarSymbol("self", typeSym) { Source = Lex.Filepath, Specifiers = [TokenType.PrivateSpec] };
 					typeScope.AddSymbol(selfSym);
-					var bodyStmts = ParseBranch(typeScope);
 
-					var body = new CompoundStmt() { Scope = typeScope, Statements = bodyStmts };
-					foreach (var stmt in bodyStmts)
+					var body = new CompoundStmt() { Scope = typeScope, Statements = ParseBranch(typeScope) };
+					foreach (var stmt in body.Statements)
 					{
 						if (stmt is VarDeclStmt vd)
 						{
 							foreach (var sym in vd.Name)
-								typeSym.Members.Add(sym);
+							{
+								if (!sym.Specifiers.Contains(TokenType.PrivateSpec)
+									&& (sym.Specifiers.Contains(TokenType.PublicSpec)
+										|| !Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault)))
+								{
+									typeSym.Members.Add(sym);
+								}
+							}
+								
 						}
-						else if (stmt is FuncDeclStmt fd)
-							typeSym.Members.Add(fd.Name);
+						else if (stmt is DeclStmt decl)
+						{
+								if (!decl.Name.Specifiers.Contains(TokenType.PrivateSpec)
+									&& (decl.Name.Specifiers.Contains(TokenType.PublicSpec)
+										|| !Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault)))
+								{
+									typeSym.Members.Add(decl.Name);
+								}
+						}
 						else if (stmt is not null)
 							throw new SyntaxError(stmt.GetFullRangeOrThrow(), "Only variable declarations and function declarations are allowed in type bodies.");
 					}
 
 					newStmt = new TypeDeclStmt(typeSym, body) { Scope = currentScope };
-					AddToScope([typeSym], currentScope);
+					AddToScope(typeSym, currentScope);
 
 					break;
 				}
@@ -921,7 +937,7 @@ namespace stilt
 					{
 						var moduleSym = new VarSymbol(importStmt.ModuleName, Lex.Filepath, Builtins.Module);
 						// moduleSym.Declaration = importStmt;
-						AddToScope([moduleSym], newScope);
+						AddToScope(moduleSym, newScope);
 					}
 					break;
 				}

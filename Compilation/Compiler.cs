@@ -101,6 +101,13 @@ namespace stilt.Compilation
 
 		public void Build()
 		{
+			//TODO
+			//remove recursion from ParseExpr
+			//multiline exprs
+			//evaluate constant values at compile time
+			//virtual filerange and error reports for them
+			//object files
+
 			Timers.Add(TimedEvents.Compilation, new Timer("Compilation"));
 			Timers[TimedEvents.Compilation].StartTimer();
 

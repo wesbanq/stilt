@@ -85,6 +85,21 @@ namespace stilt.AST
 		{ }
 	}
 
+	public class DecoratorSymbol : Symbol
+	{
+		public TypeSymbol DecoratorType;
+		public List<LiteralExpr> Arguments = [];
+
+		public DecoratorSymbol(TypeSymbol decoratorType, params Expr[] arguments) 
+			: base(decoratorType.Name, decoratorType.Source)
+		{
+			if (!decoratorType.InheritsFrom(Builtins.Decorator))
+				throw new ArgumentException("Decorator type must inherit from Decorator");
+			DecoratorType = decoratorType;
+			Arguments = [.. arguments.Select(e => e as LiteralExpr)];
+		}
+	}
+
 	public class TypeSymbol : Symbol
 	{
 		public List<Symbol> Members = [];
