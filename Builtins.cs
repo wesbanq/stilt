@@ -1,9 +1,4 @@
-﻿using stilt.AST;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace stilt
+﻿namespace stilt
 {
 	public static class Builtins
 	{
@@ -22,6 +17,7 @@ namespace stilt
 		public static readonly TypeSymbol Module = new("Module", "<BUILTIN>");
 		public static readonly TypeSymbol Decorator = new("Decorator", "<BUILTIN>");
 		public static readonly TypeSymbol Array = new("Array", "<BUILTIN>", argumentCount: 1);
+		public static readonly TypeSymbol Reference = new("Ref", "<BUILTIN>", argumentCount: 1);
 		public static readonly TypeSymbol Table = new("Table", "<BUILTIN>", argumentCount: 1);
 		public static readonly TypeSymbol Callable = new("Callable", "<BUILTIN>", argumentCount: 2);
 

@@ -1,10 +1,3 @@
-using stilt.AST;
-using stilt.Errors;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-
 namespace stilt
 {
 	public class Linker

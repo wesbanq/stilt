@@ -1,10 +1,55 @@
-using stilt.AST;
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace stilt.Errors
 {
+	public abstract class CompilationMessage : Exception
+	{
+		public FileRange? Range;
+		public ErrorSeverity Severity = ErrorSeverity.Info;
+
+		public override string ToString()
+		{
+			if (Range is not null)
+			{
+				var (lineS, columnS) = Range.StartLineAndColumn;
+				var (lineE, columnE) = Range.EndLineAndColumn;
+				var text = Range.TextLines;
+
+				var res = "";
+				for (int line = lineS; line <= lineE; ++line)
+				{
+					//TODO rewrite with StringBuilder
+					//magic numbers found via trial and error
+					var part1 = $"\n\t{line}| ";
+					var part2 = text[line-lineS];
+					var part3 = "\n\t" + new String(' ', part1.Length-2);
+					var part4 = new String(' ', line == lineS ? columnS-1 : 0)
+								+ new String('^', 
+								Math.Max(0, line == lineS 
+									? (line == lineE ? Range.Length : part2.Length-(columnS-1)) 
+									: (line == lineE ? columnE-1 : part2.Length)));
+					res += part1+part2+part3+part4;
+				}
+
+				return $"{Severity}: " + Message + $"\n  @ {Range.FormatLineAndColumn()}, in file: {Range.Filename}\n" + res;
+			}
+			else
+				return $"{Severity}: " + Message;
+		}
+			public void Print()
+		{
+			Console.WriteLine(ToString());
+		}
+
+		public CompilationMessage(string message, FileRange? range = null, ErrorSeverity severity = ErrorSeverity.Info)
+			: base(message)
+		{
+			Range = range;
+			Severity = severity;
+		}
+	}
+
+	public enum ErrorSeverity
+	{ Info, Warning, Error, Critical }
+
 	public class SyntaxError : CompilationMessage
 	{
 		public SyntaxError(FileRange range)

@@ -1,28 +1,25 @@
 #pragma warning disable CS8601
-using stilt.AST;
-using System;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Globalization;
-using System.Numerics;
-using System.Text.RegularExpressions;
-using System.Xml.Linq;
-using stilt.Errors;
 
 namespace stilt
 {
 	public class Parser
 	{
+		[JsonIgnore]
 		private Lexer Lex;
 
 		public List<Stmt> Statements = [];
-		public Scope RootScope = Builtins.BuiltinScope;
+		public Scope RootScope = new(Builtins.BuiltinScope);
+		[JsonIgnore]
 		public ProgramArgs Args;
+		[JsonIgnore]
 		public List<CompilationMessage> CompilationIssues = [];
 		public List<Symbol> AllImportedSymbols = [];
 
+		[JsonIgnore]
 		public bool HasErrors => CompilationIssues.Any(m => m.Severity >= ErrorSeverity.Error);
 
+		[JsonIgnore]
 		private int _depth = 0;
 
 		public void WriteErrors()
@@ -933,7 +930,7 @@ namespace stilt
 					if (newStmt is ImportStmt importStmt)
 					{
 						var moduleSym = new VarSymbol(importStmt.ModuleName, Lex.Filepath, Builtins.Module);
-						moduleSym.Declaration = importStmt;
+						// moduleSym.Declaration = importStmt;
 						AddToScope([moduleSym], newScope);
 					}
 					break;

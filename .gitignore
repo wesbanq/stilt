@@ -370,3 +370,4 @@ FodyWeavers.xsd
 .cursor/
 .vs/
 .gitignore
+*.stilt.o
