@@ -5,6 +5,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <VersionSuffix>latest-dev</VersionSuffix>
   </PropertyGroup>
 
   <ItemGroup>

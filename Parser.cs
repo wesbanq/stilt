@@ -8,6 +8,7 @@ namespace stilt
 		private readonly Lexer Lex;
 		private readonly ProgramArgs Args;
 		private readonly ParserResult Result;
+		private List<DecoratorObject> CurrentDecorators = [];
 		private int _depth = 0;
 
 		public static ParserResult Parse(ProgramArgs args, Lexer lex)
@@ -815,6 +816,50 @@ namespace stilt
 			return newStmt;
 		}
 
+		protected DecoratorObject ParseDecorator(Scope scope, Token firstToken)
+		{
+			firstToken = Lex.GoPast(TokenType.DecoratorBegin);
+			var decoratorName = Lex.ExpectThis(TokenType.Identifier);
+
+			var decoratorType = scope.FindTypeByName(decoratorName.Range.Text);
+			if (decoratorType is null)
+				throw new SyntaxError(decoratorName.Range, $"Decorator type '{decoratorName.Range.Text}' not found");
+
+			List<LiteralExpr> args = [];
+			if (Lex.NextIs(TokenType.OpenBracket))
+			{
+				Lex.GoPast(TokenType.OpenBracket);
+				Expr? newExpr = null;
+				ParseExpr(ref newExpr, Lex.CurrentToken);
+				if (newExpr is null)
+					throw new MalformedExpr(firstToken.Range);
+				
+				if (newExpr is CommaExpr comma)
+				{
+					args = [.. comma.Exprs.Select(e => 
+					{
+						if (e is LiteralExpr lit) 
+							return lit; 
+						else 
+							throw new ArgumentException("Decorator arguments must be literal expressions");
+					})];
+				}
+				else if (newExpr is LiteralExpr lit)
+				{
+					args = [lit];
+				}
+				else
+				{
+					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
+				}
+				
+				Lex.ExpectThis(TokenType.CloseBracket);	
+			}
+			
+			Lex.ExpectThis(TokenType.DecoratorEnd);	
+			return new DecoratorObject(decoratorType, args);
+		}
+
 		protected Stmt? ParseStmt(Scope currentScope)
 		{
 			var firstToken = Lex.CurrentToken;
@@ -1130,6 +1175,13 @@ namespace stilt
 
 					break;
 				}
+				case TokenType.DecoratorBegin:
+				{
+					var newDecorator = ParseDecorator(currentScope, firstToken);
+					CurrentDecorators.Add(newDecorator);
+					
+					break;
+				}
 				case TokenType.EOF:
 				case TokenType.StmtSeparator:
 				case TokenType.CloseCurlyBracket:
@@ -1163,7 +1215,11 @@ namespace stilt
 			//	throw new RunonStatement(Lex.CurrentToken.Range);
 
 			if (newStmt is not null)
+			{
 				newStmt.InnerRange = firstToken.Range;
+				newStmt.Decorators = [.. CurrentDecorators];
+				CurrentDecorators.Clear();
+			}
 
 			//CONTAINERSTMT
 			//ParseGenericStmt()

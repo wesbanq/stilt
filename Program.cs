@@ -86,7 +86,9 @@ namespace stilt
 
 	internal static class Program
 	{
-		public static readonly string CompilerVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString()!;
+		public static readonly string CompilerVersion = Assembly.GetExecutingAssembly()?
+  			.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
+  			.InformationalVersion.ToString() ?? "unknown";
 		public static readonly string OutputFileExtension = ".zip";
 		public static readonly string CodeFileExtension = ".stilt";
 		public static readonly string ObjectFileExtension = CodeFileExtension + ".o";
