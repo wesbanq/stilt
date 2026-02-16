@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Text;
-
 namespace stilt.AST
 {
 	public class Scope
 	{
 		public Scope? Parent;
-		public List<Symbol> Symbols = new();
+		public List<Symbol> Symbols = [];
 
 		public bool IsInScope(Symbol sym)
 		{

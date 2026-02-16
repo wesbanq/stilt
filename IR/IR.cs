@@ -1,8 +1,3 @@
-using stilt.Errors;
-using stilt.AST;
-using System.IO;
-using System.Linq;
-
 namespace stilt.IR
 {
     public enum Instruction : ushort
@@ -32,8 +27,11 @@ namespace stilt.IR
 
     public class Operand<T> : IOperand
     {
+        [JsonIgnore]
         public Type Type => typeof(T);
+        [JsonIgnore]
         public object Value => _value!;
+        [JsonProperty]
         private T _value;
 
         public bool Is<O>() => Type == typeof(O);
@@ -45,6 +43,8 @@ namespace stilt.IR
             return true;
         }
 
+        // [JsonConstructor]
+        // protected Operand() { }
         public Operand(T value)
         {
             _value = value;
@@ -137,20 +137,25 @@ namespace stilt.IR
         public Block MainBlock;
     }
 
+    public class IRGeneratorResult
+    {
+        public Block MainBlock;
+        public List<Block> Blocks = [];
+    }
+
     public class IRGenerator
     {
         public ProgramArgs Args;
         public ParsedFile SourceFile;
-        public Block MainBlock;
-        public List<Block> Blocks = [];
-        public NamespaceMapper NamespaceMapper;
-        
+        public IRGeneratorResult Result;
+
+        private static NamespaceMapper NamespaceMapper = new();
         private int _tempCounter = 0;
         private string _currentBlockPath = "main";
 
-        public void GenerateIR()
+        public IRGeneratorResult Generate()
         {
-            NamespaceMapper = new NamespaceMapper();
+            var result = new IRGeneratorResult();
             
             // Register module namespace
             if (!string.IsNullOrEmpty(SourceFile.Filepath))
@@ -159,8 +164,15 @@ namespace stilt.IR
                 NamespaceMapper.RegisterModuleNamespace(SourceFile.Filepath, NamespaceMapper.SanitizeIdentifier(moduleName));
             }
 
-            MainBlock = new Block { Name = "main" };
-            GenerateStatements(SourceFile.Parser.Statements, MainBlock);
+            result.MainBlock = new Block { Name = "main" };
+            GenerateStatements(SourceFile.Parser.Statements, result.MainBlock);
+            result.Blocks = result.MainBlock.ChildBlocks;
+            return result;
+        }
+
+        public void GenerateIR()
+        {
+            Result = Generate();
         }
 
         private void GenerateStatements(List<Stmt> stmts, Block block)
@@ -701,8 +713,7 @@ namespace stilt.IR
             if (assign.Left is not IdentityExpr lhsId)
                 throw new IRGenerationError("Assignment LHS must be a variable reference");
 
-            var lhsVar = lhsId.Identity as VarSymbol;
-            if (lhsVar is null)
+            if (lhsId.Identity is not VarSymbol lhsVar)
                 throw new IRGenerationError("Assignment LHS must reference a VarSymbol");
 
             // Handle compound assignment operators
@@ -782,6 +793,11 @@ namespace stilt.IR
         {
             Args = args;
             SourceFile = file;
+        }
+ 
+        public IRGenerator(IRGeneratorResult result)
+        {
+            Result = result;
         }
     }
 }

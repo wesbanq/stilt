@@ -1,12 +1,8 @@
-using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
-using stilt.AST;
 using System.Collections;
-using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using stilt.IR;
-using System.Text.RegularExpressions;
 using System.Globalization;
 using NuArgs;
 
@@ -43,6 +39,12 @@ namespace stilt
 		JsonDumpFilepath,
 		[Option("v", OptionType.SingleValue, "Set the target version of the language")]
 		TargetMCVersion,
+		[Option("o", OptionType.SingleValue, "Set the output filepath")]
+		OutputFilepath,
+		[Option(["no", "no-obj"], OptionType.Flag, "Don't create an object file")]
+		NoObjectFile,
+		[Option(["ro", "regen-obj"], OptionType.Flag, "Regenerate the object file")]
+		RegenObjectFile,
 	}
 
 	public class ProgramArgs : Args<ProgramOption, ProgramCommand>
@@ -61,6 +63,12 @@ namespace stilt
 		public string? JsonDumpFilepath = null;
 		[OptionTarget<ProgramOption>(ProgramOption.TargetMCVersion, nameof(ConvertMCVersion))]
 		public MCVersion TargetVersion = MCVersion.LatestJava;
+		[OptionTarget<ProgramOption>(ProgramOption.OutputFilepath, nameof(BuiltInConverters.File))]
+		public string? OutputFilepath = null;
+		[OptionTarget<ProgramOption>(ProgramOption.NoObjectFile)]
+		public bool NoObjectFile = false;
+		[OptionTarget<ProgramOption>(ProgramOption.RegenObjectFile)]
+		public bool RegenObjectFile = false;
 
 		private static MCVersion ConvertMCVersion(string[] arg) {
 			var ver = MCVersion.ParseMCVersion(arg[0]);
@@ -68,50 +76,20 @@ namespace stilt
 				throw new ArgumentParsingException(ArgumentParsingExceptionType.InvalidOptionValue, "-v", arg[0]);
 			return ver;
 		}
-	}
 
-	public class Timer
-	{
-		private string _name;
-
-		public Stopwatch? Stopwatch { get; private set; }
-		public string Time => Stopwatch is null
-			? $"{_name} has not been started."
-			: Stopwatch.IsRunning
-			? $"{_name} has been running for ({Stopwatch.Elapsed.TotalSeconds}s)."
-			: $"{_name} finished in ({Stopwatch.Elapsed.TotalSeconds}s).";
-
-		public void StartTimer()
+		public ProgramArgs()
 		{
-			Stopwatch ??= new Stopwatch();
-			Stopwatch.Start();
-		}
-
-		public void StopTimer()
-		{
-			Stopwatch?.Stop();
-		}
-
-		public void Run(Action action)
-		{
-			StartTimer();
-			action.Invoke();
-			StopTimer();
-		}
-
-		public Timer(string name, Action action)
-		{
-			_name = name;
-			Run(action);
-		}
-		public Timer(string name)
-		{
-			_name = name;
+			if (MainCodeFilepaths is not null && MainCodeFilepaths.Length > 0)
+				OutputFilepath ??= Path.ChangeExtension(MainCodeFilepaths[0], ".zip");
 		}
 	}
 
 	internal static class Program
 	{
+		public static readonly string CompilerVersion = Assembly.GetExecutingAssembly().GetName().Version?.ToString()!;
+		public static readonly string OutputFileExtension = ".zip";
+		public static readonly string CodeFileExtension = ".stilt";
+		public static readonly string ObjectFileExtension = CodeFileExtension + ".o";
 
 		public static A? GetAttributeFromEnum<T, A>(T value)
 				where T : Enum
@@ -179,8 +157,6 @@ namespace stilt
 
 		private static void Dump(object? obj, int l, bool expanded, HashSet<object> visited)
 		{
-			//TODO
-			//turn into json file
 			if (obj is null)
 			{
 				Console.WriteLine("null");
@@ -400,8 +376,8 @@ namespace stilt
 
 					if (arg.JsonDumpFilepath is not null)
 						WriteObjectToJson(compiler.Files.Select(p => p.Parser.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
-					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(compiler.Files.Select(f => f.Lexer.Tokens).ToList(), Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+					if (arg.JsonDumpFilepath is not null && compiler.Files.Any(f => f.Lexer is not null))
+						WriteObjectToJson(compiler.Files.Where(f => f.Lexer is not null).Select(f => f.Lexer!.Tokens).ToList(), Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
 					if (arg.JsonDumpFilepath is not null)
 						WriteObjectToJson(compiler.Files.Select(f => f.Parser.CompilationIssues).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_compilation_issues.json"));
 
@@ -410,12 +386,12 @@ namespace stilt
 				case ProgramCommand.Tokenize:
 				{
 					var file = Compiler.ParseFile(arg, arg.MainCodeFilepaths!.First());
-					var lex = file.Lexer;
+					var lex = file.Lexer!;
 					Token t = lex.CurrentToken;
 					do Console.WriteLine($"{lex.CurrentPos}: {t.Which}"); while ((t = lex.Next()).Which != TokenType.EOF);
 
 					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(file.Lexer.Tokens, Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+						WriteObjectToJson(lex.Tokens, Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
 						
 					break;
 				}
@@ -461,7 +437,11 @@ namespace stilt
 					var file = compiler.Files.First();
 					var ir = new IRGenerator(arg, file);
 					ir.GenerateIR();
-					Dump(ir.MainBlock, expanded: arg.ExpandedDump);
+					Dump(ir.Result.MainBlock, expanded: arg.ExpandedDump);
+
+					if (arg.JsonDumpFilepath is not null)
+						WriteObjectToJson(ir.Result.MainBlock, Path.Combine(arg.JsonDumpFilepath, "ir_main_block.json"), ExclusionPreset.Ast);
+
 					break;
 				}
 			}

@@ -1,8 +1,3 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
-using System.Text;
-
 namespace stilt.AST
 {
 	public abstract class Symbol
@@ -10,12 +5,17 @@ namespace stilt.AST
 		public string Name;
 		//TODO (IMPORTANT VERY)
 		//stop using filepaths
+		[JsonIgnore]
 		public string Source;
+		[JsonIgnore]
 		public Stmt? Declaration;
 		public List<TokenType> Specifiers = [];
+		[JsonIgnore]
 		public Token? Identifier;
 
+		[JsonIgnore]
 		public bool IsBuiltin => Source.StartsWith("<BUILTIN>");
+		[JsonIgnore]
 		public bool IsTemp => Source.StartsWith("<TEMP>");
 
 		public static bool operator ==(Symbol? left, Symbol? right)
@@ -80,17 +80,14 @@ namespace stilt.AST
 	public class TypeSymbol : Symbol
 	{
 		public List<Symbol> Members = [];
-
 		public TypeSymbol? Base;
 
+		[JsonIgnore]
 		public TypeSymbol? Inherits => Base is null ? _inherits : Base.Inherits;
 		private TypeSymbol? _inherits;
 
 		public int ArgumentCount = 0;
 		public TypeSymbol[]? Arguments;
-
-		//public bool IsComplete => Base is null ? true : ArgumentCount == Arguments?.Length;
-		//public bool IsSimple => Base is null;
 
 		public static bool operator ==(TypeSymbol? left, TypeSymbol? right)
 		{
