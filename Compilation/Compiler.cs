@@ -71,9 +71,10 @@ namespace stilt.Compilation
 
 		public static ParsedFile ParseFile(ProgramArgs args, string filepath)
 		{
+			// dont use ObjectFile for now
 			ObjectFile? objectFile = null;
-			if (!args.NoObjectFile && !args.RegenObjectFile)
-				objectFile = SearchForObjectFile(filepath);
+			// if (!args.NoObjectFile && !args.RegenObjectFile)
+			// 	objectFile = SearchForObjectFile(filepath);
 
 			if (objectFile is not null)
 			{
@@ -86,13 +87,13 @@ namespace stilt.Compilation
 				file.Parse(args);
 				file.Generate(args);
 
-				if (!args.NoObjectFile
-					&& (objectFile is null || args.RegenObjectFile
-						|| objectFile.InterfaceChecksum != file.InterfaceChecksum
-						|| objectFile.TextChecksum != file.TextChecksum))
-				{
-					GenerateObjectFile(filepath, new ObjectFile(file.TextChecksum, file.InterfaceChecksum, file.IR.Result, file.Parser));
-				}
+				// if (!args.NoObjectFile
+				// 	&& (objectFile is null || args.RegenObjectFile
+				// 		|| objectFile.InterfaceChecksum != file.InterfaceChecksum
+				// 		|| objectFile.TextChecksum != file.TextChecksum))
+				// {
+				// 	GenerateObjectFile(filepath, new ObjectFile(file.TextChecksum, file.InterfaceChecksum, file.IR.Result, file.Result!));
+				// }
 
 				return file;
 			}
@@ -118,8 +119,8 @@ namespace stilt.Compilation
 			Timers.Add(TimedEvents.Linking, new Timer("Linking"));
 			Linker = new Linker(
 				Args,
-                [.. Files.Select(f => f.Parser.RootScope)],
-                [.. Files.Select(f => f.Parser.Statements)]
+                [.. Files.Select(f => f.Result!.RootScope)],
+                [.. Files.Select(f => f.Result!.Statements)]
             );
 			Timers[TimedEvents.Linking].Run(() => Linker.Link());
 

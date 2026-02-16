@@ -375,11 +375,11 @@ namespace stilt
 						compiler.WriteTimerReadout();
 
 					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(compiler.Files.Select(p => p.Parser.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+						WriteObjectToJson(compiler.Files.Select(p => p.Result!.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
 					if (arg.JsonDumpFilepath is not null && compiler.Files.Any(f => f.Lexer is not null))
 						WriteObjectToJson(compiler.Files.Where(f => f.Lexer is not null).Select(f => f.Lexer!.Tokens).ToList(), Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
 					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(compiler.Files.Select(f => f.Parser.CompilationIssues).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_compilation_issues.json"));
+						WriteObjectToJson(compiler.Files.Select(f => f.Result!.CompilationIssues).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_compilation_issues.json"));
 
 					break;
 				}
@@ -409,7 +409,7 @@ namespace stilt
 					foreach (var file in comp.Files)
 					{
 						Console.WriteLine($"Module: {file.Filepath}");
-						foreach (var stmt in file.Parser.Statements.ToArray())
+						foreach (var stmt in file.Result!.Statements.ToArray())
 						{
 							Dump(stmt, expanded: arg.ExpandedDump);
 						}
@@ -422,7 +422,7 @@ namespace stilt
 						comp.WriteTimerReadout();
 
 					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(comp.Files.Select(f => f.Parser.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+						WriteObjectToJson(comp.Files.Select(f => f.Result!.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
 					
 					break;
 				}

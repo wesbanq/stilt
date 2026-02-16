@@ -57,6 +57,14 @@ namespace stilt.AST
 	{
 		public TypeSymbol Type = Builtins.Any;
 
+		public override int GetHashCode()
+		{
+			var hash = new HashCode();
+			hash.Add(Name);
+			hash.Add(Type.GetHashCode());
+			return hash.ToHashCode();
+		}
+
 		public VarSymbol(string n, TypeSymbol? type = null, Token? t = null)
 			: base(n, t)
 		{
@@ -127,13 +135,12 @@ namespace stilt.AST
 		{
 			var hash = new HashCode();
 			hash.Add(Name);
-			hash.Add(Source);
 			hash.Add(ArgumentCount);
 			if (Arguments is not null)
 			{
 				for (int i = 0; i < Arguments.Length; i++)
 				{
-					hash.Add(Arguments[i]);
+					hash.Add(Arguments[i].GetHashCode());
 				}
 			}
 			return hash.ToHashCode();

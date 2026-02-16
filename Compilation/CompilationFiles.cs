@@ -6,11 +6,13 @@ namespace stilt.Compilation
 {
     public class ObjectFile
 	{
+		//DO NOT USE
+		//UNFINISHED
 		public string TextChecksum;
 		public string InterfaceChecksum;
 		public string CompilerVersion = Program.CompilerVersion;
 		public IRGeneratorResult Result;
-		public Parser Parser;
+		public ParserResult ParserResult;
 
 
 		private static readonly JsonSerializerSettings JsonSerializeSettings = new()
@@ -107,29 +109,29 @@ namespace stilt.Compilation
 			}
 		}
 
-		public ObjectFile(string textChecksum, string interfaceChecksum, IRGeneratorResult result, Parser parser)
+		public ObjectFile(string textChecksum, string interfaceChecksum, IRGeneratorResult result, ParserResult parserResult)
 		{
 			TextChecksum = textChecksum;
 			InterfaceChecksum = interfaceChecksum;
 			Result = result;
-			Parser = parser;
+			ParserResult = parserResult;
 		}
 	}
 
 	public class ParsedFile
 	{
 		public Lexer? Lexer;
-		public Parser Parser;
+		public ParserResult? Result;
 		public IRGenerator IR;
 
 		public string Filepath;
 		public readonly FileText Text;
 		public Dictionary<TimedEvents, Timer> Timers = [];
-		public List<CompilationMessage> Errors => Parser?.CompilationIssues ?? [];
+		public List<CompilationMessage> Errors => Result?.CompilationIssues ?? [];
 
 		public string TextChecksum => Text.GetSHA256Hash();
 		public string InterfaceChecksum => 
-			Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join(",", Parser?.RootScope.Symbols.Select(s => s.GetHashCode()) ?? []))));
+			String.Join(',', Result?.RootScope.Symbols.Select(s => s.GetHashCode()) ?? []);
 
 		public void Parse(ProgramArgs args)
 		{
@@ -140,11 +142,10 @@ namespace stilt.Compilation
 				Lexer.Lex();
 			});
 
-			Parser = new Parser(args, Lexer);
 			Timers.Add(TimedEvents.Parsing, new Timer("Parsing"));
 			Timers[TimedEvents.Parsing].Run(() =>
 			{
-				Parser.ParseFile();
+				Result = Parser.Parse(args, Lexer);
 			});
 		}
 
@@ -162,7 +163,7 @@ namespace stilt.Compilation
 		{
 			Filepath = filepath;
 			Text = new(Filepath);
-			Parser = file.Parser;
+			Result = file.ParserResult;
 			IR = new IRGenerator(file.Result);
 		}
 
