@@ -130,8 +130,7 @@ namespace stilt.Compilation
 		public List<CompilationMessage> Errors => Result?.CompilationIssues ?? [];
 
 		public string TextChecksum => Text.GetSHA256Hash();
-		public string InterfaceChecksum => 
-			String.Join(',', Result?.RootScope.Symbols.Select(s => s.GetHashCode()) ?? []);
+		public string InterfaceChecksum => Compilation.InterfaceChecksum.Compute(Result?.RootScope, Filepath);
 
 		public void Parse(ProgramArgs args)
 		{

@@ -305,9 +305,12 @@ namespace stilt
 		[Symbol(@"[a-zA-Z_]\w*", true)]
 		Identifier,
 
-		[Unimplemented]
-		[Symbol(@"\[\[.*\]\]", true)]
-		Decorator,
+		// [Symbol(@"\[\[.*\]\]", true)]
+		[Symbol("[[")]
+		DecoratorBegin,
+
+		[Symbol("]]")]
+		DecoratorEnd,
 
 		// Declarations
 		[Symbol("func")]

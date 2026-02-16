@@ -2,10 +2,24 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace stilt.AST
 {
+	public class DecoratorObject
+	{
+		public readonly TypeSymbol DecoratorType;
+		public readonly List<LiteralExpr> Arguments;
+
+		public DecoratorObject(TypeSymbol decoratorType, List<LiteralExpr> arguments) 
+		{
+			if (!decoratorType.InheritsFrom(Builtins.Decorator))
+				throw new ArgumentException("Decorator type must inherit from Decorator");
+			DecoratorType = decoratorType;
+			Arguments = arguments;
+		}
+	}
+
 	public abstract class Stmt : IRanged
 	{
 		public required Scope Scope;
-		public List<TypeSymbol> Decorators = [];
+		public List<DecoratorObject> Decorators = [];
 
 		public FileRange? InnerRange { get; set; }
 		public FileRange? FullRange
