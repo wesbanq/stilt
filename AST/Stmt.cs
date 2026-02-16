@@ -27,6 +27,12 @@ namespace stilt.AST
 				return sum;
 			}
 		}
+
+		public FileRange GetFullRangeOrThrow() =>
+			FullRange ?? throw new InvalidOperationException("Statement has no FullRange");
+
+		public FileRange GetInnerRangeOrFullRangeOrThrow() =>
+			InnerRange ?? FullRange ?? throw new InvalidOperationException("Statement has no range");
 	}
 
 	public interface IContainerStmt

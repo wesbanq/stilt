@@ -165,7 +165,7 @@ namespace stilt.IR
             }
 
             result.MainBlock = new Block { Name = "main" };
-            GenerateStatements(SourceFile.Parser.Statements, result.MainBlock);
+            GenerateStatements(SourceFile.Result!.Statements, result.MainBlock);
             result.Blocks = result.MainBlock.ChildBlocks;
             return result;
         }

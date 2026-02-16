@@ -5,31 +5,22 @@ namespace stilt
 {
 	public class Parser
 	{
-		[JsonIgnore]
-		private Lexer Lex;
-
-		public List<Stmt> Statements = [];
-		public Scope RootScope = new(Builtins.BuiltinScope);
-		[JsonIgnore]
-		public ProgramArgs Args;
-		[JsonIgnore]
-		public List<CompilationMessage> CompilationIssues = [];
-		public List<Symbol> AllImportedSymbols = [];
-
-		[JsonIgnore]
-		public bool HasErrors => CompilationIssues.Any(m => m.Severity >= ErrorSeverity.Error);
-
-		[JsonIgnore]
+		private readonly Lexer Lex;
+		private readonly ProgramArgs Args;
+		private readonly ParserResult Result;
 		private int _depth = 0;
 
-		public void WriteErrors()
+		public static ParserResult Parse(ProgramArgs args, Lexer lex)
 		{
-			CompilationIssues.ForEach(m => m.Print());
+			var result = new ParserResult();
+			var parser = new Parser(args, lex, result);
+			parser.ParseFile();
+			return result;
 		}
 
 		protected void NewError(SyntaxError err)
 		{
-			CompilationIssues.Add(err);
+			Result.CompilationIssues.Add(err);
 		}
 
 		protected void InsertIntoExprTree(ref Expr? rootExpr, Expr? newExpr)
@@ -37,8 +28,7 @@ namespace stilt
 			if (rootExpr is null && newExpr is not null)
 			{
 				if (!newExpr.Bracketed && newExpr is not UnaryExpr && newExpr is not CommaExpr && newExpr is IOperator)
-					throw new MalformedExpr(newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
-					// throw new Exception();
+					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
 				rootExpr = newExpr;
 				return;
 			}
@@ -57,7 +47,7 @@ namespace stilt
 					rootExpr = newExpr;
 				}
 				else
-					throw new MalformedExpr(newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
+					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
 			}
 
 			if (newExpr is IOperator spreadable)
@@ -81,7 +71,7 @@ namespace stilt
 							op.ReplaceChild(toReplace, newExpr);
 						}
 						else
-							throw new MalformedExpr(toReplace?.FullRange ?? newExpr?.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
+							throw new MalformedExpr((toReplace ?? newExpr)!.GetFullRangeOrThrow());
 					}
 					else
 					{
@@ -99,13 +89,13 @@ namespace stilt
 							sParent.InsertChild(newExpr);
 						else
 						{
-							var range = newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange");
+							var range = newExpr.GetFullRangeOrThrow();
 							throw new MalformedExpr(range);
 						}
 					}
 					else
 					{
-						var range = newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange");
+						var range = newExpr.GetFullRangeOrThrow();
 						throw new MalformedExpr(range);
 					}
 
@@ -119,7 +109,7 @@ namespace stilt
 				if (parent is IOperator newSpreadable)
 					newSpreadable.InsertChild(newExpr);
 				else
-					throw new MalformedExpr(newExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
+					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
 			}
 		}
 
@@ -182,7 +172,7 @@ namespace stilt
 				}
 				default:
 				{
-					throw new MalformedExpr(expr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
+					throw new MalformedExpr(expr.GetFullRangeOrThrow());
 				}
 			}
 		}
@@ -230,7 +220,7 @@ namespace stilt
 				if (expr is AssignExpr assign)
 				{
 					if (assign.Operation is not null)
-						throw new SyntaxError(assign.InnerRange ?? assign.FullRange ?? throw new InvalidOperationException("Assign expression has no range"), "Self-assingment operators are not permitted inside tables");
+						throw new SyntaxError(assign.GetInnerRangeOrFullRangeOrThrow(), "Self-assingment operators are not permitted inside tables");
 
 					Symbol newSym;
 					//keys in tables may not neccessarily be strings
@@ -251,13 +241,13 @@ namespace stilt
 						}
 						default:
 						{
-							throw new SyntaxError(assign.FullRange ?? throw new InvalidOperationException("Assign expression has no FullRange"), "Invalid key in table");
+							throw new SyntaxError(assign.GetFullRangeOrThrow(), "Invalid key in table");
 						}
 					}
 					dict.Add(newSym, expr);
 				}
 				else
-					throw new SyntaxError(expr.InnerRange ?? expr.FullRange ?? throw new InvalidOperationException("Expression has no range"), "Only assingnment-type expressions allowed inside a table literal");
+					throw new SyntaxError(expr.GetInnerRangeOrFullRangeOrThrow(), "Only assingnment-type expressions allowed inside a table literal");
 			}
 
 			return new(currentToken.Range, dict);
@@ -569,10 +559,10 @@ namespace stilt
 				case AssignExpr assign:
 				{
 					if (assign.Operation is not (null or TokenType.Type))
-						throw new SyntaxError(assign.InnerRange ?? assign.FullRange ?? throw new InvalidOperationException("Assign expression has no range"), "Cannot use self-assignment operators in variable definition");
+						throw new SyntaxError(assign.GetInnerRangeOrFullRangeOrThrow(), "Cannot use self-assignment operators in variable definition");
 
 					if (assign.Left is null)
-						throw new MalformedExpr(assign.FullRange ?? throw new InvalidOperationException("Assign expression has no FullRange"));
+						throw new MalformedExpr(assign.GetFullRangeOrThrow());
 					
 					idExpr = assign.Left;
 					valExpr = assign.Right;
@@ -587,12 +577,12 @@ namespace stilt
 				}
 				default:
 				{
-					throw new MalformedExpr(expr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
+					throw new MalformedExpr(expr.GetFullRangeOrThrow());
 				}
 			}
 
 			if (valExpr is null && isConst)
-				throw new SyntaxError(idExpr.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"), $"No value given to initialize constant.");
+				throw new SyntaxError(idExpr.GetFullRangeOrThrow(), $"No value given to initialize constant.");
 			
 			var ids = GetIdentities(idExpr) ?? throw new Exception();
 			List<Symbol> syms = [.. ids.Select(i =>
@@ -624,13 +614,13 @@ namespace stilt
 			if (call is CallExpr callExpr && callExpr.Left is IdentityExpr id)
 			{
 				if (callExpr.Right is not (CommaExpr or IdentityExpr or null) || callExpr.Left is not IdentityExpr)
-					throw new MalformedDecl(callExpr.FullRange ?? throw new InvalidOperationException("Call expression has no FullRange"));
+					throw new MalformedDecl(callExpr.GetFullRangeOrThrow());
 
 				var arguments = GetIdentities(callExpr.Right).Select(e => e.Identity).ToList();
 
 				var leftId = callExpr.Left as IdentityExpr;
 				if (leftId is null)
-					throw new MalformedDecl(callExpr.FullRange ?? throw new InvalidOperationException("Call expression has no FullRange"));
+					throw new MalformedDecl(callExpr.GetFullRangeOrThrow());
 				var decl = new FuncDeclStmt(leftId.Identity.Name, Lex.Filepath, innerStmt)
 				{
 					Scope = newScope,
@@ -640,7 +630,7 @@ namespace stilt
 				return decl;
 			}
 			else
-				throw new MalformedDecl(call.FullRange ?? throw new InvalidOperationException("Expression has no FullRange"));
+				throw new MalformedDecl(call.GetFullRangeOrThrow());
 		}
 
 		protected ImportStmt ParseImport(Scope scope, Token firstToken)
@@ -904,7 +894,7 @@ namespace stilt
 						else if (stmt is FuncDeclStmt fd)
 							typeSym.Members.Add(fd.Name);
 						else if (stmt is not null)
-							throw new SyntaxError(stmt.FullRange ?? throw new InvalidOperationException("Statement has no FullRange"), "Only variable declarations and function declarations are allowed in type bodies.");
+							throw new SyntaxError(stmt.GetFullRangeOrThrow(), "Only variable declarations and function declarations are allowed in type bodies.");
 					}
 
 					newStmt = new TypeDeclStmt(typeSym, body) { Scope = currentScope };
@@ -1260,13 +1250,14 @@ namespace stilt
 
 		public void ParseFile()
 		{
-			Statements = ParseBranch(RootScope);
+			Result.Statements = ParseBranch(Result.RootScope);
 		}
 
-		public Parser(ProgramArgs args, Lexer lex)
+		private Parser(ProgramArgs args, Lexer lex, ParserResult result)
 		{
 			Lex = lex;
 			Args = args;
+			Result = result;
 		}
 	}
 }

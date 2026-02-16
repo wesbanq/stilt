@@ -31,6 +31,12 @@ namespace stilt.AST
 			}
 		}
 
+		public FileRange GetFullRangeOrThrow() =>
+			FullRange ?? throw new InvalidOperationException("Expression has no FullRange");
+
+		public FileRange GetInnerRangeOrFullRangeOrThrow() =>
+			InnerRange ?? FullRange ?? throw new InvalidOperationException("Expression has no range");
+
 		public Expr? FindFirstPrecedenceOrNull(int precedence, out Expr? parent)
 		{
 			//first find any null children and only then check 4 precedence
@@ -119,6 +125,8 @@ namespace stilt.AST
 		FileRange? InnerRange { set; }
 		[JsonIgnore]
 		FileRange? FullRange { get; }
+		FileRange GetFullRangeOrThrow();
+		FileRange GetInnerRangeOrFullRangeOrThrow();
 	}
 
 	public class IdentityExpr : Expr
