@@ -16,6 +16,7 @@
 		public static readonly TypeSymbol Tag = new("Tag", "<BUILTIN>");
 		public static readonly TypeSymbol Module = new("Module", "<BUILTIN>");
 		public static readonly TypeSymbol Decorator = new("Decorator", "<BUILTIN>");
+		public static readonly TypeSymbol Trait = new("Trait", "<BUILTIN>");
 		public static readonly TypeSymbol Array = new("Array", "<BUILTIN>", argumentCount: 1);
 		public static readonly TypeSymbol Reference = new("Ref", "<BUILTIN>", argumentCount: 1);
 		public static readonly TypeSymbol Table = new("Table", "<BUILTIN>", argumentCount: 1);

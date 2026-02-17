@@ -52,13 +52,13 @@ namespace stilt.Errors
 
 	public class SyntaxError : CompilationMessage
 	{
-		public SyntaxError(FileRange range)
+		public SyntaxError(FileRange? range)
 			: base("Syntax error", range, ErrorSeverity.Error)
 		{ }
-		public SyntaxError(FileRange range, string msg)
+		public SyntaxError(FileRange? range, string msg)
 			: base(msg, range, ErrorSeverity.Error)
 		{ }
-		public SyntaxError(FileRange range, string msg, ErrorSeverity severity)
+		public SyntaxError(FileRange? range, string msg, ErrorSeverity severity)
 			: base(msg, range, severity)
 		{ }
 	}
@@ -142,6 +142,13 @@ namespace stilt.Errors
 	{
 		public UnexpectedSpecifier(FileRange pos)
 			: base(pos, $"Unexpected specifier '{pos.Text}'.")
+		{ }
+	}
+
+	public class UnimplementedTraitMethod : SyntaxError
+	{
+		public UnimplementedTraitMethod(FileRange? pos, TypeSymbol type, TraitSymbol trait, string methodName)
+			: base(pos, $"Type '{type.Name}' implements trait '{trait.Name}', but does not implement method '{methodName}'.")
 		{ }
 	}
 

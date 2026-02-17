@@ -162,6 +162,12 @@ namespace stilt
 			return Next();
 		}
 
+		/// <summary>
+		/// Expects the next token to be one of the given types and returns it.
+		/// </summary>
+		/// <returns>The next token, which is one of the expected types.</returns>
+		/// <exception cref="ArgumentException">If no token types are provided.</exception>
+		/// <exception cref="UnexpectedToken">If the current token is not the expected token.</exception>
 		public Token ExpectNext(params TokenType[] expected)
 		{
 			if (expected.Length == 0)
@@ -172,6 +178,12 @@ namespace stilt
 			return next;
 		}
 
+		/// <summary>
+		/// Expects the given token types and returns the next token.
+		/// </summary>
+		/// <returns>The token after the expected token.</returns>
+		/// <exception cref="ArgumentException">If no token types are provided.</exception>
+		/// <exception cref="UnexpectedToken">If the current token is not the expected token.</exception>
 		public Token Expect(params TokenType[] expected)
 		{
 			if (expected.Length == 0)
@@ -181,6 +193,12 @@ namespace stilt
 			return Next();
 		}
 
+		/// <summary>
+		/// Expects the current token and advances the lexer.
+		/// </summary>
+		/// <returns>The expected token.</returns>
+		/// <exception cref="ArgumentException">If no token types are provided.</exception>
+		/// <exception cref="UnexpectedToken">If the current token is not the expected token.</exception>
 		public Token ExpectThis(params TokenType[] expected)
 		{
 			if (expected.Length == 0)
