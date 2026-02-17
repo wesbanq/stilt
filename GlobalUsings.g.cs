@@ -3,6 +3,7 @@ global using global::System;
 global using global::System.Collections.Generic;
 global using global::System.IO;
 global using global::System.Linq;
+global using global::System.Linq.Expressions;
 global using global::System.Text;
 global using global::System.Text.RegularExpressions;
 global using global::Newtonsoft.Json;

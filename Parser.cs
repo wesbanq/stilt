@@ -552,6 +552,116 @@ namespace stilt
 			scope.AddSymbol(symbol);
 		}
 
+		private void CheckTraitMethods(TypeSymbol typeSym)
+		{
+			var traits = new List<TraitSymbol>(typeSym.ImplementedTraits);
+
+			var typeMemberNames = new HashSet<string>();
+			var current = typeSym;
+			while (current is not null)
+			{
+				foreach (var m in current.Members)
+					typeMemberNames.Add(m.Name);
+				current = current.Inherits;
+			}
+
+			foreach (var trait in traits)
+			{
+				foreach (var member in trait.Members)
+				{
+					if (!typeMemberNames.Contains(member.Name))
+					{
+						NewError(new UnimplementedTraitMethod(typeSym.Identifier?.Range, typeSym, trait, member.Name));
+					}
+				}
+			}
+		}
+
+		/// <summary>
+		/// Parses a pattern: name[: type['('type argument[','...]')']][','..] until a terminator.
+		/// Used for the left-hand side of variable assignments and function arguments.
+		/// </summary>
+		/// <param name="scope">Scope for resolving type names.</param>
+		/// <param name="terminators">Token types that end the pattern (not consumed).</param>
+		/// <returns>List of VarSymbols, one per pattern element.</returns>
+		protected List<VarSymbol> ParsePattern(Scope scope, params TokenType[] terminators)
+		{
+			var terminatorSet = terminators.ToHashSet();
+			var result = new List<VarSymbol>();
+
+			while (true)
+			{
+				if (terminatorSet.Contains(Lex.CurrentToken.Which))
+					return result;
+
+				var nameToken = Lex.ExpectThis(TokenType.Identifier);
+				var name = nameToken.Range.Text;
+				TypeSymbol type = Builtins.Any;
+
+				if (Lex.CurrentIs(TokenType.Type))
+				{
+					Lex.Next();
+					type = ParseType(scope);
+				}
+
+				var sym = new VarSymbol(name, Lex.Filepath, type, nameToken);
+				result.Add(sym);
+
+				if (!Lex.CurrentIs(TokenType.Comma))
+					return result;
+				Lex.Next();
+			}
+		}
+
+		/// <summary>
+		/// Parses a type: '('type[','...]')' | identifier['('type[','...]')'].
+		/// Tuples use TypeSymbolFactory.GetTuple.
+		/// </summary>
+		protected TypeSymbol ParseType(Scope scope)
+		{
+			if (Lex.CurrentIs(TokenType.OpenBracket))
+			{
+				Lex.Next();
+				var tupleArgs = new List<TypeSymbol>();
+				while (true)
+				{
+					tupleArgs.Add(ParseType(scope));
+					if (Lex.CurrentIs(TokenType.CloseBracket))
+						break;
+					Lex.ExpectThis(TokenType.Comma);
+				}
+				Lex.Next();
+				return TypeSymbolFactory.GetTuple(tupleArgs);
+			}
+
+			var nameToken = Lex.ExpectThis(TokenType.Identifier);
+			var typeName = nameToken.Range.Text;
+
+			TypeSymbol[]? typeArgs = null;
+			if (Lex.NextIs(TokenType.OpenBracket))
+			{
+				Lex.Next();
+				var args = new List<TypeSymbol>();
+				while (true)
+				{
+					args.Add(ParseType(scope));
+					if (Lex.CurrentIs(TokenType.CloseBracket))
+						break;
+					Lex.ExpectThis(TokenType.Comma);
+				}
+				Lex.Next();
+				typeArgs = args.ToArray();
+			}
+
+			var baseType = scope.FindTypeByName(typeName);
+			if (baseType is null)
+			{
+				var placeholder = new TypeSymbol(typeName, Lex.Filepath, nameToken, inherits: null, argumentCount: typeArgs?.Length ?? 0);
+				return typeArgs is not null ? new TypeSymbol(placeholder, typeArgs) : placeholder;
+			}
+			return typeArgs is not null ? new TypeSymbol(baseType, typeArgs) : baseType;
+		}
+
 		protected VarDeclStmt ParseVarDecl(Scope scope, bool isConst, Expr expr)
 		{
 			Expr? idExpr = null;
@@ -912,18 +1022,45 @@ namespace stilt
 
 					break;
 				}
+				case TokenType.TraitDecl:
+				{
+					
+
+					break;
+				}
 				case TokenType.TypeDecl:
 				{
 					Lex.GoPast(TokenType.TypeDecl);
 					var nameToken = Lex.CurrentToken;
 					var typeName = nameToken.Range.Text;
 
+					TypeSymbol? inheritedType = null;
+					List<TraitSymbol> traits = [];
+
+					if (Lex.NextIs(TokenType.Type))
+					{
+						Lex.Next();
+						do
+						{
+							var item = ParseType(currentScope);
+							if (item is TraitSymbol traitSym)
+								traits.Add(traitSym);
+							else
+							{
+								if (inheritedType is not null)
+									throw new SyntaxError(item.Identifier?.Range ?? nameToken.Range, "Cannot inherit from multiple types. Only one inherited type is allowed.");
+								inheritedType = item;
+							}
+						}
+						while (Lex.CurrentIs(TokenType.LogicalAnd) && Lex.Next() is { });
+					}
+
 					if (!Lex.NextIs(TokenType.OpenCurlyBracket))
 						throw new UnexpectedToken(nameToken.Range, TokenType.OpenCurlyBracket, nameToken);
 					Lex.GoPast(TokenType.OpenCurlyBracket);
 					Lex.SkipStmtSeparator();
 
-					var typeSym = new TypeSymbol(typeName, Lex.Filepath, nameToken);
+					var typeSym = new TypeSymbol(typeName, Lex.Filepath, nameToken, inherits: inheritedType, implementedTraits: traits);
 					Scope typeScope = new(currentScope);
 
 					var selfSym = new VarSymbol("self", typeSym) { Source = Lex.Filepath, Specifiers = [TokenType.PrivateSpec] };
@@ -957,6 +1094,8 @@ namespace stilt
 						else if (stmt is not null)
 							throw new SyntaxError(stmt.GetFullRangeOrThrow(), "Only variable declarations and function declarations are allowed in type bodies.");
 					}
+
+					CheckTraitMethods(typeSym);
 
 					newStmt = new TypeDeclStmt(typeSym, body) { Scope = currentScope };
 					AddToScope(typeSym, currentScope);
@@ -996,10 +1135,7 @@ namespace stilt
 				}
 				case TokenType.Continue:
 				{
-					newStmt = new ContinueStmt()
-					{
-						Scope = currentScope,
-					};
+					newStmt = new ContinueStmt() { Scope = currentScope, };
 					break;
 				}
 				case TokenType.For:

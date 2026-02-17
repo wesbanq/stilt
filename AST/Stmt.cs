@@ -199,6 +199,25 @@ namespace stilt.AST
 		}
 	}
 
+	public class TraitDeclStmt : DeclStmt
+	{
+		[SetsRequiredMembers]
+		public TraitDeclStmt(string name, string source, Stmt v, TypeSymbol? inherits = null)
+		{
+			Value = v;
+			Name = new TypeSymbol(name, source)
+			{ Declaration = this };
+		}
+
+		[SetsRequiredMembers]
+		public TraitDeclStmt(TypeSymbol typeSym, Stmt v)
+		{
+			Value = v;
+			Name = typeSym;
+			typeSym.Declaration = this;
+		}
+	}
+
 	public class FuncDeclStmt : DeclStmt
 	{
 
