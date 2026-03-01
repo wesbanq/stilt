@@ -5,3 +5,6 @@ if a > b {
     var abstract
     var abstract
 }
+a
+import module as a
+a

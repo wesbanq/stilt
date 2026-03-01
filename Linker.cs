@@ -353,10 +353,29 @@ namespace stilt
 			}
 			if (!File.Exists(normalizedPath))
 			{
-				var range = import.InnerRange;
-				if (range is not null)
-					Errors.Add(new SyntaxError(range, $"Cannot import '{import.Filepath}': file not found"));
-				return;
+				if (string.IsNullOrEmpty(Path.GetExtension(normalizedPath)))
+				{
+					var pathWithExt = normalizedPath + Program.CodeFileExtension;
+					if (File.Exists(pathWithExt))
+					{
+						normalizedPath = pathWithExt;
+						import.Filepath = pathWithExt;
+					}
+					else
+					{
+						var range = import.InnerRange;
+						if (range is not null)
+							Errors.Add(new SyntaxError(range, $"Cannot import '{import.Filepath}': file not found"));
+						return;
+					}
+				}
+				else
+				{
+					var range = import.InnerRange;
+					if (range is not null)
+						Errors.Add(new SyntaxError(range, $"Cannot import '{import.Filepath}': file not found"));
+					return;
+				}
 			}
 			try
 			{
