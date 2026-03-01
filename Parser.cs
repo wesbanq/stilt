@@ -736,33 +736,41 @@ namespace stilt
 
 		private ImportStmt ParseImport(Scope scope, Token firstToken)
 		{
-			// import "filepath" as name
-			// import "filepath"  (uses filename as name)
-			
+			// import "filepath" as name  |  import filepath as name
+			// import "filepath"         |  import filepath  (uses filename as name)
 			Lex.GoPast(TokenType.Import);
-			var pathToken = Lex.CurrentToken;
 
-			if (pathToken.Which is not TokenType.StringLiteral)
-				throw new UnexpectedToken(pathToken.Range, TokenType.StringLiteral, pathToken);
+			Token pathToken;
+			if (Lex.CurrentIs(TokenType.StringLiteral))
+			{
+				pathToken = Lex.ExpectThis(TokenType.StringLiteral);
+			}
+			else if (Lex.CurrentIs(TokenType.Identifier))
+			{
+				var next = Lex.PeekNext(1);
+				if (next.Which != TokenType.As && next.Which != TokenType.StmtSeparator && next.Which != TokenType.EOF)
+					throw new UnexpectedToken(Lex.CurrentToken.Range, TokenType.StringLiteral, Lex.CurrentToken);
+				pathToken = Lex.ExpectThis(TokenType.Identifier);
+			}
+			else
+			{
+				throw new UnexpectedToken(Lex.CurrentToken.Range, TokenType.StringLiteral, Lex.CurrentToken);
+			}
 
-			var filepath = pathToken.Range.Text.Trim('"', '\'');
-			Lex.Next();
+			var filepath = pathToken.Which == TokenType.StringLiteral
+				? pathToken.Range.Text.Trim('"', '\'')
+				: pathToken.Range.Text;
 
 			string moduleName;
 			if (Lex.CurrentIs(TokenType.As))
 			{
-				Lex.GoPast(TokenType.As);
-				var nameToken = Lex.CurrentToken;
-				if (nameToken.Which is not TokenType.Identifier)
-					throw new UnexpectedToken(nameToken.Range, TokenType.Identifier, nameToken);
+				Lex.ExpectThis(TokenType.As);
+				var nameToken = Lex.ExpectThis(TokenType.Identifier);
 				moduleName = nameToken.Range.Text;
-				Lex.Next();
 			}
 			else
 			{
-				// Use filename as module name (without extension if .stilt)
 				moduleName = Path.GetFileNameWithoutExtension(filepath);
-				// Validate it's a valid identifier
 				if (!System.Text.RegularExpressions.Regex.IsMatch(moduleName, @"^[a-zA-Z_]\w*$"))
 					throw new SyntaxError(pathToken.Range, $"Filename '{moduleName}' is not a valid identifier. Use 'as <name>' to specify a module name.");
 			}
