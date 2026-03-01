@@ -11,7 +11,7 @@ namespace stilt
 
 		public void Link()
 		{
-			Errors.Clear();
+			// Errors.Clear();
 			for (int i = 0; i < Trees.Count; i++)
 			{
 				var scope = i < Modules.Count ? Modules[i] : null;

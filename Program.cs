@@ -10,6 +10,7 @@ namespace stilt
 {
 	public enum ProgramCommand
 	{
+		None = 0,
 		[Command<ProgramOption>("build", "Builds the given file.", [ProgramOption.InputFile])]
 		Build,
 		[Command<ProgramOption>("token", "Does only preprocessing and lexing", [ProgramOption.InputFile])]

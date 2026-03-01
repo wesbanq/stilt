@@ -12,7 +12,7 @@ namespace stilt
 		public static readonly TypeSymbol Bool = new("Bool", Symbol.BuiltinSource);
 		public static readonly TypeSymbol Num = new("Num", Symbol.BuiltinSource);
 		public static readonly TypeSymbol String = new("String", Symbol.BuiltinSource);
-		// public static readonly TypeSymbol TaggedString = new("TaggedString", Symbol.BuiltinSource);
+		public static readonly TypeSymbol TaggedString = new("TaggedString", Symbol.BuiltinSource);
 		public static readonly TypeSymbol UUID = new("UUID", Symbol.BuiltinSource);
 		public static readonly TypeSymbol NBT = new("NBT", Symbol.BuiltinSource);
 		public static readonly TypeSymbol Attribute = new("Attribute", Symbol.BuiltinSource);
@@ -51,8 +51,12 @@ namespace stilt
 			if (!args.NoStd)
 				BuiltinScope.AddSymbols(ImportBuiltins(args).Symbols);
 
-			Program.Dump(BuiltinScope, expanded: args.ExpandedDump);
-			Console.WriteLine();
+			if (args.DebugLevel >= 1)
+			{
+				Console.WriteLine("BuiltinScope:");
+				Program.Dump(BuiltinScope, expanded: args.ExpandedDump);
+				Console.WriteLine();
+			}
 		}
 
 		public static Scope ImportBuiltins(ProgramArgs args)

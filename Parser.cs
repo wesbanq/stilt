@@ -5,26 +5,19 @@ namespace stilt
 {
 	public class Parser
 	{
+		public readonly ParserResult Result;
+		
 		private readonly Lexer Lex;
 		private readonly ProgramArgs Args;
-		private readonly ParserResult Result;
 		private List<DecoratorObject> CurrentDecorators = [];
 		private int _depth = 0;
 
-		public static ParserResult Parse(ProgramArgs args, Lexer lex)
-		{
-			var result = new ParserResult();
-			var parser = new Parser(args, lex, result);
-			parser.ParseFile();
-			return result;
-		}
-
-		protected void NewError(SyntaxError err)
+		private void NewError(SyntaxError err)
 		{
 			Result.CompilationIssues.Add(err);
 		}
 
-		protected void InsertIntoExprTree(ref Expr? rootExpr, Expr? newExpr)
+		private void InsertIntoExprTree(ref Expr? rootExpr, Expr? newExpr)
 		{
 			if (rootExpr is null && newExpr is not null)
 			{
@@ -114,7 +107,7 @@ namespace stilt
 			}
 		}
 
-		protected List<Expr> CreateOperatorExpr<T>(Token token)
+		private List<Expr> CreateOperatorExpr<T>(Token token)
 			where T : OperatorAttribute
 		{
 			var operatorAttr = Program.GetAttributesFromEnum<TokenType, T>(token.Which);
@@ -178,7 +171,7 @@ namespace stilt
 			}
 		}
 
-		protected bool ExpectingOperator(ref Expr? expr)
+		private bool ExpectingOperator(ref Expr? expr)
 		{
 			if (expr is null)
 				return false;
@@ -187,7 +180,7 @@ namespace stilt
 			return a is null && p is null;
 		}
 
-		protected ArrayLiteralExpr ParseArrayLiteral(Token currentToken)
+		private ArrayLiteralExpr ParseArrayLiteral(Token currentToken)
 		{
 			if (currentToken.Which is TokenType.EOF)
 				throw new UnexpectedEOF(currentToken.Range);
@@ -203,7 +196,7 @@ namespace stilt
 				: new ArrayLiteralExpr(currentToken.Range, [newExpr]);
 		}
 
-		protected TableLiteralExpr ParseTableLiteral(Token currentToken)
+		private TableLiteralExpr ParseTableLiteral(Token currentToken)
 		{
 			if (currentToken.Which is TokenType.EOF)
 				throw new UnexpectedEOF(currentToken.Range);
@@ -254,7 +247,7 @@ namespace stilt
 			return new(currentToken.Range, dict);
 		}
 
-		protected double ParseScientificLiteral(Token token)
+		private double ParseScientificLiteral(Token token)
 		{
 			var tokenText = token.Range.Text.Replace("_", "");
 			var splitIndex = tokenText.IndexOfAny(['e', 'E']);
@@ -265,7 +258,7 @@ namespace stilt
 			return mantissa * Math.Pow(10, exponent);
 		}
 
-		protected void ParseExpr(ref Expr? rootExpr, Token currentToken)
+		private void ParseExpr(ref Expr? rootExpr, Token currentToken)
 		{
 			Expr? newExpr = null;
 
@@ -524,7 +517,7 @@ namespace stilt
 			ParseExpr(ref rootExpr, Lex.Next());
 		}
 
-		protected void AddToScope(List<Symbol> symbols, Scope scope)
+		private void AddToScope(List<Symbol> symbols, Scope scope)
 		{
 			foreach (var sym in symbols)
 			{
@@ -532,7 +525,7 @@ namespace stilt
 			}
 		}
 
-		protected void AddToScope(Symbol symbol, Scope scope)
+		private void AddToScope(Symbol symbol, Scope scope)
 		{
 			var foundSymbol = scope.FindSymbolByName(symbol.Name);
 			if (foundSymbol is not null)
@@ -541,11 +534,6 @@ namespace stilt
 					?? throw new Exception();
 				if (foundSymbol.IsBuiltin)
 					NewError(new ShadowedBuiltinSymbol(range, symbol));
-				else if (scope.Symbols.Any(s => s.Name == symbol.Name))
-				{
-					NewError(new RedeclaredSymbol(range, symbol));
-					return;
-				}
 				else
 					NewError(new ShadowedSymbol(range, symbol));
 			}
@@ -584,7 +572,7 @@ namespace stilt
 		/// <param name="scope">Scope for resolving type names.</param>
 		/// <param name="terminators">Token types that end the pattern (not consumed).</param>
 		/// <returns>List of VarSymbols, one per pattern element.</returns>
-		protected List<VarSymbol> ParsePattern(Scope scope, params TokenType[] terminators)
+		private List<VarSymbol> ParsePattern(Scope scope, params TokenType[] terminators)
 		{
 			var terminatorSet = terminators.ToHashSet();
 			var result = new List<VarSymbol>();
@@ -617,7 +605,7 @@ namespace stilt
 		/// Parses a type: '('type[','...]')' | identifier['('type[','...]')'].
 		/// Tuples use TypeSymbolFactory.GetTuple.
 		/// </summary>
-		protected TypeSymbol ParseType(Scope scope)
+		private TypeSymbol ParseType(Scope scope)
 		{
 			if (Lex.CurrentIs(TokenType.OpenBracket))
 			{
@@ -662,7 +650,7 @@ namespace stilt
 			return typeArgs is not null ? new TypeSymbol(baseType, typeArgs) : baseType;
 		}
 
-		protected VarDeclStmt ParseVarDecl(Scope scope, bool isConst, Expr expr)
+		private VarDeclStmt ParseVarDecl(Scope scope, bool isConst, Expr expr)
 		{
 			Expr? idExpr = null;
 			Expr? valExpr = null;
@@ -720,7 +708,7 @@ namespace stilt
 			return decl;
 		}
 
-		protected FuncDeclStmt ParseFuncDecl(Scope scope, Stmt innerStmt, Expr call)
+		private FuncDeclStmt ParseFuncDecl(Scope scope, Stmt innerStmt, Expr call)
 		{
 			Scope newScope = new(scope);
 
@@ -746,7 +734,7 @@ namespace stilt
 				throw new MalformedDecl(call.GetFullRangeOrThrow());
 		}
 
-		protected ImportStmt ParseImport(Scope scope, Token firstToken)
+		private ImportStmt ParseImport(Scope scope, Token firstToken)
 		{
 			// import "filepath" as name
 			// import "filepath"  (uses filename as name)
@@ -790,7 +778,7 @@ namespace stilt
 			};
 		}
 
-		protected Stmt? ParseLoopStmt(Scope currentScope, Token firstToken)
+		private Stmt? ParseLoopStmt(Scope currentScope, Token firstToken)
 		{
 			Scope newScope = new(currentScope);
 			Stmt? newStmt = null;
@@ -926,7 +914,7 @@ namespace stilt
 			return newStmt;
 		}
 
-		protected DecoratorObject ParseDecorator(Scope scope, Token firstToken)
+		private DecoratorObject ParseDecorator(Scope scope, Token firstToken)
 		{
 			firstToken = Lex.GoPast(TokenType.DecoratorBegin);
 			var decoratorName = Lex.ExpectThis(TokenType.Identifier);
@@ -970,7 +958,7 @@ namespace stilt
 			return new DecoratorObject(decoratorType, args);
 		}
 
-		protected Stmt? ParseStmt(Scope currentScope)
+		private Stmt? ParseStmt(Scope currentScope)
 		{
 			var firstToken = Lex.CurrentToken;
 
@@ -998,11 +986,12 @@ namespace stilt
 
 					if (newExpr is null)
 						throw new MalformedExpr(firstToken.Range);
-					
-					newStmt = ParseVarDecl(currentScope, isConst, newExpr);
+
+					Scope newScope = new(currentScope);
+					newStmt = ParseVarDecl(newScope, isConst, newExpr);
 
 					if (newStmt is VarDeclStmt varDecl)
-						AddToScope(varDecl.Name, currentScope);
+						AddToScope(varDecl.Name, newScope);
 
 					break;
 				}
@@ -1018,15 +1007,14 @@ namespace stilt
 
 					newStmt = ParseFuncDecl(currentScope, innerStmt, newExpr);
 					if (newStmt is FuncDeclStmt funcDecl)
-						AddToScope(funcDecl.Name, currentScope);
+						AddToScope(funcDecl.Name, funcDecl.Scope);
 
 					break;
 				}
 				case TokenType.TraitDecl:
 				{
-					
-
-					break;
+					//TODO
+					throw new UnimplementedError(firstToken);
 				}
 				case TokenType.TypeDecl:
 				{
@@ -1061,12 +1049,12 @@ namespace stilt
 					Lex.SkipStmtSeparator();
 
 					var typeSym = new TypeSymbol(typeName, Lex.Filepath, nameToken, inherits: inheritedType, implementedTraits: traits);
-					Scope typeScope = new(currentScope);
+					Scope newScope = new(currentScope);
 
 					var selfSym = new VarSymbol("self", typeSym) { Source = Lex.Filepath, Specifiers = [TokenType.PrivateSpec] };
-					typeScope.AddSymbol(selfSym);
+					newScope.AddSymbol(selfSym);
 
-					var body = new CompoundStmt() { Scope = typeScope, Statements = ParseBranch(typeScope) };
+					var body = new CompoundStmt() { Scope = newScope, Statements = ParseBranch(newScope) };
 					foreach (var stmt in body.Statements)
 					{
 						if (stmt is VarDeclStmt vd)
@@ -1097,8 +1085,9 @@ namespace stilt
 
 					CheckTraitMethods(typeSym);
 
-					newStmt = new TypeDeclStmt(typeSym, body) { Scope = currentScope };
-					AddToScope(typeSym, currentScope);
+					newScope = new(currentScope);
+					AddToScope(typeSym, newScope);
+					newStmt = new TypeDeclStmt(typeSym, body) { Scope = newScope };
 
 					break;
 				}
@@ -1127,10 +1116,7 @@ namespace stilt
 				}
 				case TokenType.Break:
 				{
-					newStmt = new BreakStmt()
-					{
-						Scope = currentScope,
-					};
+					newStmt = new BreakStmt() { Scope = currentScope, };
 					break;
 				}
 				case TokenType.Continue:
@@ -1357,26 +1343,29 @@ namespace stilt
 				CurrentDecorators.Clear();
 			}
 
-			//CONTAINERSTMT
-			//ParseGenericStmt()
 			return newStmt;
 		}
 
-		protected List<Stmt> ParseBranch(Scope parentScope)
+		private List<Stmt> ParseBranch(Scope parentScope)
 		{
 			var firstToken = Lex.CurrentToken;
 			var startingDepth = ++_depth;
 			List<Stmt> innerStmts = [];
+			Scope currentScope = parentScope;
 
 			while (true)
 			{
 				Stmt? newStmt = null;
 				if (Args.Throw)
 				{
-					newStmt = ParseStmt(parentScope);
+					newStmt = ParseStmt(currentScope);
 
 					if (newStmt is not null)
+					{
 						innerStmts.Add(newStmt);
+						if (newStmt is DeclStmt or ImportStmt)
+							currentScope = newStmt.Scope;
+					}
 
 					if (Lex.CurrentIs(TokenType.EOF))
 					{
@@ -1408,10 +1397,14 @@ namespace stilt
 				{
 					try
 					{
-						newStmt = ParseStmt(parentScope);
+						newStmt = ParseStmt(currentScope);
 
 						if (newStmt is not null)
+						{
 							innerStmts.Add(newStmt);
+							if (newStmt is DeclStmt or ImportStmt)
+								currentScope = newStmt.Scope;
+						}
 						
 						if (Lex.CurrentIs(TokenType.EOF))
 						{
@@ -1461,11 +1454,11 @@ namespace stilt
 			Result.Statements = ParseBranch(Result.RootScope);
 		}
 
-		private Parser(ProgramArgs args, Lexer lex, ParserResult result)
+		public Parser(ProgramArgs args, Lexer lex)
 		{
 			Lex = lex;
 			Args = args;
-			Result = result;
+			Result = new();
 		}
 	}
 }
