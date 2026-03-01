@@ -32,5 +32,11 @@ namespace stilt.Compilation
 			Text = Lexer.Preprocess(File.ReadAllText(filename))
 				?? throw new Exception();
 		}
+
+		public FileText(string filename, string text)
+		{
+			Filepath = filename;
+			Text = Lexer.Preprocess(text);
+		}
 	}
 }

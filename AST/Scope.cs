@@ -52,6 +52,11 @@ namespace stilt.AST
 			Symbols.Add(sym);
 		}
 
+		public void AddSymbols(List<Symbol> symbols)
+		{
+			Symbols.AddRange(symbols);
+		}
+
 		public Scope(Scope parent)
 		{
 			Parent = parent;

@@ -45,6 +45,8 @@ namespace stilt
 		NoObjectFile,
 		[Option(["ro", "regen-obj"], OptionType.Flag, "Regenerate the object file")]
 		RegenObjectFile,
+		[Option("ns", OptionType.Flag, "Don't load the standard library")]
+		NoStd,
 	}
 
 	public class ProgramArgs : Args<ProgramOption, ProgramCommand>
@@ -69,6 +71,8 @@ namespace stilt
 		public bool NoObjectFile = false;
 		[OptionTarget<ProgramOption>(ProgramOption.RegenObjectFile)]
 		public bool RegenObjectFile = false;
+		[OptionTarget<ProgramOption>(ProgramOption.NoStd)]
+		public bool NoStd = false;
 
 		private static MCVersion ConvertMCVersion(string[] arg) {
 			var ver = MCVersion.ParseMCVersion(arg[0]);
@@ -358,91 +362,91 @@ namespace stilt
 			}
 		}
 
-		static int Main(string[] args)
+		static int Main(string[] rawArgs)
 		{
-			var arg = new ProgramArgs();
-			arg.ParseArgsOrExit(args);
+			var args = new ProgramArgs();
+			args.ParseArgsOrExit(rawArgs);
 
-			switch (arg.Command)
+			Builtins.PopulateBuiltinScope(args);
+
+			switch (args.Command)
 			{
 				case ProgramCommand.Build:
 				{
-					var compiler = new Compiler(arg);
+					var compiler = new Compiler(args);
 					compiler.Build();
 
 					Console.WriteLine();
 					compiler.PrintBuildErrors();
 					Console.WriteLine();
-					if (!arg.NoTime)
+					if (!args.NoTime)
 						compiler.WriteTimerReadout();
 
-					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(compiler.Files.Select(p => p.Result!.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
-					if (arg.JsonDumpFilepath is not null && compiler.Files.Any(f => f.Lexer is not null))
-						WriteObjectToJson(compiler.Files.Where(f => f.Lexer is not null).Select(f => f.Lexer!.Tokens).ToList(), Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
-					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(compiler.Files.Select(f => f.Result!.CompilationIssues).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_compilation_issues.json"));
+					if (args.JsonDumpFilepath is not null)
+						WriteObjectToJson(compiler.Files.Select(p => p.ParserResult!.Statements).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+					if (args.JsonDumpFilepath is not null && compiler.Files.OfType<ParsedFile>().Any(f => f.Lexer is not null))
+						WriteObjectToJson(compiler.Files.OfType<ParsedFile>().Where(f => f.Lexer is not null).Select(f => f.Lexer!.Tokens).ToList(), Path.Combine(args.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+					if (args.JsonDumpFilepath is not null)
+						WriteObjectToJson(compiler.Files.Select(f => f.ParserResult!.CompilationIssues).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_compilation_issues.json"));
 
 					break;
 				}
 				case ProgramCommand.Tokenize:
-				{
-					var file = Compiler.ParseFile(arg, arg.MainCodeFilepaths!.First());
+					var file = (ParsedFile)Compiler.ParseFile(args, new FileText(args.MainCodeFilepaths!.First()));
 					var lex = file.Lexer!;
 					Token t = lex.CurrentToken;
 					do Console.WriteLine($"{lex.CurrentPos}: {t.Which}"); while ((t = lex.Next()).Which != TokenType.EOF);
 
-					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(lex.Tokens, Path.Combine(arg.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+					if (args.JsonDumpFilepath is not null)
+						WriteObjectToJson(lex.Tokens, Path.Combine(args.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
 						
 					break;
-				}
 				case ProgramCommand.Preprocess:
 				{
-					var code = File.ReadAllText(arg.MainCodeFilepaths!.First());
+					var code = File.ReadAllText(args.MainCodeFilepaths!.First());
 					Console.Write(Lexer.Preprocess(code));
 					break;
 				}
 				case ProgramCommand.Tree:
 				{
-					var comp = new Compiler(arg);
+					var comp = new Compiler(args);
 					comp.Build();
 					
-					foreach (var file in comp.Files)
+					foreach (var filecomp in comp.Files)
 					{
-						Console.WriteLine($"Module: {file.Filepath}");
-						foreach (var stmt in file.Result!.Statements.ToArray())
+						Console.WriteLine($"Module: {filecomp.Filepath}");
+						foreach (var stmt in filecomp.ParserResult!.Statements.ToArray())
 						{
-							Dump(stmt, expanded: arg.ExpandedDump);
+							Dump(stmt, expanded: args.ExpandedDump);
 						}
 					}
 
 					Console.WriteLine();
 					comp.PrintBuildErrors();
 					Console.WriteLine();
-					if (!arg.NoTime)
+					if (!args.NoTime)
 						comp.WriteTimerReadout();
 
-					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(comp.Files.Select(f => f.Result!.Statements).ToList(), Path.Combine(arg.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+					if (args.JsonDumpFilepath is not null)
+						WriteObjectToJson(comp.Files.Select(f => f.ParserResult!.Statements).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
 					
 					break;
 				}
 				case ProgramCommand.IR:
 				{
-					var compiler = new Compiler(arg);
+					var compiler = new Compiler(args);
 					compiler.Build();
 					
 					if (compiler.Files.Count == 0)
-						throw new Exception("No files parsed");
+						throw new Exception("No files built");
 					
-					var file = compiler.Files.First();
-					var ir = new IRGenerator(arg, file);
+					var fileir = compiler.Files.First();
+					var ir = new IRGenerator(args, fileir);
 					ir.GenerateIR();
-					Dump(ir.Result.MainBlock, expanded: arg.ExpandedDump);
+					Dump(ir.Result.MainBlock, expanded: args.ExpandedDump);
 
-					if (arg.JsonDumpFilepath is not null)
-						WriteObjectToJson(ir.Result.MainBlock, Path.Combine(arg.JsonDumpFilepath, "ir_main_block.json"), ExclusionPreset.Ast);
+					if (args.JsonDumpFilepath is not null)
+						WriteObjectToJson(ir.Result.MainBlock, Path.Combine(args.JsonDumpFilepath, "ir_main_block.json"), ExclusionPreset.Ast);
 
 					break;
 				}

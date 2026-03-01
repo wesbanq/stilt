@@ -36,7 +36,7 @@ namespace stilt.IR
                 // This will be resolved when we know the context
                 ns = "stilt:temp";
             }
-            else if (!string.IsNullOrEmpty(symbol.Source) && symbol.Source != "<TEMP>")
+            else if (!string.IsNullOrEmpty(symbol.Source) && symbol.Source != Symbol.TempSource)
             {
                 // Derive namespace from file path
                 if (_moduleNamespaces.TryGetValue(symbol.Source, out var moduleNs))

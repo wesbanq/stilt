@@ -364,20 +364,20 @@ namespace stilt
 				var file = Compiler.ParseFile(Args, normalizedPath);
 
 				// Add parser errors to our error list
-				Errors.AddRange(file.Result!.CompilationIssues);
+				Errors.AddRange(file.ParserResult!.CompilationIssues);
 
 				// Create the imported scope (the parser's root scope contains all top-level symbols)
-				import.ImportedScope = file.Result!.RootScope;
+				import.ImportedScope = file.ParserResult!.RootScope;
 				
 				// Cache the loaded module
-				_loadedModules[normalizedPath] = file.Result!.RootScope;
+				_loadedModules[normalizedPath] = file.ParserResult!.RootScope;
 
 				// Add the imported module to our Modules and Trees lists for further processing
-				Modules.Add(file.Result!.RootScope);
-				Trees.Add(file.Result!.Statements);
+				Modules.Add(file.ParserResult!.RootScope);
+				Trees.Add(file.ParserResult!.Statements);
 
 				// Recursively process the imported file's statements (for nested imports)
-				foreach (var stmt in file.Result!.Statements)
+				foreach (var stmt in file.ParserResult!.Statements)
 				{
 					if (stmt is not null)
 						ProcessStmt(stmt, stmt.Scope);

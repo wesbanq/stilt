@@ -323,13 +323,11 @@ namespace stilt
 		[Symbol("var")]
 		VarDecl,
 
-		//TODO decide which one of these words i like the most
 		[Symbol("prototype")]
 		[Symbol("type")]
 		[Symbol("class")]
 		TypeDecl,
 
-		[Unimplemented]
 		[Symbol("trait")]
 		TraitDecl,
 
@@ -348,14 +346,6 @@ namespace stilt
 		[Unimplemented]
 		[Symbol("signal")]
 		SignalDecl,
-
-		[Unimplemented]
-		[Symbol("select")]
-		SelectStmt,
-
-		[Symbol(@"execute(?:\s*\/.*\n)*", true)]
-		[Symbol(@"execute +as +.*?\n(?:\s*\/.*)*", true)]
-		ExecuteStmt,
 
 		// Keywords
 		[Specifier]
@@ -451,5 +441,14 @@ namespace stilt
 
 		[Symbol("version")]
 		Version,
+
+		// Special
+		[Unimplemented]
+		[Symbol("select")]
+		SelectStmt,
+
+		[Symbol(@"execute(?:\s*\/.*\n)*", true)]
+		[Symbol(@"execute +as +.*?\n(?:\s*\/.*)*", true)]
+		ExecuteStmt,
 	}
 }

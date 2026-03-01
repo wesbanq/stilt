@@ -1,0 +1,5 @@
+type Entity {
+    var Name
+    var Health
+    var UUID
+}

@@ -4,6 +4,9 @@ namespace stilt.AST
 {
 	public abstract class Symbol
 	{
+		public const string BuiltinSource = "<BUILTIN>";
+		public const string TempSource = "<TEMP>";
+
 		public string Name;
 		//TODO (IMPORTANT VERY)
 		//stop using filepaths
@@ -16,9 +19,9 @@ namespace stilt.AST
 		public Token? Identifier;
 
 		[JsonIgnore]
-		public bool IsBuiltin => Source.StartsWith("<BUILTIN>");
+		public bool IsBuiltin => Source.StartsWith(BuiltinSource);
 		[JsonIgnore]
-		public bool IsTemp => Source.StartsWith("<TEMP>");
+		public bool IsTemp => Source.StartsWith(TempSource);
 
 		public static bool operator ==(Symbol? left, Symbol? right)
 		{
@@ -42,13 +45,13 @@ namespace stilt.AST
 			return (Name + Source).GetHashCode();
 		}
 
-		protected Symbol(string name, Token? token, string src = "<TEMP>")
+		protected Symbol(string name, Token? token, string src = TempSource)
 		{
 			Name = name;
 			Source = src;
 			Identifier = token;
 		}
-		protected Symbol(string name, string src = "<TEMP>")
+		protected Symbol(string name, string src = TempSource)
 		{
 			Name = name;
 			Source = src;
@@ -304,7 +307,7 @@ namespace stilt.AST
 
 			if (!_tupleTypeSymbols.TryGetValue(args.Count, out var tupleTypeSymbol))
 			{
-				_tupleTypeSymbols[args.Count] = tupleTypeSymbol = new TypeSymbol($"Tuple_{args.Count}", "<BUILTIN>", argumentCount: args.Count);
+				_tupleTypeSymbols[args.Count] = tupleTypeSymbol = new TypeSymbol($"Tuple_{args.Count}", Symbol.BuiltinSource, argumentCount: args.Count);
 				_argTypeSymbols[tupleTypeSymbol] = CreateArgsDict();
 			}
 			
@@ -315,7 +318,7 @@ namespace stilt.AST
 		{
 			if (!_tempTypeSymbols.TryGetValue(name, out var baseType))
 			{
-				baseType = new TypeSymbol(name, "<TEMP>", argumentCount: args?.Count ?? 0);
+				baseType = new TypeSymbol(name, Symbol.TempSource, argumentCount: args?.Count ?? 0);
 				_tempTypeSymbols[name] = baseType;
 				baseType = GetTypeSymbol(baseType, args);
 			}

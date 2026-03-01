@@ -133,7 +133,7 @@ namespace stilt.IR
 
     public class CompiledFile
     {
-        public ParsedFile SourceFile;
+        public ObjectFile SourceFile;
         public Block MainBlock;
     }
 
@@ -146,7 +146,7 @@ namespace stilt.IR
     public class IRGenerator
     {
         public ProgramArgs Args;
-        public ParsedFile SourceFile;
+        public ObjectFile SourceFile;
         public IRGeneratorResult Result;
 
         private static NamespaceMapper NamespaceMapper = new();
@@ -165,7 +165,7 @@ namespace stilt.IR
             }
 
             result.MainBlock = new Block { Name = "main" };
-            GenerateStatements(SourceFile.Result!.Statements, result.MainBlock);
+            GenerateStatements(SourceFile.ParserResult!.Statements, result.MainBlock);
             result.Blocks = result.MainBlock.ChildBlocks;
             return result;
         }
@@ -285,7 +285,7 @@ namespace stilt.IR
             var valueVar = GenerateExpr(ret.Value, block);
             // Return value is stored in a special variable or passed via convention
             // For now, we'll use ASSIGN to a return variable
-            var returnVar = new VarSymbol("_return", "<TEMP>", ret.Value.Type);
+            var returnVar = new VarSymbol("_return", Symbol.TempSource, ret.Value.Type);
             var assign = new IRInstruction
             {
                 Target = returnVar,
@@ -786,10 +786,10 @@ namespace stilt.IR
         private VarSymbol AllocateTemp(TypeSymbol type)
         {
             var tempName = $"_t{_tempCounter++}";
-            return new VarSymbol(tempName, "<TEMP>", type);
+            return new VarSymbol(tempName, Symbol.TempSource, type);
         }
 
-        public IRGenerator(ProgramArgs args, ParsedFile file)
+        public IRGenerator(ProgramArgs args, ObjectFile file)
         {
             Args = args;
             SourceFile = file;
