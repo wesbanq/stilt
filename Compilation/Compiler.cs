@@ -5,11 +5,10 @@ namespace stilt.Compilation
 		string Name { get; }
 	}
 
-
 	public class Compiler
 	{
 		public ProgramArgs Args;
-		public List<ParsedFile> Files = [];
+		public List<ObjectFile> Files = [];
 		public Linker? Linker;
 		public Dictionary<TimedEvents, Timer> Timers = [];
 
@@ -69,7 +68,7 @@ namespace stilt.Compilation
 			File.WriteAllText(Path.ChangeExtension(filepath, Program.ObjectFileExtension), objectFile.Serialize());
 		}
 
-		public static ParsedFile ParseFile(ProgramArgs args, string filepath)
+		public static ObjectFile ParseFile(ProgramArgs args, string filepath)
 		{
 			// dont use ObjectFile for now
 			ObjectFile? objectFile = null;
@@ -79,13 +78,13 @@ namespace stilt.Compilation
 			if (objectFile is not null)
 			{
 				Console.WriteLine("Using obj file");
-				return new(filepath, objectFile);
+				objectFile.Filepath = filepath;
+				return objectFile;
 			}
 			else
 			{
-				var file = new ParsedFile(filepath);
-				file.Parse(args);
-				file.Generate(args);
+				var filetext = new FileText(filepath);
+				var parsedfile = ParseFile(args, filetext);
 
 				// if (!args.NoObjectFile
 				// 	&& (objectFile is null || args.RegenObjectFile
@@ -95,8 +94,15 @@ namespace stilt.Compilation
 				// 	GenerateObjectFile(filepath, new ObjectFile(file.TextChecksum, file.InterfaceChecksum, file.IR.Result, file.Result!));
 				// }
 
-				return file;
-			}
+				return parsedfile;
+			}	
+		}
+
+		public static ObjectFile ParseFile(ProgramArgs args, FileText filetext)
+		{
+			var file = new ParsedFile(filetext);
+			file.Parse(args);
+			return file;
 		}
 
 		public void Build()
@@ -126,8 +132,8 @@ namespace stilt.Compilation
 			Timers.Add(TimedEvents.Linking, new Timer("Linking"));
 			Linker = new Linker(
 				Args,
-                [.. Files.Select(f => f.Result!.RootScope)],
-                [.. Files.Select(f => f.Result!.Statements)]
+                [.. Files.Select(f => f.ParserResult!.RootScope)],
+                [.. Files.Select(f => f.ParserResult!.Statements)]
             );
 			Timers[TimedEvents.Linking].Run(() => Linker.Link());
 

@@ -9,13 +9,12 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.FileProviders.Embedded" Version="10.0.3" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="Builtins/" />
-    <!-- <Folder Remove="Dependencies/NuArgs/" /> -->
-    <!-- <ProjectReference Include="Dependencies/NuArgs/NuArgs.csproj" /> -->
+    <EmbeddedResource Include="Builtins/**" />
   </ItemGroup>
 
 </Project>

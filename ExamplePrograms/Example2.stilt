@@ -7,4 +7,5 @@ if a < b {
 		/tp @p ~2 ~1 ~2
 } else {
 	a++
+	Entity + 2
 }

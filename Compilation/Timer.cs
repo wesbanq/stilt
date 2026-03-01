@@ -13,8 +13,8 @@ namespace stilt.Compilation
 		public string Time => _stopwatch is null
 			? $"{_name} has not been started."
 			: _stopwatch.IsRunning
-			? $"{_name} has been running for ({_stopwatch.Elapsed.TotalSeconds}s)."
-			: $"{_name} finished in ({_stopwatch.Elapsed.TotalSeconds}s).";
+			? $"{_name} has been running for {_stopwatch.Elapsed.TotalSeconds}s."
+			: $"{_name} finished in {_stopwatch.Elapsed.TotalSeconds}s.";
 
 		public void StartTimer()
 		{
@@ -32,6 +32,14 @@ namespace stilt.Compilation
 			StartTimer();
 			action.Invoke();
 			StopTimer();
+		}
+
+		public T Run<T>(Func<T> func)
+		{
+			StartTimer();
+			var result = func.Invoke();
+			StopTimer();
+			return result;
 		}
 
 		public Timer(string name, Action action)

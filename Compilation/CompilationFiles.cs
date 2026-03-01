@@ -1,26 +1,23 @@
 using Newtonsoft.Json.Linq;
-using System.Security.Cryptography;
-using stilt.IR;
 
 namespace stilt.Compilation
 {
-    public class ObjectFile
+	public class ObjectFile
 	{
-		//DO NOT USE
-		//UNFINISHED
+		public string Filepath;
 		public string TextChecksum;
 		public string InterfaceChecksum;
 		public string CompilerVersion = Program.CompilerVersion;
 		public IRGeneratorResult Result;
 		public ParserResult ParserResult;
 
+		[Newtonsoft.Json.JsonIgnore]
+		public Dictionary<TimedEvents, Timer> Timers = [];
+		public List<CompilationMessage> Errors => ParserResult?.CompilationIssues ?? [];
 
 		private static readonly JsonSerializerSettings JsonSerializeSettings = new()
 		{
 			Formatting = Formatting.None,
-			// Use Objects (not All) to avoid forward-reference resolution issues.
-			// All adds $id to every object including collection elements, which can cause
-			// "Error reading object reference" when $ref is encountered before $id in document order.
 			PreserveReferencesHandling = PreserveReferencesHandling.Objects,
 			TypeNameHandling = TypeNameHandling.All,
 			ReferenceLoopHandling = ReferenceLoopHandling.Serialize,
@@ -109,8 +106,18 @@ namespace stilt.Compilation
 			}
 		}
 
-		public ObjectFile(string textChecksum, string interfaceChecksum, IRGeneratorResult result, ParserResult parserResult)
+		public IRGeneratorResult GenerateIR(ProgramArgs args)
 		{
+			Timers[TimedEvents.IRGeneration] = new Timer("IR generation");
+			Result = Timers[TimedEvents.IRGeneration].Run(() => new IRGenerator(args, this).Generate());
+			return Result;
+		}
+
+		protected ObjectFile() { } // For JSON deserialization
+
+		public ObjectFile(string filepath, string textChecksum, string interfaceChecksum, IRGeneratorResult result, ParserResult parserResult)
+		{
+			Filepath = filepath;
 			TextChecksum = textChecksum;
 			InterfaceChecksum = interfaceChecksum;
 			Result = result;
@@ -118,19 +125,15 @@ namespace stilt.Compilation
 		}
 	}
 
-	public class ParsedFile
+	public class ParsedFile : ObjectFile
 	{
 		public Lexer? Lexer;
-		public ParserResult? Result;
-		public IRGenerator IR;
-
-		public string Filepath;
 		public readonly FileText Text;
-		public Dictionary<TimedEvents, Timer> Timers = [];
-		public List<CompilationMessage> Errors => Result?.CompilationIssues ?? [];
 
-		public string TextChecksum => Text.GetSHA256Hash();
-		public string InterfaceChecksum => Compilation.InterfaceChecksum.Compute(Result?.RootScope, Filepath);
+
+
+		public new string TextChecksum => Text.GetSHA256Hash();
+		public new string InterfaceChecksum => global::stilt.Compilation.InterfaceChecksum.Compute(ParserResult?.RootScope, Filepath);
 
 		public void Parse(ProgramArgs args)
 		{
@@ -144,32 +147,25 @@ namespace stilt.Compilation
 			Timers.Add(TimedEvents.Parsing, new Timer("Parsing"));
 			Timers[TimedEvents.Parsing].Run(() =>
 			{
-				Result = Parser.Parse(args, Lexer);
+				ParserResult = Parser.Parse(args, Lexer);
 			});
 		}
 
-		public void Generate(ProgramArgs args)
+		public ParsedFile(string filepath, ObjectFile file) : base(filepath, file.TextChecksum, file.InterfaceChecksum, file.Result, file.ParserResult)
 		{
-			IR = new IRGenerator(args, this);
-			Timers.Add(TimedEvents.IRGeneration, new Timer("IRGeneration"));
-			Timers[TimedEvents.IRGeneration].Run(() =>
-			{
-				IR.GenerateIR();
-			});
-		}
-
-		public ParsedFile(string filepath, ObjectFile file)
-		{
-			Filepath = filepath;
-			Text = new(Filepath);
-			Result = file.ParserResult;
-			IR = new IRGenerator(file.Result);
+			Text = new FileText(filepath);
 		}
 
 		public ParsedFile(string filepath)
 		{
 			Filepath = filepath;
-			Text = new(Filepath);
+			Text = new FileText(filepath);
+		}
+
+		public ParsedFile(FileText filetext)
+		{
+			Filepath = filetext.Filepath;
+			Text = filetext;
 		}
 	}
 }

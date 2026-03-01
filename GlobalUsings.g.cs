@@ -11,3 +11,4 @@ global using global::stilt.AST;
 global using global::stilt.Compilation;
 global using global::stilt.Errors;
 global using global::stilt.CodeGen;
+global using global::stilt.IR;
