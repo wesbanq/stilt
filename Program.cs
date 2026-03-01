@@ -27,28 +27,33 @@ namespace stilt
 		None = 0,
 		[Option("d", OptionType.SingleValue, "Set debug level (for debugging)")]
 		DebugLvl,
-		[Option("i", OptionType.MultipleValues, "Sets the main code filepath to use")]
+		[Option(["i", "input"], OptionType.MultipleValues, "Sets the main code filepath to use")]
 		InputFile,
 		[Option("t", OptionType.Flag, "Crash the program instead of printing the error (for debugging)")]
 		Throw,
-		[Option("ex", OptionType.Flag, "Additional info in dumps")]
+		[Option(["x", "ex"], OptionType.Flag, "Additional info in dumps")]
 		Expanded,
-		[Option("nt", OptionType.Flag, "Don't show total compilation time.")]
+		[Option(["no-time"], OptionType.Flag, "Don't show total compilation time.")]
 		NoTime,
 		[Option("j", OptionType.SingleValue, "Dump the output to a JSON file (for debugging)")]
 		JsonDumpFilepath,
-		[Option("v", OptionType.SingleValue, "Set the target version of the language")]
+		[Option(["v", "mc-version"], OptionType.SingleValue, "Set the target Minecraft version to compile to.")]
 		TargetMCVersion,
-		[Option("o", OptionType.SingleValue, "Set the output filepath")]
+		[Option(["o", "output"], OptionType.SingleValue, "Set the output filepath")]
 		OutputFilepath,
-		[Option(["no", "no-obj"], OptionType.Flag, "Don't create an object file")]
+		[Option(["n", "no-obj"], OptionType.Flag, "Don't create an object file")]
 		NoObjectFile,
-		[Option(["ro", "regen-obj"], OptionType.Flag, "Regenerate the object file")]
+		[Option(["r", "regen-obj", "regen-object-file"], OptionType.Flag, "Regenerate the object file")]
 		RegenObjectFile,
-		[Option("ns", OptionType.Flag, "Don't load the standard library")]
-		NoStd,
+		[Option(["no-builtin", "no-std"], OptionType.Flag, "Don't load the builtins library")]
+		NoBuiltin,
 	}
 
+	[NuArgsExtra<ProgramCommand>(aboutText: """
+		Stilt is a language for Minecraft.
+		It is a statically typed, compiled language that is designed to be easy to learn and use.
+		It is still in early development and is not yet ready for use.
+	""", unixStyle: true)]
 	public class ProgramArgs : Args<ProgramOption, ProgramCommand>
 	{
 		[OptionTarget<ProgramOption>(ProgramOption.DebugLvl)]
@@ -71,7 +76,7 @@ namespace stilt
 		public bool NoObjectFile = false;
 		[OptionTarget<ProgramOption>(ProgramOption.RegenObjectFile)]
 		public bool RegenObjectFile = false;
-		[OptionTarget<ProgramOption>(ProgramOption.NoStd)]
+		[OptionTarget<ProgramOption>(ProgramOption.NoBuiltin)]
 		public bool NoStd = false;
 
 		private static MCVersion ConvertMCVersion(string[] arg) {
