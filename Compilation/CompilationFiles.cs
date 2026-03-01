@@ -13,7 +13,6 @@ namespace stilt.Compilation
 
 		[Newtonsoft.Json.JsonIgnore]
 		public Dictionary<TimedEvents, Timer> Timers = [];
-		public List<CompilationMessage> Errors => ParserResult?.CompilationIssues ?? [];
 
 		private static readonly JsonSerializerSettings JsonSerializeSettings = new()
 		{
@@ -129,8 +128,8 @@ namespace stilt.Compilation
 	{
 		public Lexer? Lexer;
 		public readonly FileText Text;
-
-
+		public List<CompilationMessage> Errors => ParserResult?.CompilationIssues ?? [];
+		public bool HasErrors => Errors.Any(e => e.Severity >= ErrorSeverity.Error);
 
 		public new string TextChecksum => Text.GetSHA256Hash();
 		public new string InterfaceChecksum => global::stilt.Compilation.InterfaceChecksum.Compute(ParserResult?.RootScope, Filepath);
@@ -147,7 +146,9 @@ namespace stilt.Compilation
 			Timers.Add(TimedEvents.Parsing, new Timer("Parsing"));
 			Timers[TimedEvents.Parsing].Run(() =>
 			{
-				ParserResult = Parser.Parse(args, Lexer);
+				var parser = new Parser(args, Lexer);
+				parser.ParseFile();
+				ParserResult = parser.Result;
 			});
 		}
 

@@ -32,7 +32,8 @@ namespace stilt.Compilation
 		{
 			foreach (var file in Files)
 			{
-				file.Errors.ForEach(e => e.Print());
+				if (file is ParsedFile parsedFile)
+					parsedFile.Errors.ForEach(e => e.Print());
 			}
 			Linker?.Errors.ForEach(e => e.Print());
 		}
@@ -77,7 +78,7 @@ namespace stilt.Compilation
 
 			if (objectFile is not null)
 			{
-				Console.WriteLine("Using obj file");
+				// Console.WriteLine("Using obj file");
 				objectFile.Filepath = filepath;
 				return objectFile;
 			}
@@ -112,7 +113,11 @@ namespace stilt.Compilation
 			//multiline exprs
 			//evaluate constant values at compile time
 			//virtual filerange and error reports for them
-			//object files
+			//object file deserialization
+			//separate ParserResult from Parser
+			//add ability touse functions before theyre defined
+			//ParseGenericStatemtent in Parser
+			//scope-based parser rewrite
 
 			Timers.Add(TimedEvents.Compilation, new Timer("Compilation"));
 			Timers[TimedEvents.Compilation].StartTimer();
@@ -128,6 +133,12 @@ namespace stilt.Compilation
 					}
 				}
 			});
+
+			if (Files.OfType<ParsedFile>().Any(f => f.HasErrors))
+			{
+				Timers[TimedEvents.Compilation].StopTimer();
+				return;
+			}
 
 			Timers.Add(TimedEvents.Linking, new Timer("Linking"));
 			Linker = new Linker(

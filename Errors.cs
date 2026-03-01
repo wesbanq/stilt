@@ -63,13 +63,6 @@ namespace stilt.Errors
 		{ }
 	}
 
-	public class RedeclaredSymbol : SyntaxError
-	{
-		public RedeclaredSymbol(FileRange range, Symbol symbol)
-			: base(range, $"Multiple definitions for symbol: '{symbol.Name}'")
-		{ }
-	}
-
 	public class UnimplementedError : SyntaxError
 	{
 		public UnimplementedError(Token token)
