@@ -1,10 +1,7 @@
 abstract = 1
 var abstract
 abstract = 2
-if a > b {
-    var abstract
-    var abstract
-}
-a
-import module as a
-a
+
+abstract = h()
+
+func h() {}
