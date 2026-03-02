@@ -1015,7 +1015,7 @@ namespace stilt
 
 					newStmt = ParseFuncDecl(currentScope, innerStmt, newExpr);
 					if (newStmt is FuncDeclStmt funcDecl)
-						AddToScope(funcDecl.Name, funcDecl.Scope);
+						AddToScope(funcDecl.Name, currentScope);
 
 					break;
 				}
@@ -1093,9 +1093,8 @@ namespace stilt
 
 					CheckTraitMethods(typeSym);
 
-					newScope = new(currentScope);
-					AddToScope(typeSym, newScope);
-					newStmt = new TypeDeclStmt(typeSym, body) { Scope = newScope };
+					AddToScope(typeSym, currentScope);
+					newStmt = new TypeDeclStmt(typeSym, body) { Scope = currentScope };
 
 					break;
 				}
@@ -1371,7 +1370,7 @@ namespace stilt
 					if (newStmt is not null)
 					{
 						innerStmts.Add(newStmt);
-						if (newStmt is DeclStmt or ImportStmt)
+						if (newStmt is VarDeclStmt or ImportStmt)
 							currentScope = newStmt.Scope;
 					}
 
