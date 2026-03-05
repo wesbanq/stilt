@@ -1,7 +1,8 @@
-abstract = 1
-var abstract
-abstract = 2
+trait PEES {
+    func k()
+}
 
-abstract = h()
-
-func h() {}
+type J : PEES {
+    var a
+    func k()
+}
