@@ -124,9 +124,12 @@ namespace stilt
 
 		public void SkipStmt()
 		{
-			do { Next(); } while (CurrentToken.Which is not 
+			while (CurrentToken.Which is not 
 				(TokenType.EOF or TokenType.StmtSeparator or TokenType.CloseCurlyBracket or TokenType.OpenCurlyBracket)
-			);
+			) 
+			{
+				Next();
+			}
 		}
 
 		public bool CurrentIs(params TokenType[] types) => types.Contains(CurrentToken.Which);

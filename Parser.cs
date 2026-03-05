@@ -1021,8 +1021,58 @@ namespace stilt
 				}
 				case TokenType.TraitDecl:
 				{
-					//TODO
-					throw new UnimplementedError(firstToken);
+					Lex.GoPast(TokenType.TraitDecl);
+					var nameToken = Lex.CurrentToken;
+					var traitName = nameToken.Range.Text;
+
+					TraitSymbol? inheritedTrait = null;
+
+					if (Lex.NextIs(TokenType.Type))
+					{
+						Lex.Next();
+						do
+						{
+							var item = ParseType(currentScope);
+							if (item is TraitSymbol inherited)
+							{
+								if (inheritedTrait is not null)
+									throw new SyntaxError(item.Identifier?.Range ?? nameToken.Range, "Traits can only inherit from one other trait.");
+								inheritedTrait = inherited;
+							}
+							else
+								throw new SyntaxError(item.Identifier?.Range ?? nameToken.Range, "Traits can only inherit from other traits.");
+						}
+						while (Lex.CurrentIs(TokenType.LogicalAnd) && Lex.Next() is { });
+					}
+
+					if (!Lex.NextIs(TokenType.OpenCurlyBracket))
+						throw new UnexpectedToken(nameToken.Range, TokenType.OpenCurlyBracket, nameToken);
+					Lex.GoPast(TokenType.OpenCurlyBracket);
+					Lex.SkipStmtSeparator();
+
+					var traitSym = new TraitSymbol(traitName, Lex.Filepath, nameToken, inherits: inheritedTrait);
+					Scope newScope = new(currentScope);
+
+					var body = new CompoundStmt() { Scope = newScope, Statements = ParseBranch(newScope) };
+					foreach (var stmt in body.Statements)
+					{
+						if (stmt is FuncDeclStmt funcDecl)
+						{
+							if (!funcDecl.Name.Specifiers.Contains(TokenType.PrivateSpec)
+								&& (funcDecl.Name.Specifiers.Contains(TokenType.PublicSpec)
+									|| !Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault)))
+							{
+								traitSym.Members.Add(funcDecl.Name);
+							}
+						}
+						else if (stmt is not null)
+							throw new SyntaxError(stmt.GetFullRangeOrThrow(), "Only function declarations are allowed in trait bodies.");
+					}
+
+					AddToScope(traitSym, currentScope);
+					newStmt = new TraitDeclStmt(traitSym, body) { Scope = currentScope };
+
+					break;
 				}
 				case TokenType.TypeDecl:
 				{
@@ -1355,6 +1405,7 @@ namespace stilt
 
 		private List<Stmt> ParseBranch(Scope parentScope)
 		{
+			//start token after the opening bracket
 			var firstToken = Lex.CurrentToken;
 			var startingDepth = ++_depth;
 			List<Stmt> innerStmts = [];
@@ -1416,7 +1467,7 @@ namespace stilt
 						if (Lex.CurrentIs(TokenType.EOF))
 						{
 							if (startingDepth != 1)
-								throw new SyntaxError(firstToken.Range, "Unclosed bracket.");
+								throw new SyntaxError(firstToken.Range, "Unclosed bracket.", ErrorSeverity.Critical);
 							break;
 						}
 						if (Lex.CurrentIs(TokenType.CloseCurlyBracket))
