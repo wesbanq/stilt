@@ -1,0 +1,43 @@
+using stilt.Compilation;
+using Xunit;
+
+namespace stilt.Tests;
+
+public class AstGoldenTests
+{
+	public static string TestDataRoot => GoldenTestHelper.GetTestDataRoot();
+	public static string AstDir => Path.Combine(TestDataRoot, "Ast");
+	private const string GoldenSuffix = ".ast.json";
+
+	[Theory]
+	[MemberData(nameof(GetStiltFiles))]
+	public void Ast_matches_golden(string stiltPath)
+	{
+		var args = new ProgramArgs { MainCodeFilepaths = [stiltPath], NoStd = true };
+		Builtins.PopulateBuiltinScope(args);
+
+		var compiler = new Compiler(args);
+		compiler.Build();
+
+		if (compiler.Files.Count == 0)
+			Assert.Fail($"No files built for {stiltPath}");
+		if (compiler.Files.OfType<ParsedFile>().Any(f => f.HasErrors))
+			Assert.Fail($"Build had errors for {stiltPath}. Fix the source or run with {GoldenTestHelper.RegenerateGoldensEnvVar}=1 after fixing.");
+
+		var statements = compiler.Files[0].ParserResult!.Statements;
+		var actual = CompilerJsonSerializer.SerializeToJson(statements, CompilerJsonSerializer.ExclusionPreset.Ast);
+
+		var goldenPath = GoldenTestHelper.GetGoldenPath(stiltPath, GoldenSuffix);
+		GoldenTestHelper.AssertOrUpdateGolden(actual, goldenPath, Path.GetFileName(stiltPath));
+	}
+
+	public static TheoryData<string> GetStiltFiles()
+	{
+		var data = new TheoryData<string>();
+		if (!Directory.Exists(AstDir))
+			return data;
+		foreach (var path in Directory.EnumerateFiles(AstDir, "*.stilt"))
+			data.Add(path);
+		return data;
+	}
+}
