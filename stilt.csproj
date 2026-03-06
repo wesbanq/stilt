@@ -17,4 +17,8 @@
     <EmbeddedResource Include="Builtins/**" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Tests/**" />
+  </ItemGroup>
+
 </Project>
