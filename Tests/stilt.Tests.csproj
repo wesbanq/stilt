@@ -22,4 +22,11 @@
     <None Include="TestData\**\*" CopyToOutputDirectory="PreserveNewest" LinkBase="TestData" />
   </ItemGroup>
 
+  <Target Name="WriteRegenerateGoldensFlag" AfterTargets="Build" Condition="'$(RegenerateGoldens)' == 'true'">
+    <WriteLinesToFile File="$(OutputPath)RegenerateGoldens.flag" Lines="true" Overwrite="true" />
+  </Target>
+  <Target Name="RemoveRegenerateGoldensFlag" AfterTargets="Build" Condition="'$(RegenerateGoldens)' != 'true'">
+    <Delete Files="$(OutputPath)RegenerateGoldens.flag" Condition="Exists('$(OutputPath)RegenerateGoldens.flag')" />
+  </Target>
+
 </Project>

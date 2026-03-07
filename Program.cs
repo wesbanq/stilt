@@ -27,7 +27,7 @@ namespace stilt
 		None = 0,
 		[Option("d", OptionType.SingleValue, "Set debug level (for debugging)")]
 		DebugLvl,
-		[Option(["i", "input"], OptionType.MultipleValues, "Sets the main code filepath to use")]
+		[Option(["i", "input"], OptionType.SingleValue, "Sets the main code filepath to use")]
 		InputFile,
 		[Option("t", OptionType.Flag, "Crash the program instead of printing the error (for debugging)")]
 		Throw,
@@ -59,7 +59,7 @@ namespace stilt
 		[OptionTarget<ProgramOption>(ProgramOption.DebugLvl)]
 		public int DebugLevel;
 		[OptionTarget<ProgramOption>(ProgramOption.InputFile, nameof(BuiltInConverters.FilesVerifyPaths))]
-		public string[]? MainCodeFilepaths = null;
+		public string? MainCodeFilepath = null;
 		[OptionTarget<ProgramOption>(ProgramOption.Throw)]
 		public bool Throw = false;
 		[OptionTarget<ProgramOption>(ProgramOption.Expanded)]
@@ -88,8 +88,8 @@ namespace stilt
 
 		public ProgramArgs()
 		{
-			if (MainCodeFilepaths is not null && MainCodeFilepaths.Length > 0)
-				OutputFilepath ??= Path.ChangeExtension(MainCodeFilepaths[0], ".zip");
+			if (MainCodeFilepath is not null)
+				OutputFilepath ??= Path.ChangeExtension(MainCodeFilepath, ".zip");
 		}
 	}
 
@@ -353,7 +353,7 @@ namespace stilt
 					break;
 				}
 				case ProgramCommand.Tokenize:
-					var file = (ParsedFile)Compiler.ParseFile(args, new FileText(args.MainCodeFilepaths!.First()));
+					var file = (ParsedFile)Compiler.ParseFile(args, new FileText(args.MainCodeFilepath!));
 					var lex = file.Lexer!;
 					Token t = lex.CurrentToken;
 					do Console.WriteLine($"{lex.CurrentPos}: {t.Which}"); while ((t = lex.Next()).Which != TokenType.EOF);
@@ -364,7 +364,7 @@ namespace stilt
 					break;
 				case ProgramCommand.Preprocess:
 				{
-					var code = File.ReadAllText(args.MainCodeFilepaths!.First());
+					var code = File.ReadAllText(args.MainCodeFilepath!);
 					Console.Write(Lexer.Preprocess(code));
 					break;
 				}

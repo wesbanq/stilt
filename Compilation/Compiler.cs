@@ -124,14 +124,8 @@ namespace stilt.Compilation
 
 			Timers[TimedEvents.Compilation].Run(() =>
 			{
-				foreach (var filepath in Args.MainCodeFilepaths!)
-				{
-					if (filepath is not null)
-					{
-						var file = ParseFile(Args, filepath);
-						Files.Add(file);
-					}
-				}
+				var file = ParseFile(Args, Args.MainCodeFilepath!);
+				Files.Add(file);
 			});
 
 			if (Files.OfType<ParsedFile>().Any(f => f.HasErrors))

@@ -13,7 +13,8 @@ public class AstGoldenTests
 	[MemberData(nameof(GetStiltFiles))]
 	public void Ast_matches_golden(string stiltPath)
 	{
-		var args = new ProgramArgs { MainCodeFilepaths = [stiltPath], NoStd = true };
+		// Console.WriteLine($"Ast_matches_golden: {stiltPath}");
+		var args = new ProgramArgs { MainCodeFilepath = stiltPath, NoStd = true };
 		Builtins.PopulateBuiltinScope(args);
 
 		var compiler = new Compiler(args);
@@ -22,7 +23,7 @@ public class AstGoldenTests
 		if (compiler.Files.Count == 0)
 			Assert.Fail($"No files built for {stiltPath}");
 		if (compiler.Files.OfType<ParsedFile>().Any(f => f.HasErrors))
-			Assert.Fail($"Build had errors for {stiltPath}. Fix the source or run with {GoldenTestHelper.RegenerateGoldensEnvVar}=1 after fixing.");
+			Assert.Fail($"Build had errors for {stiltPath}. Fix the source or run with -p:RegenerateGoldens=true after fixing.");
 
 		var statements = compiler.Files[0].ParserResult!.Statements;
 		var actual = CompilerJsonSerializer.SerializeToJson(statements, CompilerJsonSerializer.ExclusionPreset.Ast);

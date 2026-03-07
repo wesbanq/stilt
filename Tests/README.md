@@ -18,16 +18,10 @@ dotnet test Tests/stilt.Tests.csproj
 
 ## Regenerating golden files
 
-When you change the compiler’s AST or IR output (or add new test cases), update the expected JSON by running tests with:
+When you change the compiler’s AST or IR output (or add new test cases), update the expected JSON by running tests with the `RegenerateGoldens` property:
 
 ```bash
-REGENERATE_GOLDENS=1 dotnet test
-```
-
-On Windows (PowerShell):
-
-```powershell
-$env:REGENERATE_GOLDENS='1'; dotnet test
+dotnet test -p:RegenerateGoldens=true
 ```
 
 This overwrites the golden files in `Tests/TestData/` with the current compiler output and the tests pass.

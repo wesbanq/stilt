@@ -9,7 +9,15 @@ namespace stilt.Tests;
 /// </summary>
 internal static class GoldenTestHelper
 {
-	public const string RegenerateGoldensEnvVar = "REGENERATE_GOLDENS";
+	private const string FlagFileName = "RegenerateGoldens.flag";
+
+	public static bool RegenerateGoldens => File.Exists(GetFlagPath());
+
+	private static string GetFlagPath()
+	{
+		var dir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+		return string.IsNullOrEmpty(dir) ? "" : Path.Combine(dir, FlagFileName);
+	}
 
 	public static string GetTestDataRoot()
 	{
@@ -26,14 +34,14 @@ internal static class GoldenTestHelper
 
 	public static void AssertOrUpdateGolden(string actual, string goldenPath, string testDisplayName)
 	{
-		if (string.Equals(Environment.GetEnvironmentVariable(RegenerateGoldensEnvVar), "1", StringComparison.Ordinal))
+		if (RegenerateGoldens)
 		{
 			WriteGolden(actual, goldenPath);
 			return;
 		}
 
 		if (!File.Exists(goldenPath))
-			throw new FileNotFoundException($"Golden file not found: {goldenPath}. Run tests with {RegenerateGoldensEnvVar}=1 to create it.", goldenPath);
+			throw new FileNotFoundException($"Golden file not found: {goldenPath}. Run tests with -p:RegenerateGoldens=true to create it.", goldenPath);
 
 		var expected = File.ReadAllText(goldenPath, Encoding.UTF8);
 		var normalizedActual = NormalizeLineEndings(actual);
