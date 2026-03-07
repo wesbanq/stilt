@@ -566,42 +566,6 @@ namespace stilt
 		}
 
 		/// <summary>
-		/// Parses a pattern: name[: type['('type argument[','...]')']][','..] until a terminator.
-		/// Used for the left-hand side of variable assignments and function arguments.
-		/// </summary>
-		/// <param name="scope">Scope for resolving type names.</param>
-		/// <param name="terminators">Token types that end the pattern (not consumed).</param>
-		/// <returns>List of VarSymbols, one per pattern element.</returns>
-		private List<VarSymbol> ParsePattern(Scope scope, params TokenType[] terminators)
-		{
-			var terminatorSet = terminators.ToHashSet();
-			var result = new List<VarSymbol>();
-
-			while (true)
-			{
-				if (terminatorSet.Contains(Lex.CurrentToken.Which))
-					return result;
-
-				var nameToken = Lex.ExpectThis(TokenType.Identifier);
-				var name = nameToken.Range.Text;
-				TypeSymbol type = Builtins.Any;
-
-				if (Lex.CurrentIs(TokenType.Type))
-				{
-					Lex.Next();
-					type = ParseType(scope);
-				}
-
-				var sym = new VarSymbol(name, Lex.Filepath, type, nameToken);
-				result.Add(sym);
-
-				if (!Lex.CurrentIs(TokenType.Comma))
-					return result;
-				Lex.Next();
-			}
-		}
-
-		/// <summary>
 		/// Parses a type: '('type[','...]')' | identifier['('type[','...]')'].
 		/// Tuples use TypeSymbolFactory.GetTuple.
 		/// </summary>
@@ -723,30 +687,67 @@ namespace stilt
 			throw new SyntaxError(Lex.CurrentToken.Range, "Expected ':' type or ',' after name in tuple.");
 		}
 
-		private FuncDeclStmt ParseFuncDecl(Scope scope, Stmt innerStmt, Expr call)
+		/// <summary>
+		/// Parses a function signature: funcName(arg1: Type1, arg2, arg3: Type2, arg4): FuncReturnType
+		/// Stops when the argument bracket closes or the return type is read.
+		/// Returns (VarSymbol of type Callable, List of VarDeclStmt for each argument).
+		/// </summary>
+		private (VarSymbol FuncSymbol, List<VarDeclStmt> ArgDecls) ParseFuncSignature(Scope scope)
 		{
-			Scope newScope = new(scope);
+			var funcNameToken = Lex.ExpectThis(TokenType.Identifier);
+			var funcName = funcNameToken.Range.Text;
 
-			if (call is CallExpr callExpr && callExpr.Left is IdentityExpr id)
+			Lex.ExpectThis(TokenType.OpenBracket);
+
+			var argSymbols = new List<VarSymbol>();
+			var argDecls = new List<VarDeclStmt>();
+
+			while (!Lex.CurrentIs(TokenType.CloseBracket))
 			{
-				if (callExpr.Right is not (CommaExpr or IdentityExpr or null) || callExpr.Left is not IdentityExpr)
-					throw new MalformedDecl(callExpr.GetFullRangeOrThrow());
+				var startRange = Lex.CurrentToken.Range;
+				var syms = ParseNameTypePair(scope);
+				var endRange = Lex.PeekNext(-1).Range;
 
-				var arguments = GetIdentities(callExpr.Right).Select(e => e.Identity).ToList();
-
-				var leftId = callExpr.Left as IdentityExpr;
-				if (leftId is null)
-					throw new MalformedDecl(callExpr.GetFullRangeOrThrow());
-				var decl = new FuncDeclStmt(leftId.Identity.Name, Lex.Filepath, innerStmt)
+				var declRange = syms.Count == 1 ? (startRange + endRange) : (syms.Last().Identifier?.Range ?? startRange + endRange);
+				var decl = new VarDeclStmt
 				{
-					Scope = newScope,
+					Scope = scope,
+					Name = [.. syms],
+					Value = null,
+					IsConst = false,
+					InnerRange = declRange,
 				};
-				id.Identity = decl.Name;
-			
-				return decl;
+
+				foreach (var sym in syms)
+				{
+					sym.Source = Lex.Filepath;
+					sym.Declaration = decl;
+					argSymbols.Add(sym);
+				}
+
+				argDecls.Add(decl);
+				if (!Lex.CurrentIs(TokenType.Comma))
+					break;
+				
+				Lex.Next();
 			}
-			else
-				throw new MalformedDecl(call.GetFullRangeOrThrow());
+
+			Lex.ExpectThis(TokenType.CloseBracket);
+			TypeSymbol returnType = Builtins.Any;
+			if (Lex.CurrentIs(TokenType.Type))
+			{
+				Lex.Next();
+				returnType = ParseType(scope);
+			}
+
+			TypeSymbol argsTuple = argSymbols.Count == 0
+				? Builtins.None
+				: TypeSymbolFactory.GetTuple(argSymbols.Select(s => s.Type).ToList());
+
+			var callableType = TypeSymbolFactory.GetTypeSymbol(Builtins.Callable, [argsTuple, returnType]);
+			var funcVar = new VarSymbol(funcName, Lex.Filepath, callableType, funcNameToken);
+
+			return (funcVar, argDecls);
 		}
 
 		private ImportStmt ParseImport(Scope scope, Token firstToken)
@@ -1046,17 +1047,20 @@ namespace stilt
 				}
 				case TokenType.FuncDecl:
 				{
-					ParseExpr(ref newExpr, Lex.GoPast(TokenType.FuncDecl));
+					Lex.GoPast(TokenType.FuncDecl);
+					var (funcSymbol, argDecls) = ParseFuncSignature(currentScope);
+
+					Scope funcScope = new(currentScope);
+					foreach (var argDecl in argDecls)
+						AddToScope(argDecl.Name, funcScope);
+
 					Lex.SkipStmtSeparator();
-					var innerStmt = ParseStmt(currentScope);
+					var innerStmt = ParseStmt(funcScope);
 					if (innerStmt is null)
 						throw new SyntaxError(firstToken.Range, "Expected statement after function declaration.");
-					if (newExpr is null)
-						throw new MalformedExpr(firstToken.Range);
 
-					newStmt = ParseFuncDecl(currentScope, innerStmt, newExpr);
-					if (newStmt is FuncDeclStmt funcDecl)
-						AddToScope(funcDecl.Name, currentScope);
+					newStmt = new FuncDeclStmt(funcSymbol, innerStmt) { Scope = funcScope };
+					AddToScope(funcSymbol, currentScope);
 
 					break;
 				}
@@ -1319,7 +1323,8 @@ namespace stilt
 							TokenType.GreaterOrEqual, 
 							TokenType.Lesser, 
 							TokenType.LesserOrEqual, 
-							TokenType.Unequals);
+							TokenType.Unequals
+						);
 						var versionToken = Lex.ExpectThis(TokenType.StringLiteral);
 						var version = MCVersion.ParseMCVersion(versionToken.Range.Text);
 						if (version is null)

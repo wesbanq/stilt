@@ -220,13 +220,20 @@ namespace stilt.AST
 
 	public class FuncDeclStmt : DeclStmt
 	{
-
 		[SetsRequiredMembers]
 		public FuncDeclStmt(string name, string source, Stmt v, TypeSymbol? args = null, TypeSymbol? returns = null)
 		{
 			Value = v;
 			Name = new VarSymbol(name, source, new TypeSymbol(Builtins.Callable, [args ?? Builtins.Any, returns ?? Builtins.Any]))
 			{ Declaration = this };
+		}
+
+		[SetsRequiredMembers]
+		public FuncDeclStmt(VarSymbol funcSymbol, Stmt v)
+		{
+			Value = v;
+			Name = funcSymbol;
+			funcSymbol.Declaration = this;
 		}
 	}
 
