@@ -626,7 +626,7 @@ namespace stilt
 			var typeName = nameToken.Range.Text;
 
 			TypeSymbol[]? typeArgs = null;
-			if (Lex.NextIs(TokenType.OpenBracket))
+			if (Lex.CurrentIs(TokenType.OpenBracket))
 			{
 				Lex.Next();
 				var args = new List<TypeSymbol>();
@@ -650,62 +650,77 @@ namespace stilt
 			return typeArgs is not null ? new TypeSymbol(baseType, typeArgs) : baseType;
 		}
 
-		private VarDeclStmt ParseVarDecl(Scope scope, bool isConst, Expr expr)
+		/// <summary>
+		/// Parses a name-type pair or tuple of pairs.
+		/// Single: varName : Type | varName : Type(TypeArg, ...)
+		/// Tuple of pairs: (varName1 : Type1, varName2 : Type2)
+		/// Tuple names with tuple type: (varName1, varName2) : (Type1, Type2)
+		/// Only continues parsing multiple pairs when inside a tuple.
+		/// </summary>
+		private List<VarSymbol> ParseNameTypePair(Scope scope)
 		{
-			Expr? idExpr = null;
-			Expr? valExpr = null;
-
-			switch (expr)
+			if (!Lex.CurrentIs(TokenType.OpenBracket))
 			{
-				case AssignExpr assign:
+				var nameToken = Lex.ExpectThis(TokenType.Identifier);
+				var name = nameToken.Range.Text;
+				TypeSymbol type = Builtins.Any;
+				if (Lex.CurrentIs(TokenType.Type))
 				{
-					if (assign.Operation is not (null or TokenType.Type))
-						throw new SyntaxError(assign.GetInnerRangeOrFullRangeOrThrow(), "Cannot use self-assignment operators in variable definition");
-
-					if (assign.Left is null)
-						throw new MalformedExpr(assign.GetFullRangeOrThrow());
-					
-					idExpr = assign.Left;
-					valExpr = assign.Right;
-					break;
+					Lex.Next();
+					type = ParseType(scope);
 				}
-				case CommaExpr:
-				case IdentityExpr:
-				{
-					idExpr = expr;
-					valExpr = null;
-					break;
-				}
-				default:
-				{
-					throw new MalformedExpr(expr.GetFullRangeOrThrow());
-				}
+				return [new VarSymbol(name, Lex.Filepath, type, nameToken)];
 			}
 
-			if (valExpr is null && isConst)
-				throw new SyntaxError(idExpr.GetFullRangeOrThrow(), $"No value given to initialize constant.");
-			
-			var ids = GetIdentities(idExpr) ?? throw new Exception();
-			List<Symbol> syms = [.. ids.Select(i =>
-			{
-				var sym = i.Identity;
-				sym.Source = Lex.Filepath;
-				return sym;
-			})];
+			Lex.ExpectThis(TokenType.OpenBracket);
+			var firstName = Lex.ExpectThis(TokenType.Identifier);
 
-			VarDeclStmt decl = new()
+			if (Lex.CurrentIs(TokenType.Type))
 			{
-				Scope = scope,
-				IsConst = isConst,
-				Name = syms,
-				Value = valExpr,
-			};
-			foreach (var item in syms)
-			{
-				item.Declaration = decl;
+				Lex.Next();
+				var type = ParseType(scope);
+				var result = new List<VarSymbol> { new VarSymbol(firstName.Range.Text, Lex.Filepath, type, firstName) };
+				while (Lex.CurrentIs(TokenType.Comma))
+				{
+					Lex.Next();
+					var nameToken = Lex.ExpectThis(TokenType.Identifier);
+					Lex.ExpectThis(TokenType.Type);
+					var t = ParseType(scope);
+					result.Add(new VarSymbol(nameToken.Range.Text, Lex.Filepath, t, nameToken));
+				}
+				Lex.ExpectThis(TokenType.CloseBracket);
+				return result;
 			}
 
-			return decl;
+			if (Lex.CurrentIs(TokenType.Comma) || Lex.CurrentIs(TokenType.CloseBracket))
+			{
+				var names = new List<(Token token, string text)> { (firstName, firstName.Range.Text) };
+				while (Lex.CurrentIs(TokenType.Comma))
+				{
+					Lex.Next();
+					var nameToken = Lex.ExpectThis(TokenType.Identifier);
+					names.Add((nameToken, nameToken.Range.Text));
+				}
+				Lex.ExpectThis(TokenType.CloseBracket);
+				Lex.ExpectThis(TokenType.Type);
+				if (!Lex.CurrentIs(TokenType.OpenBracket))
+					throw new SyntaxError(Lex.CurrentToken.Range, "Expected tuple type '(Type1, Type2, ...)' for multiple names.");
+				var types = new List<TypeSymbol>();
+				Lex.Next();
+				while (true)
+				{
+					types.Add(ParseType(scope));
+					if (Lex.CurrentIs(TokenType.CloseBracket))
+						break;
+					Lex.ExpectThis(TokenType.Comma);
+				}
+				Lex.Next();
+				if (names.Count != types.Count)
+					throw new SyntaxError(Lex.CurrentToken.Range, $"Name count ({names.Count}) does not match type count ({types.Count}).");
+				return names.Select((n, i) => new VarSymbol(n.text, Lex.Filepath, types[i], n.token)).ToList();
+			}
+
+			throw new SyntaxError(Lex.CurrentToken.Range, "Expected ':' type or ',' after name in tuple.");
 		}
 
 		private FuncDeclStmt ParseFuncDecl(Scope scope, Stmt innerStmt, Expr call)
@@ -852,15 +867,23 @@ namespace stilt
 				}
 				case TokenType.Foreach:
 				{
-					firstToken = Lex.ExpectNext(TokenType.VarDecl);
-					firstToken = Lex.ExpectNext(TokenType.Identifier);
-					
-					Expr? loopVar = null;
-					ParseExpr(ref loopVar, firstToken);
-					if (loopVar is null)
-						throw new SyntaxError(firstToken.Range, "Expected variable declaration.");
+					Lex.ExpectNext(TokenType.VarDecl);
+					var loopSyms = ParseNameTypePair(newScope);
+					if (loopSyms.Count == 0)
+						throw new SyntaxError(Lex.CurrentToken.Range, "Expected variable declaration.");
+					foreach (var sym in loopSyms)
+						sym.Source = Lex.Filepath;
 
-					var lopVar = ParseVarDecl(newScope, false, loopVar);
+					VarDeclStmt lopVar = new()
+					{
+						Scope = newScope,
+						IsConst = false,
+						Name = [.. loopSyms],
+						Value = null,
+					};
+					foreach (var item in loopSyms)
+						item.Declaration = lopVar;
+
 					firstToken = Lex.Expect(TokenType.In);
 					
 					Expr? iteratorExpr = null;
@@ -990,16 +1013,34 @@ namespace stilt
 					Lex.GoPast(TokenType.VarDecl);
 					var isConst = specifiers.Any(t => t.Which == TokenType.ConstSpec);
 
-					ParseExpr(ref newExpr, Lex.CurrentToken);
-
-					if (newExpr is null)
-						throw new MalformedExpr(firstToken.Range);
-
 					Scope newScope = new(currentScope);
-					newStmt = ParseVarDecl(newScope, isConst, newExpr);
+					var syms = ParseNameTypePair(newScope);
 
-					if (newStmt is VarDeclStmt varDecl)
-						AddToScope(varDecl.Name, newScope);
+					Expr? valExpr = null;
+					if (Lex.CurrentIs(TokenType.Assign))
+					{
+						Lex.Next();
+						ParseExpr(ref valExpr, Lex.CurrentToken);
+					}
+
+					if (valExpr is null && isConst)
+						throw new SyntaxError(syms.First().Identifier?.Range ?? firstToken.Range, "No value given to initialize constant.");
+
+					foreach (var sym in syms)
+						sym.Source = Lex.Filepath;
+
+					VarDeclStmt varDecl = new()
+					{
+						Scope = newScope,
+						IsConst = isConst,
+						Name = [.. syms],
+						Value = valExpr,
+					};
+					foreach (var item in syms)
+						item.Declaration = varDecl;
+
+					newStmt = varDecl;
+					AddToScope(varDecl.Name, newScope);
 
 					break;
 				}

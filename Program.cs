@@ -192,6 +192,13 @@ namespace stilt
 				visited.Add(obj);
 			}
 
+			// Handle enums as simple values (avoid iterating; Enum implements IEnumerable and would dump every enum value)
+			if (type.IsEnum)
+			{
+				Console.WriteLine($"{indent}{type.Name} = {obj}");
+				return;
+			}
+
 			// Handle enumerable collections (arrays, lists, etc.) - but not strings
 			if (obj is IEnumerable enumerable && obj is not string)
 			{
@@ -242,7 +249,7 @@ namespace stilt
 			var valueType = value.GetType();
 
 			// Handle enumerable collections (arrays, lists, linked lists, etc.) - but not strings
-			if (value is IEnumerable enumerable && value is not string)
+			if (value is IEnumerable enumerable && value is not string && value is not Enum)
 			{
 				Console.WriteLine($"{indent}{name}:");
 				int index = 0;
