@@ -1067,68 +1067,63 @@ namespace stilt
 				case TokenType.TraitDecl:
 				{
 					Lex.GoPast(TokenType.TraitDecl);
-					var nameToken = Lex.CurrentToken;
+					var nameToken = Lex.ExpectThis(TokenType.Identifier);
 					var traitName = nameToken.Range.Text;
 
-					TraitSymbol? inheritedTrait = null;
-
-					if (Lex.NextIs(TokenType.Type))
-					{
-						Lex.Next();
-						do
-						{
-							var item = ParseType(currentScope);
-							if (item is TraitSymbol inherited)
-							{
-								if (inheritedTrait is not null)
-									throw new SyntaxError(item.Identifier?.Range ?? nameToken.Range, "Traits can only inherit from one other trait.");
-								inheritedTrait = inherited;
-							}
-							else
-								throw new SyntaxError(item.Identifier?.Range ?? nameToken.Range, "Traits can only inherit from other traits.");
-						}
-						while (Lex.CurrentIs(TokenType.LogicalAnd) && Lex.Next() is { });
-					}
-
-					if (!Lex.NextIs(TokenType.OpenCurlyBracket))
-						throw new UnexpectedToken(nameToken.Range, TokenType.OpenCurlyBracket, nameToken);
-					Lex.GoPast(TokenType.OpenCurlyBracket);
+					Lex.ExpectThis(TokenType.OpenCurlyBracket);
 					Lex.SkipStmtSeparator();
 
-					var traitSym = new TraitSymbol(traitName, Lex.Filepath, nameToken, inherits: inheritedTrait);
-					Scope newScope = new(currentScope);
-
-					var body = new CompoundStmt() { Scope = newScope, Statements = ParseBranch(newScope) };
-					foreach (var stmt in body.Statements)
+					var traitStmt = new TraitDeclStmt(traitName, Lex.Filepath) { Scope = currentScope };
+					Scope traitScope = new(currentScope);
+					while (!Lex.CurrentIs(TokenType.CloseCurlyBracket))
 					{
-						if (stmt is FuncDeclStmt funcDecl)
+						switch (Lex.CurrentToken.Which)
 						{
-							if (!funcDecl.Name.Specifiers.Contains(TokenType.PrivateSpec)
-								&& (funcDecl.Name.Specifiers.Contains(TokenType.PublicSpec)
-									|| !Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault)))
+							case TokenType.FuncDecl:
 							{
-								traitSym.Members.Add(funcDecl.Name);
+								Lex.GoPast(TokenType.FuncDecl);
+								var (sym, _) = ParseFuncSignature(traitScope);
+								sym.Source = Lex.Filepath;
+								sym.Declaration = traitStmt;
+								(traitStmt.Name as TypeSymbol)!.Members.Add(sym);
+								break;
+							}
+							case TokenType.VarDecl:
+							{
+								Lex.GoPast(TokenType.VarDecl);
+								var add = ParseNameTypePair(traitScope);
+								if (add.Count != 1) 
+									throw new SyntaxError(Lex.CurrentToken.Range, "Expected single variable declaration in trait body.");
+								var sym = add[0];
+								sym.Source = Lex.Filepath;
+								sym.Declaration = traitStmt;
+								(traitStmt.Name as TypeSymbol)!.Members.Add(sym);
+								break;
+							}
+							default:
+							{
+								throw new SyntaxError(Lex.CurrentToken.Range, "Expected variable or function declaration in trait body.");
 							}
 						}
-						else if (stmt is not null)
-							throw new SyntaxError(stmt.GetFullRangeOrThrow(), "Only function declarations are allowed in trait bodies.");
+						
+						Lex.SkipStmtSeparator();
 					}
 
-					AddToScope(traitSym, currentScope);
-					newStmt = new TraitDeclStmt(traitSym, body) { Scope = currentScope };
+					AddToScope(traitStmt.Name, currentScope);
+					newStmt = traitStmt;
 
 					break;
 				}
 				case TokenType.TypeDecl:
 				{
 					Lex.GoPast(TokenType.TypeDecl);
-					var nameToken = Lex.CurrentToken;
+					var nameToken = Lex.ExpectThis(TokenType.Identifier);
 					var typeName = nameToken.Range.Text;
 
 					TypeSymbol? inheritedType = null;
 					List<TraitSymbol> traits = [];
 
-					if (Lex.NextIs(TokenType.Type))
+					if (Lex.CurrentIs(TokenType.Type))
 					{
 						Lex.Next();
 						do
@@ -1146,7 +1141,7 @@ namespace stilt
 						while (Lex.CurrentIs(TokenType.LogicalAnd) && Lex.Next() is { });
 					}
 
-					if (!Lex.NextIs(TokenType.OpenCurlyBracket))
+					if (!Lex.CurrentIs(TokenType.OpenCurlyBracket))
 						throw new UnexpectedToken(nameToken.Range, TokenType.OpenCurlyBracket, nameToken);
 					Lex.GoPast(TokenType.OpenCurlyBracket);
 					Lex.SkipStmtSeparator();

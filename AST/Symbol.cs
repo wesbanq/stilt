@@ -100,6 +100,7 @@ namespace stilt.AST
 		[JsonIgnore]
 		public List<Symbol> Members => Base is null ? _members : Base.Members;
 		/// <summary>Traits implemented by this type (in addition to single inheritance).</summary>
+		[JsonIgnore]
 		public List<TraitSymbol> ImplementedTraits => Base is null ? _implementedTraits : Base.ImplementedTraits;
 		[JsonIgnore]
 		public TypeSymbol? Inherits => Base is null ? _inherits : Base.Inherits;
