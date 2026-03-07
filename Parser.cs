@@ -1111,6 +1111,8 @@ namespace stilt
 
 					AddToScope(traitStmt.Name, currentScope);
 					newStmt = traitStmt;
+					//increase depth so ParseBranch doesnt think the } closes the block
+					++_depth;
 
 					break;
 				}
@@ -1469,7 +1471,7 @@ namespace stilt
 					if (Lex.CurrentIs(TokenType.EOF))
 					{
 						if (startingDepth != 1)
-							throw new SyntaxError(firstToken.Range, "Unclosed bracket.");
+							throw new SyntaxError(firstToken.Range, "Unclosed bracket.", ErrorSeverity.Critical);
 						break;
 					}
 					if (Lex.CurrentIs(TokenType.CloseCurlyBracket))
@@ -1487,7 +1489,7 @@ namespace stilt
 						if (_depth == startingDepth)
 							break;
 						// _depth < startingDepth: invalid (extra '}' or corrupted state)
-						throw new SyntaxError(Lex.CurrentToken.Range, "Unmatched closing bracket.");
+						throw new SyntaxError(Lex.CurrentToken.Range, "Unmatched closing bracket.", ErrorSeverity.Critical);
 					}
 
 					Lex.Next();
@@ -1526,7 +1528,7 @@ namespace stilt
 							if (_depth == startingDepth)
 								break;
 							// _depth < startingDepth: invalid (extra '}' or corrupted state)
-							throw new SyntaxError(Lex.CurrentToken.Range, "Unmatched closing bracket.");
+							throw new SyntaxError(Lex.CurrentToken.Range, "Unmatched closing bracket.", ErrorSeverity.Critical);
 						}
 
 						Lex.Next();
