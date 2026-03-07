@@ -1,2 +1,2 @@
-# a comment
-var a = 1
+# line comment
+var a = ## mid-statement ## 1
