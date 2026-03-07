@@ -6,3 +6,15 @@ func b(arg1 : Int, arg2 : List(Int)) : String
 {
     return "sd"
 }
+
+trait TRAIT1 {
+    var vairaible1
+    func get(): Int
+    func set(val: Int): None
+}
+
+type NEWTYPE : TRAIT1 {
+    var a
+}
+
+signal
