@@ -15,7 +15,7 @@ namespace stilt.AST
 			var currentScope = this;
 			while (currentScope is not null)
 			{
-				var found = currentScope.Symbols.Find(s => s.Name == name);
+				var found = currentScope.Symbols.Find(s => s?.Name.Equals(name) ?? throw new Exception($"NULLLSDASD {name} "));
 				if (found is not null) return found;
 				currentScope = currentScope.Parent;
 			}
