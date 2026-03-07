@@ -1,0 +1,6 @@
+var a: Int = 2
+const var b : Int
+var c : Array(String)
+var d : A(Int, String, Thing, DGDS)
+var (e: Int, f: Array(Array(Int)))
+var (g, h): (Array(Int), Int)
