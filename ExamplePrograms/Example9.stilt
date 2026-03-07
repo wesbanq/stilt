@@ -1,0 +1,8 @@
+func a() {
+    return 6
+}
+
+func b(arg1 : Int, arg2 : List(Int)) : String 
+{
+    return "sd"
+}
