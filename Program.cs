@@ -1,4 +1,3 @@
-using Newtonsoft.Json.Serialization;
 using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -319,53 +318,9 @@ namespace stilt
 			return str;
 		}
 
-		public enum ExclusionPreset
-		{ None, Base, Ast, Lexer }
-
-		private static IEnumerable<string>? GetExcludedPropertyNames(ExclusionPreset preset)
+		private static void WriteObjectToJson(object? obj, string filepath, CompilerJsonSerializer.ExclusionPreset preset = CompilerJsonSerializer.ExclusionPreset.None)
 		{
-			IEnumerable<string> baseProps = ["FullRange", "InnerRange", "TextLines", "StartLineAndColumn", "EndLineAndColumn", "Length"];
-			return preset switch
-			{
-				ExclusionPreset.None => null,
-				ExclusionPreset.Base => baseProps,
-				ExclusionPreset.Ast => baseProps.Concat(new[] { "Scope", "RootScope", "Args" }),
-				ExclusionPreset.Lexer => baseProps.Concat(new[] { "Filepath", "Args", "CurrentToken", "CurrentPos", "Text" }),
-				_ => null
-			};
-		}
-
-		private static void WriteObjectToJson(object? obj, string filepath, ExclusionPreset preset = ExclusionPreset.None)
-		{
-			var settings = new JsonSerializerSettings
-			{
-				ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
-				Formatting = Formatting.Indented
-			};
-			if (GetExcludedPropertyNames(preset) is { } names && names.Any())
-			{
-				settings.ContractResolver = new ExcludePropertiesContractResolver(names);
-			}
-			string json = JsonConvert.SerializeObject(obj, settings);
-			File.WriteAllText(filepath, json);
-		}
-
-		private sealed class ExcludePropertiesContractResolver : DefaultContractResolver
-		{
-			private readonly HashSet<string> _exclude;
-
-			internal ExcludePropertiesContractResolver(IEnumerable<string> propertyNames)
-			{
-				_exclude = new HashSet<string>(propertyNames, StringComparer.Ordinal);
-			}
-
-			protected override JsonProperty CreateProperty(MemberInfo member, MemberSerialization memberSerialization)
-			{
-				var prop = base.CreateProperty(member, memberSerialization);
-				if (prop.PropertyName is { } name && _exclude.Contains(name))
-					prop.ShouldSerialize = _ => false;
-				return prop;
-			}
+			File.WriteAllText(filepath, CompilerJsonSerializer.SerializeToJson(obj, preset));
 		}
 
 		static int Main(string[] rawArgs)
@@ -389,9 +344,9 @@ namespace stilt
 						compiler.WriteTimerReadout();
 
 					if (args.JsonDumpFilepath is not null)
-						WriteObjectToJson(compiler.Files.Select(p => p.ParserResult!.Statements).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+						WriteObjectToJson(compiler.Files.Select(p => p.ParserResult!.Statements).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_statements.json"), CompilerJsonSerializer.ExclusionPreset.Ast);
 					if (args.JsonDumpFilepath is not null && compiler.Files.OfType<ParsedFile>().Any(f => f.Lexer is not null))
-						WriteObjectToJson(compiler.Files.OfType<ParsedFile>().Where(f => f.Lexer is not null).Select(f => f.Lexer!.Tokens).ToList(), Path.Combine(args.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+						WriteObjectToJson(compiler.Files.OfType<ParsedFile>().Where(f => f.Lexer is not null).Select(f => f.Lexer!.Tokens).ToList(), Path.Combine(args.JsonDumpFilepath, "lexer_tokens.json"), CompilerJsonSerializer.ExclusionPreset.Lexer);
 					if (args.JsonDumpFilepath is not null)
 						WriteObjectToJson(compiler.Files.Select(f => f.ParserResult!.CompilationIssues).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_compilation_issues.json"));
 
@@ -404,7 +359,7 @@ namespace stilt
 					do Console.WriteLine($"{lex.CurrentPos}: {t.Which}"); while ((t = lex.Next()).Which != TokenType.EOF);
 
 					if (args.JsonDumpFilepath is not null)
-						WriteObjectToJson(lex.Tokens, Path.Combine(args.JsonDumpFilepath, "lexer_tokens.json"), ExclusionPreset.Lexer);
+						WriteObjectToJson(lex.Tokens, Path.Combine(args.JsonDumpFilepath, "lexer_tokens.json"), CompilerJsonSerializer.ExclusionPreset.Lexer);
 						
 					break;
 				case ProgramCommand.Preprocess:
@@ -434,7 +389,7 @@ namespace stilt
 						comp.WriteTimerReadout();
 
 					if (args.JsonDumpFilepath is not null)
-						WriteObjectToJson(comp.Files.Select(f => f.ParserResult!.Statements).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_statements.json"), ExclusionPreset.Ast);
+						WriteObjectToJson(comp.Files.Select(f => f.ParserResult!.Statements).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_statements.json"), CompilerJsonSerializer.ExclusionPreset.Ast);
 					
 					break;
 				}
@@ -452,7 +407,7 @@ namespace stilt
 					Dump(ir.Result.MainBlock, expanded: args.ExpandedDump);
 
 					if (args.JsonDumpFilepath is not null)
-						WriteObjectToJson(ir.Result.MainBlock, Path.Combine(args.JsonDumpFilepath, "ir_main_block.json"), ExclusionPreset.Ast);
+						WriteObjectToJson(ir.Result.MainBlock, Path.Combine(args.JsonDumpFilepath, "ir_main_block.json"), CompilerJsonSerializer.ExclusionPreset.Ast);
 
 					break;
 				}

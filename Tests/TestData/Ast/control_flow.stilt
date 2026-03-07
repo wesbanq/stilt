@@ -1,0 +1,10 @@
+# if/else and blocks
+var a = 2
+var b = 4
+if a ## condition ## < b {
+	var x = 1
+} else {
+	var x = 2
+}
+{ var inner = 1 }
+var outer = 2
