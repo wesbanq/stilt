@@ -1,0 +1,7 @@
+# vars and arithmetic
+var a = 1
+var b = 2
+var c = 4
+var x = a ## sum ## + c
+var n = 0
+n = n ## increment ## + 1
