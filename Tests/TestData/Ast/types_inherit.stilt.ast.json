@@ -1,0 +1,104 @@
+﻿[
+  {
+    "Name": {
+      "Base": null,
+      "Arguments": null,
+      "Name": "A",
+      "Specifiers": [],
+      "Members": [
+        {
+          "Type": {
+            "Base": null,
+            "Arguments": null,
+            "Name": "Any",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "a",
+          "Specifiers": [
+            75
+          ]
+        }
+      ]
+    },
+    "Value": {
+      "Statements": [
+        {
+          "Name": [
+            {
+              "Type": {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Any",
+                "Specifiers": [],
+                "Members": []
+              },
+              "Name": "a",
+              "Specifiers": [
+                75
+              ]
+            }
+          ],
+          "Value": null,
+          "IsConst": false,
+          "Specifiers": [],
+          "Decorators": []
+        }
+      ],
+      "Decorators": []
+    },
+    "Specifiers": [],
+    "Decorators": []
+  },
+  {
+    "Name": {
+      "Base": null,
+      "Arguments": null,
+      "Name": "B",
+      "Specifiers": [],
+      "Members": [
+        {
+          "Type": {
+            "Base": null,
+            "Arguments": null,
+            "Name": "Any",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "b",
+          "Specifiers": [
+            75
+          ]
+        }
+      ]
+    },
+    "Value": {
+      "Statements": [
+        {
+          "Name": [
+            {
+              "Type": {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Any",
+                "Specifiers": [],
+                "Members": []
+              },
+              "Name": "b",
+              "Specifiers": [
+                75
+              ]
+            }
+          ],
+          "Value": null,
+          "IsConst": false,
+          "Specifiers": [],
+          "Decorators": []
+        }
+      ],
+      "Decorators": []
+    },
+    "Specifiers": [],
+    "Decorators": []
+  }
+]

@@ -1,0 +1,12 @@
+# trait and type implementing it
+trait TRAIT1 {
+	var v1
+	func get(): Int
+	func set(val: Int): None
+}
+type NEWTYPE : TRAIT1 {
+	var a
+	var v1
+	func get(): Int {}
+	func set(val: Int): None {}
+}

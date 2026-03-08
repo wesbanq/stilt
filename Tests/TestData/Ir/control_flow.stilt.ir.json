@@ -8,7 +8,7 @@
           "Arguments": null,
           "Name": "Whole",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "_t0",
         "Specifiers": []
@@ -28,7 +28,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "a",
         "Specifiers": []
@@ -42,7 +42,7 @@
               "Arguments": null,
               "Name": "Whole",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "_t0",
             "Specifiers": []
@@ -57,7 +57,7 @@
           "Arguments": null,
           "Name": "Whole",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "_t1",
         "Specifiers": []
@@ -77,7 +77,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "b",
         "Specifiers": []
@@ -91,7 +91,7 @@
               "Arguments": null,
               "Name": "Whole",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "_t1",
             "Specifiers": []
@@ -106,7 +106,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "_t2",
         "Specifiers": []
@@ -120,7 +120,7 @@
               "Arguments": null,
               "Name": "Any",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "a",
             "Specifiers": []
@@ -137,7 +137,7 @@
               "Arguments": null,
               "Name": "Any",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "b",
             "Specifiers": []
@@ -156,7 +156,7 @@
               "Arguments": null,
               "Name": "Any",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "_t2",
             "Specifiers": []
@@ -173,7 +173,7 @@
                     "Arguments": null,
                     "Name": "Whole",
                     "Specifiers": [],
-                    "ImplementedTraits": []
+                    "Members": []
                   },
                   "Name": "_t3",
                   "Specifiers": []
@@ -193,7 +193,7 @@
                     "Arguments": null,
                     "Name": "Any",
                     "Specifiers": [],
-                    "ImplementedTraits": []
+                    "Members": []
                   },
                   "Name": "x",
                   "Specifiers": []
@@ -207,7 +207,7 @@
                         "Arguments": null,
                         "Name": "Whole",
                         "Specifiers": [],
-                        "ImplementedTraits": []
+                        "Members": []
                       },
                       "Name": "_t3",
                       "Specifiers": []
@@ -232,7 +232,7 @@
               "Arguments": null,
               "Name": "Any",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "_t2",
             "Specifiers": []
@@ -249,7 +249,7 @@
                     "Arguments": null,
                     "Name": "Whole",
                     "Specifiers": [],
-                    "ImplementedTraits": []
+                    "Members": []
                   },
                   "Name": "_t4",
                   "Specifiers": []
@@ -269,7 +269,7 @@
                     "Arguments": null,
                     "Name": "Any",
                     "Specifiers": [],
-                    "ImplementedTraits": []
+                    "Members": []
                   },
                   "Name": "x",
                   "Specifiers": []
@@ -283,7 +283,7 @@
                         "Arguments": null,
                         "Name": "Whole",
                         "Specifiers": [],
-                        "ImplementedTraits": []
+                        "Members": []
                       },
                       "Name": "_t4",
                       "Specifiers": []
@@ -304,7 +304,7 @@
           "Arguments": null,
           "Name": "Whole",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "_t5",
         "Specifiers": []
@@ -324,7 +324,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "inner",
         "Specifiers": []
@@ -338,7 +338,7 @@
               "Arguments": null,
               "Name": "Whole",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "_t5",
             "Specifiers": []
@@ -353,7 +353,7 @@
           "Arguments": null,
           "Name": "Whole",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "_t6",
         "Specifiers": []
@@ -373,7 +373,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "outer",
         "Specifiers": []
@@ -387,7 +387,7 @@
               "Arguments": null,
               "Name": "Whole",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "_t6",
             "Specifiers": []
@@ -407,7 +407,7 @@
               "Arguments": null,
               "Name": "Whole",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "_t3",
             "Specifiers": []
@@ -427,7 +427,7 @@
               "Arguments": null,
               "Name": "Any",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "x",
             "Specifiers": []
@@ -441,7 +441,7 @@
                   "Arguments": null,
                   "Name": "Whole",
                   "Specifiers": [],
-                  "ImplementedTraits": []
+                  "Members": []
                 },
                 "Name": "_t3",
                 "Specifiers": []
@@ -462,7 +462,7 @@
               "Arguments": null,
               "Name": "Whole",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "_t4",
             "Specifiers": []
@@ -482,7 +482,7 @@
               "Arguments": null,
               "Name": "Any",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "x",
             "Specifiers": []
@@ -496,7 +496,7 @@
                   "Arguments": null,
                   "Name": "Whole",
                   "Specifiers": [],
-                  "ImplementedTraits": []
+                  "Members": []
                 },
                 "Name": "_t4",
                 "Specifiers": []

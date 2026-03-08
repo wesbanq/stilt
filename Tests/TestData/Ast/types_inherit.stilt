@@ -1,0 +1,7 @@
+# type inheritance
+type A {
+	var a
+}
+type B : A {
+	var b
+}
