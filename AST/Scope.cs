@@ -5,6 +5,13 @@ namespace stilt.AST
 		public Scope? Parent;
 		public List<Symbol> Symbols = [];
 
+		/// <summary>When true, symbols added to this scope (or a descendant) do not emit a shadow warning when they shadow a name from a parent scope. Set for type/trait body scopes.</summary>
+		public bool AllowShadowingFromParent { get; set; }
+
+		/// <summary>True if this scope or any ancestor has AllowShadowingFromParent.</summary>
+		public bool IsInScopeThatAllowsShadowingFromParent() =>
+			AllowShadowingFromParent || (Parent?.IsInScopeThatAllowsShadowingFromParent() ?? false);
+
 		public bool IsInScope(Symbol sym)
 		{
 			return FindSymbolByName(sym.Name) is not null;
