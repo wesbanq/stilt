@@ -534,7 +534,7 @@ namespace stilt
 					?? throw new Exception();
 				if (foundSymbol.IsBuiltin)
 					NewError(new ShadowedBuiltinSymbol(range, symbol));
-				else
+				else if (!scope.IsInScopeThatAllowsShadowingFromParent())
 					NewError(new ShadowedSymbol(range, symbol));
 			}
 			scope.AddSymbol(symbol);
@@ -990,21 +990,26 @@ namespace stilt
 			return new DecoratorObject(decoratorType, args);
 		}
 
-		private Stmt? ParseStmt(Scope currentScope)
+		private List<Token> CollectSpecifiers(ref Token firstToken)
 		{
-			var firstToken = Lex.CurrentToken;
-
-			Expr? newExpr = null;
 			List<Token> specifiers = [];
-
 			while (firstToken.IsSpecifier)
 			{
-				if (specifiers.Any(t => t.Which == firstToken.Which))
+				var tt = firstToken.Which;
+				if (specifiers.Any(t => t.Which == tt))
 					throw new SyntaxError(firstToken.Range, "Duplicate specifiers.");
 				specifiers.Add(firstToken);
 				firstToken = Lex.Next();
 			}
+			return specifiers;
+		}
 
+		private Stmt? ParseStmt(Scope currentScope)
+		{
+			var firstToken = Lex.CurrentToken;
+			List<Token> specifiers = CollectSpecifiers(ref firstToken);
+
+			Expr? newExpr = null;
 			Stmt? newStmt = null;
 
 			switch (firstToken.Which)
@@ -1074,7 +1079,7 @@ namespace stilt
 					Lex.SkipStmtSeparator();
 
 					var traitStmt = new TraitDeclStmt(traitName, Lex.Filepath) { Scope = currentScope };
-					Scope traitScope = new(currentScope);
+					Scope traitScope = new(currentScope) { AllowShadowingFromParent = true };
 					while (!Lex.CurrentIs(TokenType.CloseCurlyBracket))
 					{
 						switch (Lex.CurrentToken.Which)
@@ -1149,7 +1154,7 @@ namespace stilt
 					Lex.SkipStmtSeparator();
 
 					var typeSym = new TypeSymbol(typeName, Lex.Filepath, nameToken, inherits: inheritedType, implementedTraits: traits);
-					Scope newScope = new(currentScope);
+					Scope newScope = new(currentScope) { AllowShadowingFromParent = true };
 
 					var selfSym = new VarSymbol("self", typeSym) { Source = Lex.Filepath, Specifiers = [TokenType.PrivateSpec] };
 					newScope.AddSymbol(selfSym);
@@ -1159,28 +1164,32 @@ namespace stilt
 					{
 						if (stmt is VarDeclStmt vd)
 						{
-							foreach (var sym in vd.Name)
+							if (vd.Name.Count != 1)
+								throw new SyntaxError(vd.Name.First().Identifier?.Range ?? firstToken.Range, "Expected single variable declaration in type body.");
+							var sym = vd.Name[0];
+
+							typeSym.Members.Add(sym);
+							if (!sym.Specifiers.Contains(TokenType.PrivateSpec) && !sym.Specifiers.Contains(TokenType.PublicSpec))
 							{
-								if (!sym.Specifiers.Contains(TokenType.PrivateSpec)
-									&& (sym.Specifiers.Contains(TokenType.PublicSpec)
-										|| !Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault)))
-								{
-									typeSym.Members.Add(sym);
-								}
+								if (Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault))
+									sym.Specifiers.Add(TokenType.PrivateSpec);
+								else
+									sym.Specifiers.Add(TokenType.PublicSpec);
 							}
-								
 						}
 						else if (stmt is DeclStmt decl)
 						{
-								if (!decl.Name.Specifiers.Contains(TokenType.PrivateSpec)
-									&& (decl.Name.Specifiers.Contains(TokenType.PublicSpec)
-										|| !Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault)))
-								{
-									typeSym.Members.Add(decl.Name);
-								}
+							typeSym.Members.Add(decl.Name);
+							if (!decl.Name.Specifiers.Contains(TokenType.PrivateSpec) && !decl.Name.Specifiers.Contains(TokenType.PublicSpec))
+							{
+								if (Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault))
+									decl.Name.Specifiers.Add(TokenType.PrivateSpec);
+								else
+									decl.Name.Specifiers.Add(TokenType.PublicSpec);
+							}
 						}
 						else if (stmt is not null)
-							throw new SyntaxError(stmt.GetFullRangeOrThrow(), "Only variable declarations and function declarations are allowed in type bodies.");
+							throw new SyntaxError(stmt.GetFullRangeOrThrow(), "Only declarations are allowed in type bodies.");
 					}
 
 					CheckTraitMethods(typeSym);

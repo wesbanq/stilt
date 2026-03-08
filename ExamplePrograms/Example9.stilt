@@ -13,8 +13,10 @@ trait TRAIT1 {
     func set(val: Int): None
 }
 
-type NEWTYPE : TRAIT1 {
+type NEWTYPE: TRAIT1 {
     var a
+    var vairaible1
+    func get(): Int {}
+    func set(val: Int): None {}
+    func gset() {}
 }
-
-signal
