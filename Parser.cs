@@ -1168,6 +1168,9 @@ namespace stilt
 								throw new SyntaxError(vd.Name.First().Identifier?.Range ?? firstToken.Range, "Expected single variable declaration in type body.");
 							var sym = vd.Name[0];
 
+							if (typeSym.GetMember(sym.Name) is not null && !sym.Specifiers.Contains(TokenType.OverrideSpec))
+								NewError(new ShadowedClassMember(sym.Identifier?.Range ?? firstToken.Range, sym));
+
 							typeSym.Members.Add(sym);
 							if (!sym.Specifiers.Contains(TokenType.PrivateSpec) && !sym.Specifiers.Contains(TokenType.PublicSpec))
 							{
@@ -1179,6 +1182,9 @@ namespace stilt
 						}
 						else if (stmt is DeclStmt decl)
 						{
+							if (typeSym.GetMember(decl.Name.Name) is not null && !decl.Name.Specifiers.Contains(TokenType.OverrideSpec))
+								NewError(new ShadowedClassMember(decl.Name.Identifier?.Range ?? firstToken.Range, decl.Name));
+
 							typeSym.Members.Add(decl.Name);
 							if (!decl.Name.Specifiers.Contains(TokenType.PrivateSpec) && !decl.Name.Specifiers.Contains(TokenType.PublicSpec))
 							{

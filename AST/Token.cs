@@ -332,10 +332,6 @@ namespace stilt
 		TraitDecl,
 
 		[Unimplemented]
-		[Symbol("impl")]
-		ImplDef,
-
-		[Unimplemented]
 		[Symbol("extend")]
 		ExtensionDef,
 
@@ -370,6 +366,10 @@ namespace stilt
 		[Specifier]
 		[Symbol("const")]
 		ConstSpec,
+
+		[Specifier]
+		[Symbol("override")]
+		OverrideSpec,
 
 		[Unimplemented]
 		[UnaryOperator(13)]
