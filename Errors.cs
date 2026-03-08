@@ -161,6 +161,13 @@ namespace stilt.Errors
 		{ }
 	}
 
+	public class ShadowedClassMember : SyntaxWarning
+	{
+		public ShadowedClassMember(FileRange pos, Symbol symbol)
+			: base(pos, $"Shadowed class member: '{symbol.Name}'. Consider using 'override' to suppress this warning.")
+		{ }
+	}
+
 	public class ShadowedBuiltinSymbol : SyntaxWarning
 	{
 		public ShadowedBuiltinSymbol(FileRange pos, Symbol symbol)

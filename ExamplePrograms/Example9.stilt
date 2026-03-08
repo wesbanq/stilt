@@ -20,3 +20,11 @@ type NEWTYPE: TRAIT1 {
     func set(val: Int): None {}
     func gset() {}
 }
+
+type A {
+    var a
+}
+
+type B : A {
+    var a
+}

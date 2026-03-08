@@ -179,6 +179,19 @@ namespace stilt.AST
 			return false;
 		}
 
+		public Symbol? GetMember(string name)
+		{
+			var currentType = this;
+			while (currentType is not null)
+			{
+				var member = currentType.Members.Find(m => m.Name == name);
+				if (member is not null)
+					return member;
+				currentType = currentType.Inherits;
+			}
+			return null;
+		}
+
 		public bool Implements(TraitSymbol trait)
 		{
 			if (!trait.InheritsFrom(Builtins.Trait))
