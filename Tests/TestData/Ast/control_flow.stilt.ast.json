@@ -7,7 +7,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "a",
         "Specifiers": []
@@ -20,9 +20,9 @@
         "Arguments": null,
         "Name": "Whole",
         "Specifiers": [],
-        "ImplementedTraits": []
+        "Members": []
       },
-      "Bracketed": false,
+      "Bracketed": true,
       "Explicit": false,
       "Precedence": 0
     },
@@ -38,7 +38,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "b",
         "Specifiers": []
@@ -51,9 +51,9 @@
         "Arguments": null,
         "Name": "Whole",
         "Specifiers": [],
-        "ImplementedTraits": []
+        "Members": []
       },
-      "Bracketed": false,
+      "Bracketed": true,
       "Explicit": false,
       "Precedence": 0
     },
@@ -70,7 +70,7 @@
             "Arguments": null,
             "Name": "Any",
             "Specifiers": [],
-            "ImplementedTraits": []
+            "Members": []
           },
           "Name": "a",
           "Specifiers": []
@@ -80,7 +80,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Bracketed": false,
         "Explicit": false,
@@ -93,7 +93,7 @@
             "Arguments": null,
             "Name": "Any",
             "Specifiers": [],
-            "ImplementedTraits": []
+            "Members": []
           },
           "Name": "b",
           "Specifiers": []
@@ -103,7 +103,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Bracketed": false,
         "Explicit": false,
@@ -124,7 +124,7 @@
         "Arguments": null,
         "Name": "Any",
         "Specifiers": [],
-        "ImplementedTraits": []
+        "Members": []
       },
       "Bracketed": true,
       "Explicit": false,
@@ -140,7 +140,7 @@
                 "Arguments": null,
                 "Name": "Any",
                 "Specifiers": [],
-                "ImplementedTraits": []
+                "Members": []
               },
               "Name": "x",
               "Specifiers": []
@@ -153,9 +153,9 @@
               "Arguments": null,
               "Name": "Whole",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
-            "Bracketed": false,
+            "Bracketed": true,
             "Explicit": false,
             "Precedence": 0
           },
@@ -176,7 +176,7 @@
                 "Arguments": null,
                 "Name": "Any",
                 "Specifiers": [],
-                "ImplementedTraits": []
+                "Members": []
               },
               "Name": "x",
               "Specifiers": []
@@ -189,9 +189,9 @@
               "Arguments": null,
               "Name": "Whole",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
-            "Bracketed": false,
+            "Bracketed": true,
             "Explicit": false,
             "Precedence": 0
           },
@@ -214,7 +214,7 @@
               "Arguments": null,
               "Name": "Any",
               "Specifiers": [],
-              "ImplementedTraits": []
+              "Members": []
             },
             "Name": "inner",
             "Specifiers": []
@@ -227,9 +227,9 @@
             "Arguments": null,
             "Name": "Whole",
             "Specifiers": [],
-            "ImplementedTraits": []
+            "Members": []
           },
-          "Bracketed": false,
+          "Bracketed": true,
           "Explicit": false,
           "Precedence": 0
         },
@@ -248,7 +248,7 @@
           "Arguments": null,
           "Name": "Any",
           "Specifiers": [],
-          "ImplementedTraits": []
+          "Members": []
         },
         "Name": "outer",
         "Specifiers": []
@@ -261,9 +261,9 @@
         "Arguments": null,
         "Name": "Whole",
         "Specifiers": [],
-        "ImplementedTraits": []
+        "Members": []
       },
-      "Bracketed": false,
+      "Bracketed": true,
       "Explicit": false,
       "Precedence": 0
     },

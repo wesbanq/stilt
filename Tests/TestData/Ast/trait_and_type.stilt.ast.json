@@ -1,0 +1,369 @@
+﻿[
+  {
+    "Name": {
+      "Base": null,
+      "Arguments": null,
+      "Name": "TRAIT1",
+      "Specifiers": [],
+      "Members": [
+        {
+          "Type": {
+            "Base": null,
+            "Arguments": null,
+            "Name": "Any",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "v1",
+          "Specifiers": []
+        },
+        {
+          "Type": {
+            "Base": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Callable",
+              "Specifiers": [],
+              "Members": []
+            },
+            "Arguments": [
+              {
+                "Base": null,
+                "Arguments": null,
+                "Name": "None",
+                "Specifiers": [],
+                "Members": []
+              },
+              {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Int",
+                "Specifiers": [],
+                "Members": []
+              }
+            ],
+            "Name": "Callable",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "get",
+          "Specifiers": []
+        },
+        {
+          "Type": {
+            "Base": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Callable",
+              "Specifiers": [],
+              "Members": []
+            },
+            "Arguments": [
+              {
+                "Base": {
+                  "Base": null,
+                  "Arguments": null,
+                  "Name": "Tuple_1",
+                  "Specifiers": [],
+                  "Members": []
+                },
+                "Arguments": [
+                  {
+                    "Base": null,
+                    "Arguments": null,
+                    "Name": "Int",
+                    "Specifiers": [],
+                    "Members": []
+                  }
+                ],
+                "Name": "Tuple_1",
+                "Specifiers": [],
+                "Members": []
+              },
+              {
+                "Base": null,
+                "Arguments": null,
+                "Name": "None",
+                "Specifiers": [],
+                "Members": []
+              }
+            ],
+            "Name": "Callable",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "set",
+          "Specifiers": []
+        }
+      ]
+    },
+    "Value": null,
+    "Specifiers": [],
+    "Decorators": []
+  },
+  {
+    "Name": {
+      "Base": null,
+      "Arguments": null,
+      "Name": "NEWTYPE",
+      "Specifiers": [],
+      "Members": [
+        {
+          "Type": {
+            "Base": null,
+            "Arguments": null,
+            "Name": "Any",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "a",
+          "Specifiers": [
+            75
+          ]
+        },
+        {
+          "Type": {
+            "Base": null,
+            "Arguments": null,
+            "Name": "Any",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "v1",
+          "Specifiers": [
+            75
+          ]
+        },
+        {
+          "Type": {
+            "Base": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Callable",
+              "Specifiers": [],
+              "Members": []
+            },
+            "Arguments": [
+              {
+                "Base": null,
+                "Arguments": null,
+                "Name": "None",
+                "Specifiers": [],
+                "Members": []
+              },
+              {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Int",
+                "Specifiers": [],
+                "Members": []
+              }
+            ],
+            "Name": "Callable",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "get",
+          "Specifiers": [
+            75
+          ]
+        },
+        {
+          "Type": {
+            "Base": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Callable",
+              "Specifiers": [],
+              "Members": []
+            },
+            "Arguments": [
+              {
+                "Base": {
+                  "Base": null,
+                  "Arguments": null,
+                  "Name": "Tuple_1",
+                  "Specifiers": [],
+                  "Members": []
+                },
+                "Arguments": [
+                  {
+                    "Base": null,
+                    "Arguments": null,
+                    "Name": "Int",
+                    "Specifiers": [],
+                    "Members": []
+                  }
+                ],
+                "Name": "Tuple_1",
+                "Specifiers": [],
+                "Members": []
+              },
+              {
+                "Base": null,
+                "Arguments": null,
+                "Name": "None",
+                "Specifiers": [],
+                "Members": []
+              }
+            ],
+            "Name": "Callable",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "set",
+          "Specifiers": [
+            75
+          ]
+        }
+      ]
+    },
+    "Value": {
+      "Statements": [
+        {
+          "Name": [
+            {
+              "Type": {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Any",
+                "Specifiers": [],
+                "Members": []
+              },
+              "Name": "a",
+              "Specifiers": [
+                75
+              ]
+            }
+          ],
+          "Value": null,
+          "IsConst": false,
+          "Specifiers": [],
+          "Decorators": []
+        },
+        {
+          "Name": [
+            {
+              "Type": {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Any",
+                "Specifiers": [],
+                "Members": []
+              },
+              "Name": "v1",
+              "Specifiers": [
+                75
+              ]
+            }
+          ],
+          "Value": null,
+          "IsConst": false,
+          "Specifiers": [],
+          "Decorators": []
+        },
+        {
+          "Name": {
+            "Type": {
+              "Base": {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Callable",
+                "Specifiers": [],
+                "Members": []
+              },
+              "Arguments": [
+                {
+                  "Base": null,
+                  "Arguments": null,
+                  "Name": "None",
+                  "Specifiers": [],
+                  "Members": []
+                },
+                {
+                  "Base": null,
+                  "Arguments": null,
+                  "Name": "Int",
+                  "Specifiers": [],
+                  "Members": []
+                }
+              ],
+              "Name": "Callable",
+              "Specifiers": [],
+              "Members": []
+            },
+            "Name": "get",
+            "Specifiers": [
+              75
+            ]
+          },
+          "Value": {
+            "Statements": [],
+            "Decorators": []
+          },
+          "Specifiers": [],
+          "Decorators": []
+        },
+        {
+          "Name": {
+            "Type": {
+              "Base": {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Callable",
+                "Specifiers": [],
+                "Members": []
+              },
+              "Arguments": [
+                {
+                  "Base": {
+                    "Base": null,
+                    "Arguments": null,
+                    "Name": "Tuple_1",
+                    "Specifiers": [],
+                    "Members": []
+                  },
+                  "Arguments": [
+                    {
+                      "Base": null,
+                      "Arguments": null,
+                      "Name": "Int",
+                      "Specifiers": [],
+                      "Members": []
+                    }
+                  ],
+                  "Name": "Tuple_1",
+                  "Specifiers": [],
+                  "Members": []
+                },
+                {
+                  "Base": null,
+                  "Arguments": null,
+                  "Name": "None",
+                  "Specifiers": [],
+                  "Members": []
+                }
+              ],
+              "Name": "Callable",
+              "Specifiers": [],
+              "Members": []
+            },
+            "Name": "set",
+            "Specifiers": [
+              75
+            ]
+          },
+          "Value": {
+            "Statements": [],
+            "Decorators": []
+          },
+          "Specifiers": [],
+          "Decorators": []
+        }
+      ],
+      "Decorators": []
+    },
+    "Specifiers": [],
+    "Decorators": []
+  }
+]

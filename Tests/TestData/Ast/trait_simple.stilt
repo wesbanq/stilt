@@ -1,0 +1,6 @@
+# trait with var and func signature
+trait T {
+	var x
+	func f()
+	func g(a: Int): None
+}

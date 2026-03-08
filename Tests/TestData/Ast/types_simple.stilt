@@ -1,0 +1,8 @@
+# simple type declarations
+type A {
+	var a
+	var b = 2
+}
+type B {
+	var a
+}

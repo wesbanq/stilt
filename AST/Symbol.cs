@@ -97,7 +97,7 @@ namespace stilt.AST
 		private List<TraitSymbol> _implementedTraits = [];
 		private int _argumentCount = 0;
 
-		[JsonIgnore]
+		// [JsonIgnore]
 		public List<Symbol> Members => Base is null ? _members : Base.Members;
 		/// <summary>Traits implemented by this type (in addition to single inheritance).</summary>
 		[JsonIgnore]
