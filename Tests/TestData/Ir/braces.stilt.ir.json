@@ -1,0 +1,883 @@
+﻿{
+  "Name": "main",
+  "Instructions": [
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t0",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 1
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "a",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t0",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t1",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 2
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "b",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t1",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t2",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 1
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "a",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t2",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t3",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 2
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "b",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t3",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t4",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 1
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "a",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t4",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t5",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 2
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "b",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t5",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t6",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 3
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "c",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t6",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t7",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 1
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "p",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t7",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t8",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 2
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "e",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t8",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t9",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 1
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "u",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t9",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t10",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 0
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "v",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t10",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": null,
+      "Opcode": 5,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Any",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "u",
+            "Specifiers": []
+          }
+        },
+        {
+          "_value": {
+            "Name": "main/if_0_then",
+            "Instructions": [
+              {
+                "Target": null,
+                "Opcode": 5,
+                "Operands": [
+                  {
+                    "_value": {
+                      "Type": {
+                        "Base": null,
+                        "Arguments": null,
+                        "Name": "Any",
+                        "Specifiers": [],
+                        "ImplementedTraits": []
+                      },
+                      "Name": "v",
+                      "Specifiers": []
+                    }
+                  },
+                  {
+                    "_value": {
+                      "Name": "main/if_0_then/if_0_then",
+                      "Instructions": [],
+                      "ChildBlocks": []
+                    }
+                  }
+                ]
+              },
+              {
+                "Target": null,
+                "Opcode": 10,
+                "Operands": [
+                  {
+                    "_value": {
+                      "Type": {
+                        "Base": null,
+                        "Arguments": null,
+                        "Name": "Any",
+                        "Specifiers": [],
+                        "ImplementedTraits": []
+                      },
+                      "Name": "v",
+                      "Specifiers": []
+                    }
+                  },
+                  {
+                    "_value": {
+                      "Name": "main/if_0_then/if_0_else",
+                      "Instructions": [],
+                      "ChildBlocks": []
+                    }
+                  }
+                ]
+              }
+            ],
+            "ChildBlocks": [
+              {
+                "Name": "main/if_0_then/if_0_then",
+                "Instructions": [],
+                "ChildBlocks": []
+              },
+              {
+                "Name": "main/if_0_then/if_0_else",
+                "Instructions": [],
+                "ChildBlocks": []
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "Target": null,
+      "Opcode": 10,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Any",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "u",
+            "Specifiers": []
+          }
+        },
+        {
+          "_value": {
+            "Name": "main/if_0_else",
+            "Instructions": [],
+            "ChildBlocks": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t11",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 1
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "a",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t11",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t12",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 2
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "b",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t12",
+            "Specifiers": []
+          }
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Whole",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "_t13",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "Type": "System.Int64, System.Private.CoreLib, Version=10.0.0.0, Culture=neutral, PublicKeyToken=7cec85d7bea7798e",
+          "Value": 0
+        }
+      ]
+    },
+    {
+      "Target": {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "x",
+        "Specifiers": []
+      },
+      "Opcode": 7,
+      "Operands": [
+        {
+          "_value": {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "ImplementedTraits": []
+            },
+            "Name": "_t13",
+            "Specifiers": []
+          }
+        }
+      ]
+    }
+  ],
+  "ChildBlocks": [
+    {
+      "Name": "main/if_0_then",
+      "Instructions": [
+        {
+          "Target": null,
+          "Opcode": 5,
+          "Operands": [
+            {
+              "_value": {
+                "Type": {
+                  "Base": null,
+                  "Arguments": null,
+                  "Name": "Any",
+                  "Specifiers": [],
+                  "ImplementedTraits": []
+                },
+                "Name": "v",
+                "Specifiers": []
+              }
+            },
+            {
+              "_value": {
+                "Name": "main/if_0_then/if_0_then",
+                "Instructions": [],
+                "ChildBlocks": []
+              }
+            }
+          ]
+        },
+        {
+          "Target": null,
+          "Opcode": 10,
+          "Operands": [
+            {
+              "_value": {
+                "Type": {
+                  "Base": null,
+                  "Arguments": null,
+                  "Name": "Any",
+                  "Specifiers": [],
+                  "ImplementedTraits": []
+                },
+                "Name": "v",
+                "Specifiers": []
+              }
+            },
+            {
+              "_value": {
+                "Name": "main/if_0_then/if_0_else",
+                "Instructions": [],
+                "ChildBlocks": []
+              }
+            }
+          ]
+        }
+      ],
+      "ChildBlocks": [
+        {
+          "Name": "main/if_0_then/if_0_then",
+          "Instructions": [],
+          "ChildBlocks": []
+        },
+        {
+          "Name": "main/if_0_then/if_0_else",
+          "Instructions": [],
+          "ChildBlocks": []
+        }
+      ]
+    },
+    {
+      "Name": "main/if_0_else",
+      "Instructions": [],
+      "ChildBlocks": []
+    }
+  ]
+}

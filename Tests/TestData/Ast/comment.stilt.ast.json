@@ -1,0 +1,33 @@
+﻿[
+  {
+    "Name": [
+      {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "ImplementedTraits": []
+        },
+        "Name": "a",
+        "Specifiers": []
+      }
+    ],
+    "Value": {
+      "Value": 1,
+      "Type": {
+        "Base": null,
+        "Arguments": null,
+        "Name": "Whole",
+        "Specifiers": [],
+        "ImplementedTraits": []
+      },
+      "Bracketed": false,
+      "Explicit": false,
+      "Precedence": 0
+    },
+    "IsConst": false,
+    "Specifiers": [],
+    "Decorators": []
+  }
+]

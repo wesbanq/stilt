@@ -1,0 +1,17 @@
+# consecutive blocks
+{var a = 1}{var b = 2}
+# newline before closing brace
+{var a = 1
+}{var b = 2}
+# mixed layout
+{var a = 1}{
+	var b = 2}var c = ## after block ## 3
+# nested
+{{{var p = 1}}}
+var e = 2
+var u = 1
+var v = 0
+if u {if v {} else {}} else {}
+# adjacent block and var
+{var a = 1}var b = 2
+{var x = 0}
