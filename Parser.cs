@@ -574,7 +574,7 @@ namespace stilt
 
 		private void CheckTraitMethods(TypeSymbol typeSym)
 		{
-			var traits = new List<TraitSymbol>(typeSym.ImplementedTraits);
+			var traits = new List<TypeSymbol>(typeSym.ImplementedTraits);
 
 			var typeMemberNames = new HashSet<string>();
 			var current = typeSym;
@@ -590,9 +590,7 @@ namespace stilt
 				foreach (var member in trait.Members)
 				{
 					if (!typeMemberNames.Contains(member.Name))
-					{
 						NewError(new UnimplementedTraitMethod(typeSym.Identifier?.Range, typeSym, trait, member.Name));
-					}
 				}
 			}
 		}
@@ -639,6 +637,83 @@ namespace stilt
 
 			var baseType = TypeSymbolFactory.GetTempTypeSymbol(typeName, typeArgs);
 			return TypeSymbolFactory.GetTypeSymbol(baseType, typeArgs);
+		}
+
+		/// <summary>
+		/// Parses the inheritance and implemented traits for a type declaration after the name.
+		/// Example: <c>: BaseType & TraitA & TraitB</c>.
+		/// Returns the single inherited type (or null) and a list of trait symbols.
+		/// </summary>
+		private (TypeSymbol? inheritedType, List<TypeSymbol> traits) ParseInheritanceAndTraits()
+		{
+			TypeSymbol? inheritedType = null;
+			List<TypeSymbol> traits = [];
+
+			if (Lex.CurrentIs(TokenType.Type))
+			{
+				Lex.Next();
+				do
+				{
+					var item = ParseType();
+					if (item is TypeSymbol traitSym)
+						traits.Add(traitSym);
+					else
+					{
+						if (inheritedType is not null)
+							throw new SyntaxError(item.Identifier?.Range!, "Cannot inherit from multiple types. Only one inherited type is allowed.");
+						inheritedType = item;
+					}
+				}
+				while (Lex.CurrentIs(TokenType.LogicalAnd) && Lex.Next() is { });
+			}
+
+			return (inheritedType, traits);
+		}
+
+		/// <summary>
+		/// Parses generic type parameters for a type declaration after the name.
+		/// Example: <c>[T, U : Base & Trait]</c>.
+		/// Adds the generic type symbols to the given scope and returns them.
+		/// Assumes the current token is <see cref="TokenType.OpenBracket"/>.
+		/// </summary>
+		private List<TypeSymbol> ParseGenericTypeArguments(Token? nameToken = null)
+		{
+			List<TypeSymbol> genericTypes = [];
+
+			Lex.GoPast(TokenType.OpenBracket);
+			while (true)
+			{
+				var genericTypeToken = Lex.ExpectThis(TokenType.Identifier);
+				TypeSymbol genericTypeSymbol;
+
+				if (Lex.CurrentIs(TokenType.Type))
+				{
+					var (argInheritedType, argTraits) = ParseInheritanceAndTraits();
+					if (argInheritedType is null)
+						throw new SyntaxError(nameToken?.Range ?? Lex.CurrentToken.Range, "Expected type arguments after type declaration.");
+
+					genericTypeSymbol = TypeSymbolFactory.GetTypeSymbol(
+						new TypeSymbol(genericTypeToken.Range.Text, Lex.Filepath),
+						[argInheritedType]
+					);
+				}
+				else
+				{
+					genericTypeSymbol = TypeSymbolFactory.GetTypeSymbol(
+						new TypeSymbol(genericTypeToken.Range.Text, Lex.Filepath)
+					);
+				}
+
+				genericTypes.Add(genericTypeSymbol);
+
+				if (!Lex.CurrentIs(TokenType.Comma))
+					break;
+
+				Lex.Next();
+			}
+
+			Lex.ExpectThis(TokenType.CloseBracket);
+			return genericTypes;
 		}
 
 		/// <summary>
@@ -719,10 +794,12 @@ namespace stilt
 		/// Stops when the argument bracket closes or the return type is read.
 		/// Returns (VarSymbol of type Callable, List of VarDeclStmt for each argument).
 		/// </summary>
-		private (VarSymbol FuncSymbol, List<VarDeclStmt> ArgDecls) ParseFuncSignature(Scope scope)
+		private (VarSymbol FuncSymbol, List<VarDeclStmt> ArgDecls, List<TypeSymbol> TypeArgs) ParseFuncSignature(Scope scope)
 		{
 			var funcNameToken = Lex.ExpectThis(TokenType.Identifier);
 			var funcName = funcNameToken.Range.Text;
+			var typeArgs = ParseGenericTypeArguments(funcNameToken);
+			var typeArgTuple = typeArgs.Count == 0 ? Builtins.None : TypeSymbolFactory.GetTuple(typeArgs);
 
 			Lex.ExpectThis(TokenType.OpenBracket);
 
@@ -772,9 +849,12 @@ namespace stilt
 				: TypeSymbolFactory.GetTuple(argSymbols.Select(s => s.Type).ToList());
 
 			var callableType = TypeSymbolFactory.GetTypeSymbol(Builtins.Callable, [argsTuple, returnType]);
+			if (typeArgs.Count > 0)
+				callableType = TypeSymbolFactory.GetTypeSymbol(Builtins.Generator, [typeArgTuple, callableType]);
+			
 			var funcVar = new VarSymbol(funcName, Lex.Filepath, callableType, funcNameToken);
 
-			return (funcVar, argDecls);
+			return (funcVar, argDecls, typeArgs);
 		}
 
 		private ImportStmt ParseImport(Scope scope, Token firstToken)
@@ -1080,11 +1160,14 @@ namespace stilt
 				case TokenType.FuncDecl:
 				{
 					Lex.GoPast(TokenType.FuncDecl);
-					var (funcSymbol, argDecls) = ParseFuncSignature(currentScope);
+					var (funcSymbol, argDecls, typeArgs) = ParseFuncSignature(currentScope);
+					//expr
 
 					Scope funcScope = new(currentScope);
 					foreach (var argDecl in argDecls)
 						AddToScope(argDecl.Name, funcScope);
+					foreach (var typeArg in typeArgs)
+						AddToScope(typeArg, funcScope);
 
 					Lex.SkipStmtSeparator();
 					var innerStmt = ParseStmt(funcScope);
@@ -1101,12 +1184,19 @@ namespace stilt
 					Lex.GoPast(TokenType.TraitDecl);
 					var nameToken = Lex.ExpectThis(TokenType.Identifier);
 					var traitName = nameToken.Range.Text;
+					var typeArgs = ParseGenericTypeArguments(nameToken);
 
 					Lex.ExpectThis(TokenType.OpenCurlyBracket);
 					Lex.SkipStmtSeparator();
 
-					var traitStmt = new TraitDeclStmt(traitName, Lex.Filepath) { Scope = currentScope };
 					Scope traitScope = new(currentScope) { AllowShadowingFromParent = true };
+					foreach (var typeArg in typeArgs)
+						AddToScope(typeArg, traitScope);
+
+					var baseTraitSym = new TypeSymbol(traitName, Lex.Filepath);
+					var traitSym = TypeSymbolFactory.GetTypeSymbol(baseTraitSym, typeArgs);
+					var traitStmt = new TraitDeclStmt(traitSym) { Scope = traitScope };
+
 					while (!Lex.CurrentIs(TokenType.CloseCurlyBracket))
 					{
 						switch (Lex.CurrentToken.Which)
@@ -1114,7 +1204,7 @@ namespace stilt
 							case TokenType.FuncDecl:
 							{
 								Lex.GoPast(TokenType.FuncDecl);
-								var (sym, _) = ParseFuncSignature(traitScope);
+								var (sym, _, _) = ParseFuncSignature(traitScope);
 								sym.Source = Lex.Filepath;
 								sym.Declaration = traitStmt;
 								(traitStmt.Name as TypeSymbol)!.Members.Add(sym);
@@ -1153,36 +1243,25 @@ namespace stilt
 					Lex.GoPast(TokenType.TypeDecl);
 					var nameToken = Lex.ExpectThis(TokenType.Identifier);
 					var typeName = nameToken.Range.Text;
-
-					TypeSymbol? inheritedType = null;
-					List<TraitSymbol> traits = [];
-
-					if (Lex.CurrentIs(TokenType.Type))
-					{
-						Lex.Next();
-						do
-						{
-							var item = ParseType();
-							if (item is TraitSymbol traitSym)
-								traits.Add(traitSym);
-							else
-							{
-								if (inheritedType is not null)
-									throw new SyntaxError(item.Identifier?.Range ?? nameToken.Range, "Cannot inherit from multiple types. Only one inherited type is allowed.");
-								inheritedType = item;
-							}
-						}
-						while (Lex.CurrentIs(TokenType.LogicalAnd) && Lex.Next() is { });
-					}
+					var (inheritedType, traits) = ParseInheritanceAndTraits();
+					var typeArgs = ParseGenericTypeArguments(nameToken);
 
 					if (!Lex.CurrentIs(TokenType.OpenCurlyBracket))
 						throw new UnexpectedToken(nameToken.Range, TokenType.OpenCurlyBracket, nameToken);
 					Lex.GoPast(TokenType.OpenCurlyBracket);
 					Lex.SkipStmtSeparator();
 
-					var typeSym = new TypeSymbol(typeName, Lex.Filepath, nameToken, inherits: inheritedType, implementedTraits: traits);
+					//create base type symbol
+					var baseTypeSym = new TypeSymbol(typeName, Lex.Filepath, nameToken, inherits: inheritedType, implementedTraits: traits);
+
+					//make sure its registered in the factory
+					var typeSym = TypeSymbolFactory.GetTypeSymbol(baseTypeSym);
+					if (typeArgs.Count > 0)
+						typeSym = TypeSymbolFactory.GetTypeSymbol(baseTypeSym, typeArgs);
+
 					Scope newScope = new(currentScope) { AllowShadowingFromParent = true };
 
+					//potentailly remove self as a variable and use a special self token
 					var selfSym = new VarSymbol("self", typeSym) { Source = Lex.Filepath, Specifiers = [TokenType.PrivateSpec] };
 					newScope.AddSymbol(selfSym);
 

@@ -94,14 +94,14 @@ namespace stilt.AST
 	{
 		private List<Symbol> _members = [];
 		private TypeSymbol? _inherits;
-		private List<TraitSymbol> _implementedTraits = [];
+		private List<TypeSymbol> _implementedTraits = [];
 		private int _argumentCount = 0;
 
 		// [JsonIgnore]
 		public List<Symbol> Members => Base is null ? _members : Base.Members;
 		/// <summary>Traits implemented by this type (in addition to single inheritance).</summary>
 		[JsonIgnore]
-		public List<TraitSymbol> ImplementedTraits => Base is null ? _implementedTraits : Base.ImplementedTraits;
+		public List<TypeSymbol> ImplementedTraits => Base is null ? _implementedTraits : Base.ImplementedTraits;
 		[JsonIgnore]
 		public TypeSymbol? Inherits => Base is null ? _inherits : Base.Inherits;
 		[JsonIgnore]
@@ -192,7 +192,7 @@ namespace stilt.AST
 			return null;
 		}
 
-		public bool Implements(TraitSymbol trait)
+		public bool Implements(TypeSymbol trait)
 		{
 			if (!trait.InheritsFrom(Builtins.Trait))
 				throw new ArgumentException("Given type does not inherit from Trait");
@@ -218,7 +218,7 @@ namespace stilt.AST
 			_argumentCount = argumentCount;
 			_inherits = inherits;
 		}
-		public TypeSymbol(string n, string s, Token? t = null, TypeSymbol? inherits = null, int argumentCount = 0, List<TraitSymbol>? implementedTraits = null)
+		public TypeSymbol(string n, string s, Token? t = null, TypeSymbol? inherits = null, int argumentCount = 0, List<TypeSymbol>? implementedTraits = null)
 			: base(n, t, s)
 		{
 			_argumentCount = argumentCount;
@@ -235,16 +235,6 @@ namespace stilt.AST
 			if (Arguments is not null && Arguments.Length != ArgumentCount)
 				throw new ArgumentException();
 		}
-	}
-
-	public class TraitSymbol : TypeSymbol
-	{
-		public TraitSymbol(string n, Token? t = null, TypeSymbol? inherits = null, int argumentCount = 0)
-			: base(n, t, inherits ?? Builtins.Trait, argumentCount) { }
-		public TraitSymbol(string n, string s, Token? t = null, TypeSymbol? inherits = null, int argumentCount = 0)
-			: base(n, s, t, inherits ?? Builtins.Trait, argumentCount) { }
-		public TraitSymbol(TypeSymbol basedef, TypeSymbol[]? arguments = null)
-			: base(basedef, arguments) { }
 	}
 
 	public static class TypeSymbolFactory

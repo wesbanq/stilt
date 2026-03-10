@@ -23,6 +23,7 @@ namespace stilt
 		public static readonly TypeSymbol Array = new("Array", Symbol.BuiltinSource, argumentCount: 1);
 		public static readonly TypeSymbol Reference = new("Ref", Symbol.BuiltinSource, argumentCount: 1);
 		public static readonly TypeSymbol Table = new("Table", Symbol.BuiltinSource, argumentCount: 1);
+		public static readonly TypeSymbol Generator = new("Generator", Symbol.BuiltinSource, argumentCount: 2);
 		public static readonly TypeSymbol Callable = new("Callable", Symbol.BuiltinSource, argumentCount: 2);
 
 		public static readonly VarSymbol IgnoreWarning = new("IgnoreWarning", Symbol.BuiltinSource, Decorator);
