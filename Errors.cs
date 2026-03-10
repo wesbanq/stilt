@@ -140,7 +140,7 @@ namespace stilt.Errors
 
 	public class UnimplementedTraitMethod : SyntaxError
 	{
-		public UnimplementedTraitMethod(FileRange? pos, TypeSymbol type, TraitSymbol trait, string methodName)
+		public UnimplementedTraitMethod(FileRange? pos, TypeSymbol type, TypeSymbol trait, string methodName)
 			: base(pos, $"Type '{type.Name}' implements trait '{trait.Name}', but does not implement method '{methodName}'.")
 		{ }
 	}
