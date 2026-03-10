@@ -32,7 +32,7 @@ internal static class GoldenTestHelper
 		return stiltFilePath + suffix;
 	}
 
-	public static void AssertOrUpdateGolden(string actual, string goldenPath, string testDisplayName)
+	public static void AssertOrUpdateGolden(string actual, string goldenPath, string testDisplayName, string sourcePath)
 	{
 		if (RegenerateGoldens)
 		{
@@ -41,12 +41,81 @@ internal static class GoldenTestHelper
 		}
 
 		if (!File.Exists(goldenPath))
-			throw new FileNotFoundException($"Golden file not found: {goldenPath}. Run tests with -p:RegenerateGoldens=true to create it.", goldenPath);
+			throw new FileNotFoundException(
+				$"Golden file not found for {testDisplayName}.\nGolden: {goldenPath}\nSource: {sourcePath}\nRun tests with -p:RegenerateGoldens=true to create it.",
+				goldenPath);
 
 		var expected = File.ReadAllText(goldenPath, Encoding.UTF8);
 		var normalizedActual = NormalizeLineEndings(actual);
 		var normalizedExpected = NormalizeLineEndings(expected);
-		Assert.Equal(normalizedExpected, normalizedActual);
+		if (!string.Equals(normalizedExpected, normalizedActual, StringComparison.Ordinal))
+		{
+			var diff = FindFirstDiff(normalizedExpected, normalizedActual);
+			var (line, col) = GetLineAndColumn(normalizedExpected, diff.Index);
+			var expectedLine = GetLineAt(normalizedExpected, diff.Index);
+			var actualLine = GetLineAt(normalizedActual, diff.Index);
+
+			var pointer = col <= 1 ? "^" : new string(' ', col - 1) + "^";
+			throw new Xunit.Sdk.XunitException(
+				$"Golden mismatch for {testDisplayName} at line {line}, col {col} (offset {diff.Index}).\n" +
+				$"Golden: {goldenPath}\n" +
+				$"Source: {sourcePath}\n" +
+				"\nExpected line:\n" +
+				expectedLine + "\n" +
+				pointer + "\n" +
+				"\nActual line:\n" +
+				actualLine + "\n" +
+				pointer + "\n" +
+				"\nRun tests with -p:RegenerateGoldens=true to overwrite.");
+		}
+	}
+
+	private readonly record struct DiffInfo(int Index);
+
+	private static DiffInfo FindFirstDiff(string expected, string actual)
+	{
+		var len = Math.Min(expected.Length, actual.Length);
+		for (int i = 0; i < len; i++)
+		{
+			if (expected[i] != actual[i])
+				return new DiffInfo(i);
+		}
+		return new DiffInfo(len);
+	}
+
+	private static (int Line, int Column) GetLineAndColumn(string text, int index)
+	{
+		// 1-based line/column
+		int line = 1;
+		int col = 1;
+		int i = 0;
+		int limit = Math.Min(index, text.Length);
+		while (i < limit)
+		{
+			if (text[i] == '\n')
+			{
+				line++;
+				col = 1;
+			}
+			else
+			{
+				col++;
+			}
+			i++;
+		}
+		return (line, col);
+	}
+
+	private static string GetLineAt(string text, int index)
+	{
+		if (text.Length == 0)
+			return "";
+
+		int safeIndex = Math.Clamp(index, 0, text.Length);
+		int start = safeIndex == 0 ? 0 : text.LastIndexOf('\n', Math.Min(safeIndex - 1, text.Length - 1)) + 1;
+		int end = safeIndex < text.Length ? text.IndexOf('\n', safeIndex) : -1;
+		if (end < 0) end = text.Length;
+		return text.Substring(start, end - start);
 	}
 
 	private static void WriteGolden(string actual, string goldenPath)
