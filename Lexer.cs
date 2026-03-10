@@ -134,9 +134,9 @@ namespace stilt
 
 		public bool CurrentIs(params TokenType[] types) => types.Contains(CurrentToken.Which);
 
-		public bool NextIs(TokenType type) => 
-			PeekNext(1).Which == type || 
-			(PeekNext(1).Which == TokenType.StmtSeparator && PeekNext(2).Which == type);
+		public bool NextIs(params TokenType[] types) => 
+			types.Contains(PeekNext(1).Which) || 
+			(PeekNext(1).Which == TokenType.StmtSeparator && types.Contains(PeekNext(2).Which));
 
 		public void SkipStmtSeparator()
 		{

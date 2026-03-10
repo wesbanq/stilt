@@ -29,7 +29,7 @@ public class AstGoldenTests
 		var actual = CompilerJsonSerializer.SerializeToJson(statements, CompilerJsonSerializer.ExclusionPreset.Ast);
 
 		var goldenPath = GoldenTestHelper.GetGoldenPath(stiltPath, GoldenSuffix);
-		GoldenTestHelper.AssertOrUpdateGolden(actual, goldenPath, Path.GetFileName(stiltPath));
+		GoldenTestHelper.AssertOrUpdateGolden(actual, goldenPath, Path.GetFileName(stiltPath), stiltPath);
 	}
 
 	public static TheoryData<string> GetStiltFiles()

@@ -17,6 +17,21 @@ namespace stilt
 			Result.CompilationIssues.Add(err);
 		}
 
+		private static Expr GetLastExprInTree(Expr root)
+		{
+			// Prefer the most-recently-added leaf node in the current tree.
+			// Child ordering in GetChildren() is already "newest-first" for operators.
+			var current = root;
+			while (!current.Bracketed && current is IOperator op)
+			{
+				var next = op.GetChildren().First(c => c is not null);
+				if (next is null)
+					break;
+				current = next;
+			}
+			return current;
+		}
+
 		private void InsertIntoExprTree(ref Expr? rootExpr, Expr? newExpr)
 		{
 			if (rootExpr is null && newExpr is not null)
@@ -430,6 +445,23 @@ namespace stilt
 					rootExpr?.Bracketed = true;
 					return;
 				}
+				case TokenType.Type:
+				{
+					if (rootExpr is null)
+						throw new SyntaxError(currentToken.Range, "Expected an expression before ':'");
+
+					var targetExpr = GetLastExprInTree(rootExpr);
+
+					// Move onto the first token of the type.
+					Lex.Next();
+					var parsedType = ParseType();
+					targetExpr.Type = parsedType;
+					targetExpr.Explicit = true;
+
+					// ParseType already advanced the lexer to the token after the type.
+					ParseExpr(ref rootExpr, Lex.CurrentToken);
+					return;
+				}
 				default:
 				{
 					if (currentToken.IsUnimplemented)
@@ -437,7 +469,7 @@ namespace stilt
 
 					var possibleExprs = CreateOperatorExpr<OperatorAttribute>(currentToken)
 						?? throw new UnexpectedToken(currentToken.Range, currentToken);
-					if (Lex.NextIs(TokenType.Assign))
+					if (Lex.NextIs(TokenType.Assign, TokenType.Type))
 					{
 						Lex.Next();
 						var assignToken = new Token 
@@ -569,7 +601,7 @@ namespace stilt
 		/// Parses a type: '('type[','...]')' | identifier['('type[','...]')'].
 		/// Tuples use TypeSymbolFactory.GetTuple.
 		/// </summary>
-		private TypeSymbol ParseType(Scope scope)
+		private TypeSymbol ParseType()
 		{
 			if (Lex.CurrentIs(TokenType.OpenBracket))
 			{
@@ -577,7 +609,7 @@ namespace stilt
 				var tupleArgs = new List<TypeSymbol>();
 				while (true)
 				{
-					tupleArgs.Add(ParseType(scope));
+					tupleArgs.Add(ParseType());
 					if (Lex.CurrentIs(TokenType.CloseBracket))
 						break;
 					Lex.ExpectThis(TokenType.Comma);
@@ -589,29 +621,24 @@ namespace stilt
 			var nameToken = Lex.ExpectThis(TokenType.Identifier);
 			var typeName = nameToken.Range.Text;
 
-			TypeSymbol[]? typeArgs = null;
+			List<TypeSymbol>? typeArgs = null;
 			if (Lex.CurrentIs(TokenType.OpenBracket))
 			{
 				Lex.Next();
 				var args = new List<TypeSymbol>();
 				while (true)
 				{
-					args.Add(ParseType(scope));
+					args.Add(ParseType());
 					if (Lex.CurrentIs(TokenType.CloseBracket))
 						break;
 					Lex.ExpectThis(TokenType.Comma);
 				}
 				Lex.Next();
-				typeArgs = args.ToArray();
+				typeArgs = args.ToList();
 			}
 
-			var baseType = scope.FindTypeByName(typeName);
-			if (baseType is null)
-			{
-				var placeholder = new TypeSymbol(typeName, Lex.Filepath, nameToken, inherits: null, argumentCount: typeArgs?.Length ?? 0);
-				return typeArgs is not null ? new TypeSymbol(placeholder, typeArgs) : placeholder;
-			}
-			return typeArgs is not null ? new TypeSymbol(baseType, typeArgs) : baseType;
+			var baseType = TypeSymbolFactory.GetTempTypeSymbol(typeName, typeArgs);
+			return TypeSymbolFactory.GetTypeSymbol(baseType, typeArgs);
 		}
 
 		/// <summary>
@@ -631,7 +658,7 @@ namespace stilt
 				if (Lex.CurrentIs(TokenType.Type))
 				{
 					Lex.Next();
-					type = ParseType(scope);
+					type = ParseType();
 				}
 				return [new VarSymbol(name, Lex.Filepath, type, nameToken)];
 			}
@@ -642,14 +669,14 @@ namespace stilt
 			if (Lex.CurrentIs(TokenType.Type))
 			{
 				Lex.Next();
-				var type = ParseType(scope);
+				var type = ParseType();
 				var result = new List<VarSymbol> { new VarSymbol(firstName.Range.Text, Lex.Filepath, type, firstName) };
 				while (Lex.CurrentIs(TokenType.Comma))
 				{
 					Lex.Next();
 					var nameToken = Lex.ExpectThis(TokenType.Identifier);
 					Lex.ExpectThis(TokenType.Type);
-					var t = ParseType(scope);
+					var t = ParseType();
 					result.Add(new VarSymbol(nameToken.Range.Text, Lex.Filepath, t, nameToken));
 				}
 				Lex.ExpectThis(TokenType.CloseBracket);
@@ -673,7 +700,7 @@ namespace stilt
 				Lex.Next();
 				while (true)
 				{
-					types.Add(ParseType(scope));
+					types.Add(ParseType());
 					if (Lex.CurrentIs(TokenType.CloseBracket))
 						break;
 					Lex.ExpectThis(TokenType.Comma);
@@ -737,7 +764,7 @@ namespace stilt
 			if (Lex.CurrentIs(TokenType.Type))
 			{
 				Lex.Next();
-				returnType = ParseType(scope);
+				returnType = ParseType();
 			}
 
 			TypeSymbol argsTuple = argSymbols.Count == 0
@@ -1135,7 +1162,7 @@ namespace stilt
 						Lex.Next();
 						do
 						{
-							var item = ParseType(currentScope);
+							var item = ParseType();
 							if (item is TraitSymbol traitSym)
 								traits.Add(traitSym);
 							else
