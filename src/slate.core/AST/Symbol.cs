@@ -60,7 +60,7 @@ namespace stilt.AST
 
 	public class VarSymbol : Symbol
 	{
-		public TypeSymbol Type = Builtins.Any;
+		public TypeSymbol Type = Builtins.None;
 
 		public override int GetHashCode()
 		{
@@ -73,7 +73,7 @@ namespace stilt.AST
 		public VarSymbol(string n, TypeSymbol? type = null, Token? t = null)
 			: base(n, t)
 		{
-			Type = type ?? Builtins.Any;
+			Type = type ?? Builtins.None;
 		}
 		public VarSymbol(string n, string s, TypeSymbol type, Token t)
 			: base(n, t, s)
@@ -275,7 +275,7 @@ namespace stilt.AST
 			args ??= new List<TypeSymbol>(baseType.ArgumentCount);
 			if (args.Count != baseType.ArgumentCount)
 				for (int i = args.Count; i < baseType.ArgumentCount; i++)
-					args.Add(Builtins.Any);
+					args.Add(Builtins.None);
 
 			return args.ToArray();
 		}
@@ -336,9 +336,9 @@ namespace stilt.AST
 							throw new ArgumentException("Inconsistent argument count for temp type symbol");
 						else
 						{
-							//change preexisting uses of type symbol to have Any as the type args
+							//change preexisting uses of type symbol to have None as the type args
 							baseType._changeArgCount(args.Count);
-							baseType.Arguments = Enumerable.Repeat(Builtins.Any, args.Count).ToArray();
+							baseType.Arguments = Enumerable.Repeat(Builtins.None, args.Count).ToArray();
 							_basicTypeSymbols.Remove(baseType);
 						}
 					}

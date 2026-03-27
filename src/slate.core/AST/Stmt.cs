@@ -184,7 +184,7 @@ namespace stilt.AST
 		public FuncDeclStmt(string name, string source, Stmt v, TypeSymbol? args = null, TypeSymbol? returns = null)
 		{
 			Value = v;
-			Name = new VarSymbol(name, source, new TypeSymbol(Builtins.Callable, [args ?? Builtins.Any, returns ?? Builtins.Any]))
+			Name = new VarSymbol(name, source, new TypeSymbol(Builtins.Callable, [args ?? Builtins.None, returns ?? Builtins.None]))
 			{ Declaration = this };
 		}
 

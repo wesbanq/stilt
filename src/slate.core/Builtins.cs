@@ -7,37 +7,27 @@ namespace stilt
 	{
 		public static Scope BuiltinScope;
 
-		public static readonly TypeSymbol Any = new("Any", Symbol.BuiltinSource);
-		public static readonly TypeSymbol None = new("None", Symbol.BuiltinSource);
-		public static readonly TypeSymbol Bool = new("Bool", Symbol.BuiltinSource);
-		public static readonly TypeSymbol Num = new("Num", Symbol.BuiltinSource);
-		public static readonly TypeSymbol String = new("String", Symbol.BuiltinSource);
-		public static readonly TypeSymbol TaggedString = new("TaggedString", Symbol.BuiltinSource);
-		public static readonly TypeSymbol UUID = new("UUID", Symbol.BuiltinSource);
-		public static readonly TypeSymbol NBT = new("NBT", Symbol.BuiltinSource);
-		public static readonly TypeSymbol Attribute = new("Attribute", Symbol.BuiltinSource);
-		public static readonly TypeSymbol Tag = new("Tag", Symbol.BuiltinSource);
-		public static readonly TypeSymbol Module = new("Module", Symbol.BuiltinSource);
+		public static readonly TypeSymbol None = new("none", Symbol.BuiltinSource);
+		public static readonly TypeSymbol Bool = new("bool", Symbol.BuiltinSource);
+		public static readonly TypeSymbol Num = new("num", Symbol.BuiltinSource);
+		public static readonly TypeSymbol String = new("string", Symbol.BuiltinSource);
+		public static readonly TypeSymbol Proto = new("proto", Symbol.BuiltinSource);
+		public static readonly TypeSymbol Trait = new("trait", Symbol.BuiltinSource);
 		public static readonly TypeSymbol Decorator = new("Decorator", Symbol.BuiltinSource);
-		public static readonly TypeSymbol Trait = new("Trait", Symbol.BuiltinSource);
-		public static readonly TypeSymbol Array = new("Array", Symbol.BuiltinSource, argumentCount: 1);
-		public static readonly TypeSymbol Reference = new("Ref", Symbol.BuiltinSource, argumentCount: 1);
-		public static readonly TypeSymbol Table = new("Table", Symbol.BuiltinSource, argumentCount: 1);
-		public static readonly TypeSymbol Generator = new("Generator", Symbol.BuiltinSource, argumentCount: 2);
+		public static readonly TypeSymbol TaggedString = new("TaggedString", Symbol.BuiltinSource);
+		public static readonly TypeSymbol Array = new("array", Symbol.BuiltinSource, argumentCount: 1);
+		public static readonly TypeSymbol Table = new("table", Symbol.BuiltinSource);
 		public static readonly TypeSymbol Callable = new("Callable", Symbol.BuiltinSource, argumentCount: 2);
-
-		public static readonly VarSymbol IgnoreWarning = new("IgnoreWarning", Symbol.BuiltinSource, Decorator);
-		public static readonly VarSymbol PrivateByDefault = new("PrivateByDefault", Symbol.BuiltinSource, Decorator);
-		public static readonly VarSymbol ExplicitByDefault = new("ExplicitByDefault", Symbol.BuiltinSource, Decorator);
-
-		public static readonly TypeSymbol Whole = new("Whole", Symbol.BuiltinSource, inherits: Num);
-		public static readonly TypeSymbol Fractional = new("Fractional", Symbol.BuiltinSource, inherits: Num);
-		public static readonly TypeSymbol Byte = new("Byte", Symbol.BuiltinSource, inherits: Whole);
-		public static readonly TypeSymbol Short = new("Short", Symbol.BuiltinSource, inherits: Whole);
-		public static readonly TypeSymbol Int = new("Int", Symbol.BuiltinSource, inherits : Whole);
-		public static readonly TypeSymbol Long = new("Long", Symbol.BuiltinSource, inherits : Whole);
-		public static readonly TypeSymbol Float = new("Float", Symbol.BuiltinSource, inherits : Fractional);
-		public static readonly TypeSymbol Double = new("Double", Symbol.BuiltinSource, inherits : Fractional);
+		public static readonly TypeSymbol Module = new("Module", Symbol.BuiltinSource);
+		public static readonly TypeSymbol Object = new("Object", Symbol.BuiltinSource);
+		public static readonly TypeSymbol Whole = new("whole", Symbol.BuiltinSource, inherits: Num);
+		public static readonly TypeSymbol Fractional = new("fract", Symbol.BuiltinSource, inherits: Num);
+		public static readonly TypeSymbol Byte = new("byte", Symbol.BuiltinSource, inherits: Whole);
+		public static readonly TypeSymbol Short = new("short", Symbol.BuiltinSource, inherits: Whole);
+		public static readonly TypeSymbol Int = new("int", Symbol.BuiltinSource, inherits : Whole);
+		public static readonly TypeSymbol Long = new("long", Symbol.BuiltinSource, inherits : Whole);
+		public static readonly TypeSymbol Float = new("float", Symbol.BuiltinSource, inherits : Fractional);
+		public static readonly TypeSymbol Double = new("double", Symbol.BuiltinSource, inherits : Fractional);
 
 		public static void PopulateBuiltinScope(ProgramArgs args)
 		{
