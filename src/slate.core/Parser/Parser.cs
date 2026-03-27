@@ -245,7 +245,7 @@ namespace stilt
 						case StringLiteralExpr str:
 						{
 							//think of something for other string literal types
-							newSym = new VarSymbol((str.Value as String) ?? throw new MalformedExpr(str.FullRange ?? str.InnerRange ?? throw new InvalidOperationException("String literal has no range")), Lex.Filepath, Builtins.Any);
+							newSym = new VarSymbol((str.Value as String) ?? throw new MalformedExpr(str.FullRange ?? str.InnerRange ?? throw new InvalidOperationException("String literal has no range")), Lex.Filepath, Builtins.None);
 							break;
 						}
 						default:
@@ -731,7 +731,7 @@ namespace stilt
 			{
 				var nameToken = Lex.ExpectThis(TokenType.Identifier);
 				var name = nameToken.Range.Text;
-				TypeSymbol type = Builtins.Any;
+				TypeSymbol type = Builtins.None;
 				if (Lex.CurrentIs(TokenType.Type))
 				{
 					Lex.Next();
@@ -839,7 +839,7 @@ namespace stilt
 			}
 
 			Lex.ExpectThis(TokenType.CloseBracket);
-			TypeSymbol returnType = Builtins.Any;
+			TypeSymbol returnType = Builtins.None;
 			if (Lex.CurrentIs(TokenType.Type))
 			{
 				Lex.Next();
@@ -851,8 +851,9 @@ namespace stilt
 				: TypeSymbolFactory.GetTuple(argSymbols.Select(s => s.Type).ToList());
 
 			var callableType = TypeSymbolFactory.GetTypeSymbol(Builtins.Callable, [argsTuple, returnType]);
-			if (typeArgs.Count > 0)
-				callableType = TypeSymbolFactory.GetTypeSymbol(Builtins.Generator, [typeArgTuple, callableType]);
+			// TODO handle generics for callables
+			// if (typeArgs.Count > 0)
+			// 	callableType = TypeSymbolFactory.GetTypeSymbol(Builtins.Generator, [typeArgTuple, callableType]);
 			
 			var funcVar = new VarSymbol(funcName, Lex.Filepath, callableType, funcNameToken);
 
@@ -1367,9 +1368,9 @@ namespace stilt
 							typeSym.Members.Add(sym);
 							if (!sym.Specifiers.Contains(TokenType.PrivateSpec) && !sym.Specifiers.Contains(TokenType.PublicSpec))
 							{
-								if (Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault))
-									sym.Specifiers.Add(TokenType.PrivateSpec);
-								else
+								// if (Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault))
+								// 	sym.Specifiers.Add(TokenType.PrivateSpec);
+								// else
 									sym.Specifiers.Add(TokenType.PublicSpec);
 							}
 						}
@@ -1381,9 +1382,9 @@ namespace stilt
 							typeSym.Members.Add(decl.Name);
 							if (!decl.Name.Specifiers.Contains(TokenType.PrivateSpec) && !decl.Name.Specifiers.Contains(TokenType.PublicSpec))
 							{
-								if (Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault))
-									decl.Name.Specifiers.Add(TokenType.PrivateSpec);
-								else
+								// if (Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault))
+								// 	decl.Name.Specifiers.Add(TokenType.PrivateSpec);
+								// else
 									decl.Name.Specifiers.Add(TokenType.PublicSpec);
 							}
 						}

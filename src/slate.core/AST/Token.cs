@@ -261,7 +261,7 @@ namespace stilt
 		[Symbol("=>")]
 		NamedTuple,
 
-		[Symbol(@"[a-zA-Z_]\w*|'(?:\\'|[^'])*'", true)]
+		[Symbol(@"[@a-zA-Z_][@\w]*|'(?:\\'|[^'])*'", true)]
 		Identifier,
 
 		// [Symbol(@"\[\[.*\]\]", true)]

@@ -4,7 +4,7 @@ namespace stilt.AST
 {
 	public abstract class Expr : IRanged
 	{
-		public TypeSymbol Type = Builtins.Any;
+		public TypeSymbol Type = Builtins.None;
 		public bool Bracketed = false;
 		public bool Explicit = false;
 		public int Precedence = 0;
