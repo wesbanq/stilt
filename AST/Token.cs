@@ -146,31 +146,6 @@ namespace stilt
 		[Symbol("xor")]
 		LogicalXor,
 
-		// Bitwise Operators
-		[UnaryOperator(8)]
-		[Symbol("!!")]
-		BitwiseNot,
-
-		[BinaryOperator(8)]
-		[Symbol("&&")]
-		BitwiseAnd,
-
-		[BinaryOperator(8)]
-		[Symbol("||")]
-		BitwiseOr,
-
-		[BinaryOperator(8)]
-		[Symbol("^^")]
-		BitwiseXor,
-
-		[BinaryOperator(5)]
-		[Symbol("<<")]
-		BitShiftLeft,
-
-		[BinaryOperator(5)]
-		[Symbol(">>")]
-		BitShiftRight,
-
 		// Signal Operators
 		[Unimplemented]
 		[BinaryOperator(14)]
@@ -192,7 +167,7 @@ namespace stilt
 		[Symbol("false")]
 		False,
 
-		[Symbol(@"[rftm]*(?:""(?:\.|[^\\""])*""|'(?:\.|[^'])*')", true)]
+		[Symbol(@"[rftm]*(?:""(?:\\""|[^""])*""", true)]
 		StringLiteral,
 
 		[Symbol(@"(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[bsilfd]?", true)]
@@ -252,10 +227,6 @@ namespace stilt
 		Clone,
 
 		[Unimplemented]
-		[Symbol("@")]
-		Target,
-
-		[Unimplemented]
 		[Symbol("$")]
 		Server,
 
@@ -302,7 +273,7 @@ namespace stilt
 		[Symbol("=>")]
 		CopyTo,
 
-		[Symbol(@"[a-zA-Z_]\w*", true)]
+		[Symbol(@"[a-zA-Z_]\w*|'(?:\\'|[^'])*'", true)]
 		Identifier,
 
 		// [Symbol(@"\[\[.*\]\]", true)]
@@ -323,9 +294,7 @@ namespace stilt
 		[Symbol("var")]
 		VarDecl,
 
-		[Symbol("prototype")]
 		[Symbol("type")]
-		[Symbol("class")]
 		TypeDecl,
 
 		[Symbol("trait")]
@@ -336,20 +305,12 @@ namespace stilt
 		ExtensionDef,
 
 		[Unimplemented]
-		[Symbol("target")]
-		TargetDecl,
-
-		[Unimplemented]
 		[Symbol("signal")]
 		SignalDecl,
 
-		// Keywords
+		// Specifiers
 		[Specifier]
-		[Symbol("internal")]
-		InternalSpec,
-
-		[Specifier]
-		[Symbol("priv")]
+		[Symbol("prv")]
 		[Symbol("private")]
 		PrivateSpec,
 
@@ -371,6 +332,7 @@ namespace stilt
 		[Symbol("override")]
 		OverrideSpec,
 
+		// Keywords
 		[Unimplemented]
 		[UnaryOperator(13)]
 		[Symbol("await")]
@@ -392,20 +354,8 @@ namespace stilt
 		[Symbol("import")]
 		Import,
 
-		[Unimplemented]
-		[Symbol("where")]
-		Where,
-
-		[Unimplemented]
-		[Symbol("with")]
-		With,
-
 		[Symbol("as")]
 		As,
-
-		[Unimplemented]
-		[Symbol("use")]
-		Use,
 
 		[Symbol("while")]
 		While,
@@ -443,9 +393,6 @@ namespace stilt
 		Version,
 
 		// Special
-		[Unimplemented]
-		[Symbol("select")]
-		SelectStmt,
 
 		[Symbol(@"execute(?:\s*\/.*\n)*", true)]
 		[Symbol(@"execute +as +.*?\n(?:\s*\/.*)*", true)]
