@@ -1,6 +1,4 @@
 <Solution>
-  <Folder Name="/Tests/">
-    <Project Path="Tests/stilt.Tests.csproj" />
-  </Folder>
-  <Project Path="stilt.csproj" />
+  <Project Path="src\slate.tests\stilt.tests.csproj" />
+  <Project Path="src\slate.core\stilt.core.csproj" />
 </Solution>

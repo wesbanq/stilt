@@ -14,11 +14,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Include="Builtins/**" />
+    <ProjectReference Include="..\..\external\NuArgs\NuArgs.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Remove="Tests/**" />
+    <EmbeddedResource Include="Builtins\**" />
   </ItemGroup>
 
 </Project>
