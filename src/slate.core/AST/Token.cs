@@ -95,7 +95,6 @@ namespace stilt
 		[Symbol("--")]
 		Decrement,
 
-		// Assignment Operators
 		[BinaryOperator(16)]
 		[Symbol("=")]
 		Assign,
@@ -222,13 +221,8 @@ namespace stilt
 		New,
 
 		[UnaryOperator(3)]
-		[Symbol("copy")]
 		[Symbol("clone")]
 		Clone,
-
-		[Unimplemented]
-		[Symbol("$")]
-		Server,
 
 		[BinaryOperator(1)]
 		[Symbol(".")]
@@ -264,14 +258,8 @@ namespace stilt
 		Composition,
 
 		[Unimplemented]
-		[BinaryOperator(14)]
-		[Symbol("><")]
-		SwapValue,
-
-		[Unimplemented]
-		[BinaryOperator(14)]
 		[Symbol("=>")]
-		CopyTo,
+		NamedTuple,
 
 		[Symbol(@"[a-zA-Z_]\w*|'(?:\\'|[^'])*'", true)]
 		Identifier,
