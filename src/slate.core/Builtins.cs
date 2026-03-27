@@ -55,7 +55,7 @@ namespace stilt
 			if (args.DebugLevel >= 1)
 			{
 				Console.WriteLine("BuiltinScope:");
-				Program.Dump(BuiltinScope, expanded: args.ExpandedDump);
+				Utils.Dump(BuiltinScope, expanded: args.ExpandedDump);
 				Console.WriteLine();
 			}
 		}
@@ -76,7 +76,7 @@ namespace stilt
 
 			foreach (IFileInfo file in folderContents)
 			{
-				if (file.IsDirectory || !file.Name.EndsWith(Program.CodeFileExtension)) continue; 
+				if (file.IsDirectory || !file.Name.EndsWith(args.CodeFileExtension)) continue;
 
 				using Stream stream = file.CreateReadStream();
 				using StreamReader reader = new StreamReader(stream);

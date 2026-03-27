@@ -120,7 +120,7 @@ namespace stilt.Errors
 		}
 
 		public UnexpectedToken(FileRange? pos, Token got)
-			: base(pos ?? got.Range, $"Unexpected token: '{Program.Escape(got.Which.ToString())}'.")
+			: base(pos ?? got.Range, $"Unexpected token: '{Utils.Escape(got.Which.ToString())}'.")
 		{ }
 	}
 

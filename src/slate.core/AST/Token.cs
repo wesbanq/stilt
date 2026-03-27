@@ -41,8 +41,8 @@ namespace stilt
 		public TokenType Which;
 		public FileRange Range;
 
-		public bool IsUnimplemented => Program.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(Which) is not null;
-		public bool IsSpecifier => Program.GetAttributeFromEnum<TokenType, SpecifierAttribute>(Which) is not null;
+		public bool IsUnimplemented => Utils.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(Which) is not null;
+		public bool IsSpecifier => Utils.GetAttributeFromEnum<TokenType, SpecifierAttribute>(Which) is not null;
 
 		public static string[] GetRulesFromType(TokenType t)
 		{
@@ -166,7 +166,7 @@ namespace stilt
 		[Symbol("false")]
 		False,
 
-		[Symbol(@"[rftm]*(?:""(?:\\""|[^""])*""", true)]
+		[Symbol(@"[rftm]*""(?:\\""|[^""])*""", true)]
 		StringLiteral,
 
 		[Symbol(@"(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[bsilfd]?", true)]

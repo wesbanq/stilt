@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using stilt.IR;
 using System.Globalization;
 using NuArgs;
+using stilt.CodeGen;
+using stilt.Compilation;
 
 namespace stilt
 {
@@ -54,7 +56,7 @@ namespace stilt
 		It is a statically typed, compiled language that is designed to be easy to learn and use.
 		It is still in early development and is not yet ready for use.
 	""", unixStyle: true)]
-	public class ProgramArgs : Args<ProgramOption, ProgramCommand>
+	public class ConsoleArgs : Args<ProgramOption, ProgramCommand>
 	{
 		[OptionTarget<ProgramOption>(ProgramOption.DebugLvl)]
 		public int DebugLevel;
@@ -79,6 +81,26 @@ namespace stilt
 		[OptionTarget<ProgramOption>(ProgramOption.NoBuiltin)]
 		public bool NoStd = false;
 
+		public ProgramArgs ToCompilerArgs()
+		{
+			return new ProgramArgs(
+				DebugLevel,
+				MainCodeFilepath,
+				Throw,
+				ExpandedDump,
+				NoTime,
+				JsonDumpFilepath,
+				TargetVersion,
+				OutputFilepath,
+				NoObjectFile,
+				RegenObjectFile,
+				NoStd,
+				Program.OutputFileExtension,
+				Program.CodeFileExtension,
+				Program.ObjectFileExtension
+			);
+		}
+
 		private static MCVersion ConvertMCVersion(string[] arg) {
 			var ver = MCVersion.ParseMCVersion(arg[0]);
 			if (ver is null)
@@ -86,7 +108,7 @@ namespace stilt
 			return ver;
 		}
 
-		public ProgramArgs()
+		public ConsoleArgs()
 		{
 			if (MainCodeFilepath is not null)
 				OutputFilepath ??= Path.ChangeExtension(MainCodeFilepath, ".zip");
@@ -95,191 +117,9 @@ namespace stilt
 
 	internal static class Program
 	{
-		public static readonly string CompilerVersion = Assembly.GetExecutingAssembly()?
-  			.GetCustomAttribute<AssemblyInformationalVersionAttribute>()?
-  			.InformationalVersion.ToString() ?? "unknown";
 		public static readonly string OutputFileExtension = ".zip";
 		public static readonly string CodeFileExtension = ".stilt";
 		public static readonly string ObjectFileExtension = CodeFileExtension + ".o";
-
-		public static A? GetAttributeFromEnum<T, A>(T value)
-				where T : Enum
-				where A : Attribute
-		{
-			var a = typeof(T).GetField(value.ToString())?.GetCustomAttributes<A>()?.ToArray();
-			if (a is not null && a.Length > 0)
-				return a.First();
-			else
-				return null;
-		}
-
-		public static A[]? GetAttributesFromEnum<T, A>(T value)
-			where T : Enum
-			where A : Attribute
-		{
-			var a = typeof(T).GetField(value.ToString())?.GetCustomAttributes<A>()?.ToArray();
-			if (a is not null && a.Length > 0)
-				return a;
-			else
-				return null;
-		}
-
-		public static List<A?> GetAttributesFromType<A>(Type t)
-			where A : Attribute
-		{
-			List<A?> res = [];
-			foreach (var field in t.GetFields())
-			{
-				res.Add(field.GetCustomAttribute<A>());
-			}
-			return res;
-		}
-
-		public static T GetEnumFromDescription<T, A>(string toFind)
-			where T : Enum
-			where A : Attribute, IDescriptable
-		{
-			foreach (var field in typeof(T).GetFields())
-			{
-				if (field.GetCustomAttribute<A>()?.Name == toFind)
-					return (T)field.GetValue(null)!;
-			}
-			//return default;
-			throw new ArgumentException($"Enum value with description '{toFind}' not found.");
-		}
-
-		public static A? GetAttrFromDescription<T, A>(string toFind)
-			where T : Enum
-			where A : Attribute, IDescriptable
-		{
-			foreach (var field in typeof(T).GetFields())
-			{
-				if (field.GetCustomAttribute<A>()?.Name == toFind)
-					return field.GetCustomAttribute<A>();
-			}
-			return null;
-		}
-
-		public static void Dump(object? obj, int l = 0, bool expanded = false)
-		{
-			var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);
-			Dump(obj, l, expanded, visited);
-		}
-
-		private static void Dump(object? obj, int l, bool expanded, HashSet<object> visited)
-		{
-			if (obj is null)
-			{
-				Console.WriteLine("null");
-				return;
-			}
-
-			if (l == 0)
-				Console.WriteLine();
-
-			var type = obj.GetType();
-			var indent = new string('\t', l);
-
-			// Check for circular references (only for reference types) - do this before handling enumerables
-			if (!type.IsValueType)
-			{
-				if (visited.Contains(obj))
-				{
-					Console.WriteLine($"{indent}{type.Name} <CYCLE>");
-					return;
-				}
-				visited.Add(obj);
-			}
-
-			// Handle enums as simple values (avoid iterating; Enum implements IEnumerable and would dump every enum value)
-			if (type.IsEnum)
-			{
-				Console.WriteLine($"{indent}{type.Name} = {obj}");
-				return;
-			}
-
-			// Handle enumerable collections (arrays, lists, etc.) - but not strings
-			if (obj is IEnumerable enumerable && obj is not string)
-			{
-				Console.WriteLine($"{indent}{type.Name}");
-				int index = 0;
-				foreach (var item in enumerable)
-				{
-					Console.WriteLine($"{indent}\t[{index}]:");
-					Dump(item, l + 2, expanded, visited);
-					index++;
-				}
-				return;
-			}
-
-			Console.WriteLine($"{indent}{type.Name}");
-
-			// Dump properties
-			foreach (var prop in type.GetProperties())
-			{
-				try
-				{
-					DumpMember(prop.Name, prop.GetValue(obj), l, expanded, visited);
-				}
-				catch { }
-			}
-
-			// Dump fields
-			foreach (var field in type.GetFields())
-			{
-				try
-				{
-					DumpMember(field.Name, field.GetValue(obj), l, expanded, visited);
-				}
-				catch { }
-			}
-		}
-
-		private static void DumpMember(string name, object? value, int level, bool expanded, HashSet<object> visited)
-		{
-			var indent = new string('\t', level + 1);
-
-			if (value is null)
-			{
-				Console.WriteLine($"{indent}{name} = null");
-				return;
-			}
-
-			var valueType = value.GetType();
-
-			// Handle enumerable collections (arrays, lists, linked lists, etc.) - but not strings
-			if (value is IEnumerable enumerable && value is not string && value is not Enum)
-			{
-				Console.WriteLine($"{indent}{name}:");
-				int index = 0;
-				foreach (var item in enumerable)
-				{
-					Console.WriteLine($"{indent}\t[{index}]:");
-					Dump(item, level + 2, expanded, visited);
-					index++;
-				}
-				return;
-			}
-
-			// Handle simple types (primitives, enums, strings)
-			if (valueType.IsPrimitive || valueType.IsEnum || value is string)
-			{
-				var displayValue = value is string str ? $"\"{Escape(str)}\"" : value.ToString();
-				Console.WriteLine($"{indent}{name} = {displayValue}");
-				return;
-			}
-
-			// Handle types that should be hidden when not expanded
-			if (!expanded && (value is FileRange or FileText or Scope or List<Symbol> or Symbol or Type))
-			{
-				Console.WriteLine($"{indent}{name}: <HIDDEN>");
-				return;
-			}
-
-			// Recursively dump complex objects
-			Console.WriteLine($"{indent}{name}:");
-			Dump(value, level + 1, expanded, visited);
-		}
 
 		private class ReferenceEqualityComparer : IEqualityComparer<object>
 		{
@@ -296,35 +136,6 @@ namespace stilt
 			}
 		}
 
-		public static string Escape(string s)
-		{
-			return s
-				.Replace("\n", "\\n")
-				.Replace("\r\n", "\\r\\n")
-				.Replace("\t", "\\t")
-				.Replace("\"", "\\\"")
-				.Replace("\'", "\\\'")
-				.Replace("\\", "\\\\");
-		}
-
-		public static string Unescape(string s)
-		{
-			var str = s
-				.Replace("\\n", "\n")
-				.Replace("\\r\\n", "\r\n")
-				.Replace("\\t", "\t")
-				.Replace("\\\"", "\"")
-				.Replace("\\\'", "\'")
-				.Replace("\\\\", "\\");
-			
-			str = Regex.Replace(Regex.Replace(Regex.Replace(
-				str, @"\\u[\da-fA-F]{4}", m => { return ((char)int.Parse(m.Value.Substring(2), NumberStyles.HexNumber)).ToString(); }), 
-				@"\\U[\da-fA-F]{8}", m => { return ((char)int.Parse(m.Value.Substring(2), NumberStyles.HexNumber)).ToString(); }),
-				@"\\x[\da-fA-F]{2}", m => { return ((char)int.Parse(m.Value.Substring(2), NumberStyles.HexNumber)).ToString(); });
-
-			return str;
-		}
-
 		private static void WriteObjectToJson(object? obj, string filepath, CompilerJsonSerializer.ExclusionPreset preset = CompilerJsonSerializer.ExclusionPreset.None)
 		{
 			File.WriteAllText(filepath, CompilerJsonSerializer.SerializeToJson(obj, preset));
@@ -332,12 +143,13 @@ namespace stilt
 
 		static int Main(string[] rawArgs)
 		{
-			var args = new ProgramArgs();
-			args.ParseArgsOrExit(rawArgs);
+			var consoleArgs = new ConsoleArgs();
+			consoleArgs.ParseArgsOrExit(rawArgs);
 
+			var args = consoleArgs.ToCompilerArgs();
 			Builtins.PopulateBuiltinScope(args);
 
-			switch (args.Command)
+			switch (consoleArgs.Command)
 			{
 				case ProgramCommand.Build:
 				{
@@ -385,7 +197,7 @@ namespace stilt
 						Console.WriteLine($"Module: {filecomp.Filepath}");
 						foreach (var stmt in filecomp.ParserResult!.Statements.ToArray())
 						{
-							Dump(stmt, expanded: args.ExpandedDump);
+							Utils.Dump(stmt, expanded: args.ExpandedDump);
 						}
 					}
 
@@ -411,7 +223,7 @@ namespace stilt
 					var fileir = compiler.Files.First();
 					var ir = new IRGenerator(args, fileir);
 					ir.GenerateIR();
-					Dump(ir.Result.MainBlock, expanded: args.ExpandedDump);
+					Utils.Dump(ir.Result.MainBlock, expanded: args.ExpandedDump);
 
 					if (args.JsonDumpFilepath is not null)
 						WriteObjectToJson(ir.Result.MainBlock, Path.Combine(args.JsonDumpFilepath, "ir_main_block.json"), CompilerJsonSerializer.ExclusionPreset.Ast);

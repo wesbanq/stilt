@@ -7,7 +7,7 @@ namespace stilt.Compilation
 		public string Filepath;
 		public string TextChecksum;
 		public string InterfaceChecksum;
-		public string CompilerVersion = Program.CompilerVersion;
+		public string CompilerVersion = Compiler.CompilerVersion;
 		public IRGeneratorResult Result;
 		public ParserResult ParserResult;
 
