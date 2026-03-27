@@ -1,4 +1,0 @@
-<Solution>
-  <Project Path="src\slate.tests\stilt.tests.csproj" />
-  <Project Path="src\slate.core\stilt.core.csproj" />
-</Solution>

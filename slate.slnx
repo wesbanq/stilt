@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src\slate.tests\slate.tests.csproj" />
+  <Project Path="src\slate.core\slate.core.csproj" />
+  <Project Path="src\slate.cli\slate.cli.csproj" />
+</Solution>

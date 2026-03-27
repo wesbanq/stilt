@@ -5,11 +5,30 @@ namespace stilt.Compilation
 		string Name { get; }
 	}
 
+	public readonly record struct ProgramArgs(
+		int DebugLevel,
+		string? MainCodeFilepath,
+		bool Throw,
+		bool ExpandedDump,
+		bool NoTime,
+		string? JsonDumpFilepath,
+		MCVersion TargetVersion,
+		string? OutputFilepath,
+		bool NoObjectFile,
+		bool RegenObjectFile,
+		bool NoStd,
+		string OutputFileExtension,
+		string CodeFileExtension,
+		string ObjectFileExtension
+	);
+
 	public class Compiler
 	{
+		public static readonly string CompilerVersion = 
+			System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
 		public ProgramArgs Args;
 		public List<ObjectFile> Files = [];
-		public Linker? Linker;
+		public Linker? Link;
 		public Dictionary<TimedEvents, Timer> Timers = [];
 
 		public void WriteTimerReadout()
@@ -35,12 +54,12 @@ namespace stilt.Compilation
 				if (file is ParsedFile parsedFile)
 					parsedFile.Errors.ForEach(e => e.Print());
 			}
-			Linker?.Errors.ForEach(e => e.Print());
+			Link?.Errors.ForEach(e => e.Print());
 		}
 
-		private static ObjectFile? SearchForObjectFile(string filepath)
+		private static ObjectFile? SearchForObjectFile(string filepath, string extension)
 		{
-			var objPath = Path.ChangeExtension(filepath, Program.ObjectFileExtension);
+			var objPath = Path.ChangeExtension(filepath, extension);
 			if (!File.Exists(objPath))
 				return null;
 			try
@@ -48,7 +67,7 @@ namespace stilt.Compilation
 				var objFileText = new FileText(objPath);
 				var deserialized = ObjectFile.Deserialize(objFileText.Text);
 				if (deserialized is not null
-					&& deserialized.CompilerVersion == Program.CompilerVersion)
+					&& deserialized.CompilerVersion == CompilerVersion)
 				{
 					// TextChecksum is the hash of the source file; validate against source, not object file
 					var sourceFile = new FileText(filepath);
@@ -64,9 +83,9 @@ namespace stilt.Compilation
 			}
 		}
 
-		private static void GenerateObjectFile(string filepath, ObjectFile objectFile)
+		private static void GenerateObjectFile(string filepath, string extension, ObjectFile objectFile)
 		{
-			File.WriteAllText(Path.ChangeExtension(filepath, Program.ObjectFileExtension), objectFile.Serialize());
+			File.WriteAllText(Path.ChangeExtension(filepath, extension), objectFile.Serialize());
 		}
 
 		public static ObjectFile ParseFile(ProgramArgs args, string filepath)
@@ -135,12 +154,12 @@ namespace stilt.Compilation
 			}
 
 			Timers.Add(TimedEvents.Linking, new Timer("Linking"));
-			Linker = new Linker(
+			Link = new Linker(
 				Args,
                 [.. Files.Select(f => f.ParserResult!.RootScope)],
                 [.. Files.Select(f => f.ParserResult!.Statements)]
             );
-			Timers[TimedEvents.Linking].Run(() => Linker.Link());
+			Timers[TimedEvents.Linking].Run(() => Link.Link());
 
 			Timers[TimedEvents.Compilation].StopTimer();
 		}

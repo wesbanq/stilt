@@ -355,7 +355,7 @@ namespace stilt
 			{
 				if (string.IsNullOrEmpty(Path.GetExtension(normalizedPath)))
 				{
-					var pathWithExt = normalizedPath + Program.CodeFileExtension;
+					var pathWithExt = normalizedPath + Args.CodeFileExtension;
 					if (File.Exists(pathWithExt))
 					{
 						normalizedPath = pathWithExt;

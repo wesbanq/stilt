@@ -125,7 +125,7 @@ namespace stilt
 		private List<Expr> CreateOperatorExpr<T>(Token token)
 			where T : OperatorAttribute
 		{
-			var operatorAttr = Program.GetAttributesFromEnum<TokenType, T>(token.Which);
+			var operatorAttr = Utils.GetAttributesFromEnum<TokenType, T>(token.Which);
 			if (operatorAttr is null)
 				throw new UnexpectedToken(token.Range, token);
 
@@ -306,7 +306,7 @@ namespace stilt
 					if (!multi)
 						stringText = stringText.Replace("\n", "");
 					if (!raw)
-						stringText = Program.Unescape(stringText);
+						stringText = Utils.Unescape(stringText);
 
 					newExpr = new StringLiteralExpr(stringText, currentToken.Range, format, tagged, multi, raw);
 					break;
@@ -479,7 +479,7 @@ namespace stilt
 							Which = TokenType.Assign, 
 							Range = currentToken.Range + Lex.CurrentToken.Range 
 						};
-						var assignAttr = Program.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign);
+						var assignAttr = Utils.GetAttributeFromEnum<TokenType, OperatorAttribute>(TokenType.Assign);
 						if (assignAttr is null)
 							throw new UnexpectedToken(currentToken.Range, currentToken);
 						var assignExpr = new AssignExpr(
