@@ -422,7 +422,8 @@ namespace stilt
 				{
 					if (ExpectingOperator(ref rootExpr))
 					{
-						rootExpr?.Bracketed = true;
+						if (rootExpr is not null)
+							rootExpr.Bracketed = true;
 						return;
 					}
 					else
@@ -442,7 +443,8 @@ namespace stilt
 				case TokenType.CloseSquareBracket:
 				{
 					//FIX FullRange will ignore the closing bracket
-					rootExpr?.Bracketed = true;
+					if (rootExpr is not null)
+						rootExpr.Bracketed = true;
 					return;
 				}
 				case TokenType.Type:
@@ -1097,6 +1099,91 @@ namespace stilt
 			return new DecoratorObject(decoratorType, args);
 		}
 
+		private enum CaptureKind {Expr, Stmt, Keyword}
+		private readonly record struct ExpectedValue(CaptureKind Kind, TokenType? Token = null)
+		{
+			public static ExpectedValue Expr => new(CaptureKind.Expr);
+			public static ExpectedValue Stmt => new(CaptureKind.Stmt);
+			public static ExpectedValue Kw(TokenType t) => new(CaptureKind.Keyword, t);
+		}
+
+		private readonly record struct CapturedItem(CaptureKind Kind, Expr? Expr = null, Stmt? Stmt = null, TokenType? Keyword = null);
+
+		private readonly record struct CapturedStmt(IReadOnlyList<CapturedItem> Items)
+		{
+			public static CapturedStmt Empty => new([]);
+			public readonly IReadOnlyList<Expr> Exprs => [.. Items.Where(i => i.Kind == CaptureKind.Expr).Select(i => i.Expr!).Where(e => e is not null)];
+			public readonly IReadOnlyList<Stmt> Stmts => [.. Items.Where(i => i.Kind == CaptureKind.Stmt).Select(i => i.Stmt!).Where(s => s is not null)];
+			public readonly Stmt SingleStmt => Stmts.Count == 1 
+				? Stmts[0] 
+				: throw new InvalidOperationException($"Expected exactly one statement, got {Stmts.Count}.");
+			public readonly Expr SingleExpr => Exprs.Count == 1 
+				? Exprs[0] 
+				: throw new InvalidOperationException($"Expected exactly one expression, got {Exprs.Count}.");
+			
+			public readonly bool TryGetSingleStmt(out Stmt? stmt)
+			{
+				if (Stmts.Count == 1)
+				{
+					stmt = Stmts[0];
+					return true;
+				}
+				stmt = null;
+				return false;
+			}
+			public readonly bool TryGetSingleExpr(out Expr? expr) 
+			{
+				if (Exprs.Count == 1)
+				{
+					expr = Exprs[0];
+					return true;
+				}
+				expr = null;
+				return false;
+			}
+		}
+
+		private CapturedStmt? ParseContainerStmt (
+			Scope currentScope, 
+			params ExpectedValue[] expectedValues
+		)
+		{
+			List<CapturedItem> items = [];
+
+			foreach (var expectedValue in expectedValues)
+			{
+				switch (expectedValue.Kind)
+				{
+					case CaptureKind.Expr:
+					{
+						Expr? newExpr = null;
+						ParseExpr(ref newExpr, Lex.CurrentToken);
+						if (newExpr is null)
+							return null;
+						items.Add(new CapturedItem(CaptureKind.Expr, Expr: newExpr));
+						break;
+					}
+					case CaptureKind.Stmt:
+					{
+						Stmt? newStmt = null;
+						newStmt = ParseStmt(currentScope);
+						if (newStmt is null)
+							return null;
+						items.Add(new CapturedItem(CaptureKind.Stmt, Stmt: newStmt));
+						break;
+					}
+					case CaptureKind.Keyword:
+					{
+						var keyword = Lex.ExpectThis(expectedValue.Token!.Value);
+						items.Add(new CapturedItem(CaptureKind.Keyword, Keyword: keyword.Which));
+						break;
+					}
+				}
+			}
+
+			return items.Count > 0 ? new CapturedStmt(items) : null;
+		}
+
 		private List<Token> CollectSpecifiers(ref Token firstToken)
 		{
 			List<Token> specifiers = [];
@@ -1161,7 +1248,7 @@ namespace stilt
 				{
 					Lex.GoPast(TokenType.FuncDecl);
 					var (funcSymbol, argDecls, typeArgs) = ParseFuncSignature(currentScope);
-					//expr
+					//use exprs
 
 					Scope funcScope = new(currentScope);
 					foreach (var argDecl in argDecls)
