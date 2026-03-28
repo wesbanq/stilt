@@ -58,6 +58,65 @@ namespace slate.AST
 		}
 	}
 
+	/// <summary>
+	/// Syntactic path to a name before resolution: optional qualifier (<c>a.b</c>),
+	/// this segment's identifier, and optional generic type arguments on this segment.
+	/// Not a <see cref="Symbol"/> — the linker attaches real symbols after lookup.
+	/// </summary>
+	public sealed class UnresolvedReference(
+        string name,
+        Token token,
+        UnresolvedReference? qualifier = null,
+        IEnumerable<UnresolvedReference>? typeArguments = null
+	)
+    {
+        public string Name { get; } = name;
+        public Token Token { get; } = token;
+        public UnresolvedReference? Qualifier { get; } = qualifier;
+        public IReadOnlyList<UnresolvedReference> TypeArguments { get; } = typeArguments is null
+                ? Array.Empty<UnresolvedReference>()
+                : typeArguments.ToList();
+    }
+
+	/// <summary>
+	/// Holds an unresolved name path and, after the linker runs, the <see cref="Symbol"/> it bound to
+	/// </summary>
+	public sealed class SymbolReference(UnresolvedReference unresolved)
+    {
+        public UnresolvedReference Unresolved { get; } = unresolved ?? throw new ArgumentNullException(nameof(unresolved));
+        private Symbol? _resolved;
+
+		public Symbol? Resolved => _resolved;
+		public bool IsResolved => _resolved is not null;
+
+        public void Resolve(Symbol symbol)
+		{
+			ArgumentNullException.ThrowIfNull(symbol);
+			if (_resolved is not null)
+				throw new InvalidOperationException("Symbol already resolved.");
+			_resolved = symbol;
+		}
+	}
+
+	/// <summary>
+	/// Like <see cref="SymbolReference"/> but resolves only to a <see cref="TypeSymbol"/> (type positions in the AST).
+	/// </summary>
+	public sealed class TypeSymbolReference(UnresolvedReference unresolved)
+    {
+        public UnresolvedReference Unresolved { get; } = unresolved ?? throw new ArgumentNullException(nameof(unresolved));
+        private TypeSymbol? _resolved;
+
+		public TypeSymbol? Resolved => _resolved;
+		public bool IsResolved => _resolved is not null;
+
+        public void Resolve(TypeSymbol typeSymbol)
+		{
+			if (_resolved is not null)
+				throw new InvalidOperationException("Type symbol already resolved.");
+			_resolved = typeSymbol;
+		}
+	}
+
 	public class VarSymbol : Symbol
 	{
 		public TypeSymbol Type = Builtins.None;
@@ -237,6 +296,10 @@ namespace slate.AST
 		}
 	}
 
+	/// <summary>
+	/// Canonical structural types: one <see cref="TypeSymbol"/> instance per distinct applied generic / tuple shape.
+	/// Does not resolve source names — use <see cref="UnresolvedReference"/> + linker for that.
+	/// </summary>
 	public static class TypeSymbolFactory
 	{
 		private sealed class TypeSymbolArrayComparer : IEqualityComparer<TypeSymbol[]>
@@ -262,13 +325,13 @@ namespace slate.AST
 			}
 		}
 
-		private static Dictionary<TypeSymbol, Dictionary<TypeSymbol[], TypeSymbol>> _argTypeSymbols = [];
-		private static List<TypeSymbol> _basicTypeSymbols = [];
-		private static Dictionary<int, TypeSymbol> _tupleTypeSymbols = [];
-		private static Dictionary<string, TypeSymbol> _tempTypeSymbols = [];
+		private static readonly Dictionary<TypeSymbol, Dictionary<TypeSymbol[], TypeSymbol>> _argTypeSymbols = [];
+		private static readonly Dictionary<int, TypeSymbol> _tupleTypeSymbols = [];
+		private static readonly List<TypeSymbol> _basicTypeSymbols = [];
+		private static readonly Dictionary<string, TypeSymbol> _tempTypeSymbolsByName = [];
 
 		private static Dictionary<TypeSymbol[], TypeSymbol> CreateArgsDict() =>
-    		new Dictionary<TypeSymbol[], TypeSymbol>(new TypeSymbolArrayComparer());
+			new(new TypeSymbolArrayComparer());
 
 		private static TypeSymbol[] PopulateArgs(TypeSymbol baseType, List<TypeSymbol>? args = null)
 		{
@@ -277,7 +340,7 @@ namespace slate.AST
 				for (int i = args.Count; i < baseType.ArgumentCount; i++)
 					args.Add(Builtins.None);
 
-			return args.ToArray();
+			return [.. args];
 		}
 
 		private static TypeSymbol GetBasicTypeSymbol(TypeSymbol baseType)
@@ -314,40 +377,8 @@ namespace slate.AST
 				_tupleTypeSymbols[args.Count] = tupleTypeSymbol = new TypeSymbol($"Tuple_{args.Count}", Symbol.BuiltinSource, argumentCount: args.Count);
 				_argTypeSymbols[tupleTypeSymbol] = CreateArgsDict();
 			}
-			
+
 			return GetTypeSymbol(tupleTypeSymbol, args);
-		}
-
-		public static TypeSymbol GetTempTypeSymbol(string name, List<TypeSymbol>? args = null)
-		{
-			if (!_tempTypeSymbols.TryGetValue(name, out var baseType))
-			{
-				baseType = new TypeSymbol(name, Symbol.TempSource, argumentCount: args?.Count ?? 0);
-				_tempTypeSymbols[name] = baseType;
-				baseType = GetTypeSymbol(baseType, args);
-			}
-			else
-			{
-				if (args is not null) 
-				{
-					if (args.Count != baseType.ArgumentCount)
-					{
-						if (baseType.ArgumentCount > 0)
-							throw new ArgumentException("Inconsistent argument count for temp type symbol");
-						else
-						{
-							//change preexisting uses of type symbol to have None as the type args
-							baseType._changeArgCount(args.Count);
-							baseType.Arguments = Enumerable.Repeat(Builtins.None, args.Count).ToArray();
-							_basicTypeSymbols.Remove(baseType);
-						}
-					}
-				}
-
-				baseType = GetTypeSymbol(baseType, args);
-			}
-
-			return baseType;
 		}
 	}
 }

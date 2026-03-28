@@ -7,7 +7,7 @@ using NuArgs;
 using slate.CodeGen;
 using slate.Compilation;
 
-namespace slate
+namespace slate.Cli
 {
 	public enum ProgramCommand
 	{
@@ -141,6 +141,22 @@ namespace slate
 			File.WriteAllText(filepath, CompilerJsonSerializer.SerializeToJson(obj, preset));
 		}
 
+		private static void PrintBuildErrors(Compiler compiler)
+		{
+			foreach (var error in compiler.Errors)
+			{
+				error.Print();
+			}
+		}
+
+		private static void PrintTimerReadout(Compiler compiler)
+		{
+			foreach (var timer in compiler.Timers)
+			{
+				Console.WriteLine(timer.Value.Time);
+			}
+		}
+
 		static int Main(string[] rawArgs)
 		{
 			var consoleArgs = new ConsoleArgs();
@@ -157,10 +173,10 @@ namespace slate
 					compiler.Build();
 
 					Console.WriteLine();
-					compiler.PrintBuildErrors();
+					PrintBuildErrors(compiler);
 					Console.WriteLine();
 					if (!args.NoTime)
-						compiler.WriteTimerReadout();
+						PrintTimerReadout(compiler);
 
 					if (args.JsonDumpFilepath is not null)
 						WriteObjectToJson(compiler.Files.Select(p => p.ParserResult!.Statements).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_statements.json"), CompilerJsonSerializer.ExclusionPreset.Ast);
@@ -202,10 +218,10 @@ namespace slate
 					}
 
 					Console.WriteLine();
-					comp.PrintBuildErrors();
+					PrintBuildErrors(comp);
 					Console.WriteLine();
 					if (!args.NoTime)
-						comp.WriteTimerReadout();
+						PrintTimerReadout(comp);
 
 					if (args.JsonDumpFilepath is not null)
 						WriteObjectToJson(comp.Files.Select(f => f.ParserResult!.Statements).ToList(), Path.Combine(args.JsonDumpFilepath, "parser_statements.json"), CompilerJsonSerializer.ExclusionPreset.Ast);

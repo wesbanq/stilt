@@ -11,9 +11,6 @@ namespace slate.Compilation
 		public IRGeneratorResult Result;
 		public ParserResult ParserResult;
 
-		[Newtonsoft.Json.JsonIgnore]
-		public Dictionary<TimedEvents, Timer> Timers = [];
-
 		private static readonly JsonSerializerSettings JsonSerializeSettings = new()
 		{
 			Formatting = Formatting.None,
@@ -105,11 +102,9 @@ namespace slate.Compilation
 			}
 		}
 
-		public IRGeneratorResult GenerateIR(ProgramArgs args)
+		public virtual IRGeneratorResult GenerateIR(ProgramArgs args)
 		{
-			Timers[TimedEvents.IRGeneration] = new Timer("IR generation");
-			Result = Timers[TimedEvents.IRGeneration].Run(() => new IRGenerator(args, this).Generate());
-			return Result;
+			return new IRGenerator(args, this).Generate();
 		}
 
 		protected ObjectFile() { } // For JSON deserialization
@@ -130,6 +125,7 @@ namespace slate.Compilation
 		public readonly FileText Text;
 		public List<CompilationMessage> Errors => ParserResult?.CompilationIssues ?? [];
 		public bool HasErrors => Errors.Any(e => e.Severity >= ErrorSeverity.Error);
+		public Dictionary<TimedEvents, Timer> Timers = [];
 
 		public new string TextChecksum => Text.GetSHA256Hash();
 		public new string InterfaceChecksum => global::slate.Compilation.InterfaceChecksum.Compute(ParserResult?.RootScope, Filepath);
@@ -150,6 +146,16 @@ namespace slate.Compilation
 				parser.ParseFile();
 				ParserResult = parser.Result;
 			});
+		}
+
+		public override IRGeneratorResult GenerateIR(ProgramArgs args)
+		{
+			Timers.Add(TimedEvents.IRGeneration, new Timer("IR generation"));
+			Timers[TimedEvents.IRGeneration].Run(() =>
+			{
+				Result = base.GenerateIR(args);
+			});
+			return Result;
 		}
 
 		public ParsedFile(string filepath, ObjectFile file) : base(filepath, file.TextChecksum, file.InterfaceChecksum, file.Result, file.ParserResult)
