@@ -1,8 +1,8 @@
-using stilt.Compilation;
-using stilt.IR;
+using slate.Compilation;
+using slate.IR;
 using Xunit;
 
-namespace stilt.Tests;
+namespace slate.Tests;
 
 public class IrGoldenTests
 {
@@ -11,35 +11,32 @@ public class IrGoldenTests
 	private const string GoldenSuffix = ".ir.json";
 
 	[Theory]
-	[MemberData(nameof(GetStiltFiles))]
-	public void Ir_matches_golden(string stiltPath)
+	[MemberData(nameof(GetSlateFiles))]
+	public void Ir_matches_golden(string slatePath)
 	{
-		var args = new ProgramArgs { MainCodeFilepath = stiltPath, NoStd = true };
+		var args = new ProgramArgs { MainCodeFilepath = slatePath, NoStd = true };
 		Builtins.PopulateBuiltinScope(args);
 
 		var compiler = new Compiler(args);
 		compiler.Build();
 
-		if (compiler.Files.Count == 0)
-			Assert.Fail($"No files built for {stiltPath}");
-		if (compiler.Files.OfType<ParsedFile>().Any(f => f.HasErrors))
-			Assert.Fail($"Build had errors for {stiltPath}. Fix the source or run with -p:RegenerateGoldens=true after fixing.");
+		GoldenTestHelper.AssertCompilationSucceeded(compiler, "IR", Path.GetFileName(slatePath), slatePath);
 
 		var file = compiler.Files[0];
 		var ir = new IRGenerator(args, file);
 		ir.GenerateIR();
 		var actual = CompilerJsonSerializer.SerializeToJson(ir.Result.MainBlock, CompilerJsonSerializer.ExclusionPreset.Ast);
 
-		var goldenPath = GoldenTestHelper.GetGoldenPath(stiltPath, GoldenSuffix);
-		GoldenTestHelper.AssertOrUpdateGolden(actual, goldenPath, Path.GetFileName(stiltPath), stiltPath);
+		var goldenPath = GoldenTestHelper.GetGoldenPath(slatePath, GoldenSuffix);
+		GoldenTestHelper.AssertOrUpdateGolden(actual, goldenPath, Path.GetFileName(slatePath), slatePath);
 	}
 
-	public static TheoryData<string> GetStiltFiles()
+	public static TheoryData<string> GetSlateFiles()
 	{
 		var data = new TheoryData<string>();
 		if (!Directory.Exists(IrDir))
 			return data;
-		foreach (var path in Directory.EnumerateFiles(IrDir, "*.stilt"))
+		foreach (var path in Directory.EnumerateFiles(IrDir, "*.slate"))
 			data.Add(path);
 		return data;
 	}

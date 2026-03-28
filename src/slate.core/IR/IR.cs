@@ -1,4 +1,4 @@
-namespace stilt.IR
+namespace slate.IR
 {
     public enum Instruction : ushort
     {

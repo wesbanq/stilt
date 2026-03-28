@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\slate.core\slate.core.csproj" />
+    <ProjectReference Include="..\slate.Core\slate.Core.csproj" />
     <ProjectReference Include="..\..\external\NuArgs\NuArgs.csproj" />
   </ItemGroup>
 

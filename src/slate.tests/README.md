@@ -1,6 +1,6 @@
-# Stilt compiler test suite
+# Slate compiler test suite
 
-This project contains golden tests for the Stilt compiler: AST, IR, and (in the future) generated code.
+This project contains golden tests for the Slate compiler: AST, IR, and (in the future) generated code.
 
 ## Running tests
 
@@ -13,7 +13,7 @@ dotnet test
 Or run only the test project:
 
 ```bash
-dotnet test Tests/stilt.Tests.csproj
+dotnet test src/slate.Tests/slate.Tests.csproj
 ```
 
 ## Regenerating golden files
@@ -24,4 +24,4 @@ When you change the compiler’s AST or IR output (or add new test cases), updat
 dotnet test -p:RegenerateGoldens=true
 ```
 
-This overwrites the golden files in `Tests/TestData/` with the current compiler output and the tests pass.
+This overwrites the golden files in `src/slate.Tests/TestData/` with the current compiler output and the tests pass.

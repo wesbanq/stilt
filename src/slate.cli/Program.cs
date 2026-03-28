@@ -1,13 +1,13 @@
 using System.Collections;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using stilt.IR;
+using slate.IR;
 using System.Globalization;
 using NuArgs;
-using stilt.CodeGen;
-using stilt.Compilation;
+using slate.CodeGen;
+using slate.Compilation;
 
-namespace stilt
+namespace slate
 {
 	public enum ProgramCommand
 	{
@@ -52,7 +52,7 @@ namespace stilt
 	}
 
 	[NuArgsExtra<ProgramCommand>(aboutText: """
-		Stilt is a language for Minecraft.
+		Slate is a language for Minecraft.
 		It is a statically typed, compiled language that is designed to be easy to learn and use.
 		It is still in early development and is not yet ready for use.
 	""", unixStyle: true)]
@@ -118,7 +118,7 @@ namespace stilt
 	internal static class Program
 	{
 		public static readonly string OutputFileExtension = ".zip";
-		public static readonly string CodeFileExtension = ".stilt";
+		public static readonly string CodeFileExtension = ".slate";
 		public static readonly string ObjectFileExtension = CodeFileExtension + ".o";
 
 		private class ReferenceEqualityComparer : IEqualityComparer<object>

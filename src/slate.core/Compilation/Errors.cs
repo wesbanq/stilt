@@ -1,4 +1,4 @@
-namespace stilt.Errors
+namespace slate.Errors
 {
 	public abstract class CompilationMessage : Exception
 	{

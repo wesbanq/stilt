@@ -1,4 +1,4 @@
-namespace stilt
+namespace slate
 {
 	public class ParserResult
 	{

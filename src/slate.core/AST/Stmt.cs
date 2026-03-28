@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 
-namespace stilt.AST
+namespace slate.AST
 {
 	public class DecoratorObject
 	{

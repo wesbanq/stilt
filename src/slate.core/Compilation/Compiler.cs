@@ -1,4 +1,4 @@
-namespace stilt.Compilation
+namespace slate.Compilation
 {
 	public interface IDescriptable
 	{
