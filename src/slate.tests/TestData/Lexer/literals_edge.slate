@@ -1,0 +1,29 @@
+# strings: plain, raw prefix, escaped quote
+"hello"
+r"quote:\"inside\""
+f"fmt"
+rft"multiline
+text"
+
+# integers / radix / underscores
+0xFF 42 0o7 0b11
+1_024 0xDE_AD
+42l
+
+# floats, scientific
+1.5f 3.0e+2 3.0e-1
+.5 2.0
+0.
+
+# not scientific: regex needs decimal mantissa before e
+1e2
+
+# tab in source becomes four spaces (preprocessor)
+	a_tabbed
+
+# block comment: stripped, newlines preserved for line tracking
+##
+two lines
+inside
+##
+after_block

@@ -1,0 +1,290 @@
+﻿[
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 0,
+      "End": 1,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "StringLiteral",
+    "Range": {
+      "Start": 1,
+      "End": 8,
+      "Text": "\"hello\""
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 8,
+      "End": 9,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "StringLiteral",
+    "Range": {
+      "Start": 9,
+      "End": 28,
+      "Text": "r\"quote:\\\"inside\\\"\""
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 28,
+      "End": 29,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "StringLiteral",
+    "Range": {
+      "Start": 29,
+      "End": 35,
+      "Text": "f\"fmt\""
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 35,
+      "End": 36,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "StringLiteral",
+    "Range": {
+      "Start": 36,
+      "End": 55,
+      "Text": "rft\"multiline\ntext\""
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 55,
+      "End": 58,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "HexNumericLiteral",
+    "Range": {
+      "Start": 58,
+      "End": 62,
+      "Text": "0xFF"
+    }
+  },
+  {
+    "Which": "WholeNumericLiteral",
+    "Range": {
+      "Start": 63,
+      "End": 65,
+      "Text": "42"
+    }
+  },
+  {
+    "Which": "OctalNumericLiteral",
+    "Range": {
+      "Start": 66,
+      "End": 69,
+      "Text": "0o7"
+    }
+  },
+  {
+    "Which": "ByteNumericLiteral",
+    "Range": {
+      "Start": 70,
+      "End": 74,
+      "Text": "0b11"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 74,
+      "End": 75,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "WholeNumericLiteral",
+    "Range": {
+      "Start": 75,
+      "End": 80,
+      "Text": "1_024"
+    }
+  },
+  {
+    "Which": "HexNumericLiteral",
+    "Range": {
+      "Start": 81,
+      "End": 88,
+      "Text": "0xDE_AD"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 88,
+      "End": 89,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "WholeNumericLiteral",
+    "Range": {
+      "Start": 89,
+      "End": 92,
+      "Text": "42l"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 92,
+      "End": 95,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "DecimalNumericLiteral",
+    "Range": {
+      "Start": 95,
+      "End": 99,
+      "Text": "1.5f"
+    }
+  },
+  {
+    "Which": "ScientificNumericLiteral",
+    "Range": {
+      "Start": 100,
+      "End": 106,
+      "Text": "3.0e+2"
+    }
+  },
+  {
+    "Which": "ScientificNumericLiteral",
+    "Range": {
+      "Start": 107,
+      "End": 113,
+      "Text": "3.0e-1"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 113,
+      "End": 114,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "DecimalNumericLiteral",
+    "Range": {
+      "Start": 114,
+      "End": 116,
+      "Text": ".5"
+    }
+  },
+  {
+    "Which": "DecimalNumericLiteral",
+    "Range": {
+      "Start": 117,
+      "End": 120,
+      "Text": "2.0"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 120,
+      "End": 121,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "DecimalNumericLiteral",
+    "Range": {
+      "Start": 121,
+      "End": 123,
+      "Text": "0."
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 123,
+      "End": 126,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "WholeNumericLiteral",
+    "Range": {
+      "Start": 126,
+      "End": 127,
+      "Text": "1"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 127,
+      "End": 129,
+      "Text": "e2"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 129,
+      "End": 132,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 136,
+      "End": 144,
+      "Text": "a_tabbed"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 144,
+      "End": 151,
+      "Text": "\n\n\n\n\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 151,
+      "End": 162,
+      "Text": "after_block"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 162,
+      "End": 163,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "EOF",
+    "Range": {
+      "Start": 162,
+      "End": 163,
+      "Text": "\n"
+    }
+  }
+]

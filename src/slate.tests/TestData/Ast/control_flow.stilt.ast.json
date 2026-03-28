@@ -1,0 +1,274 @@
+﻿[
+  {
+    "Name": [
+      {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "Members": []
+        },
+        "Name": "a",
+        "Specifiers": []
+      }
+    ],
+    "Value": {
+      "Value": 2,
+      "Type": {
+        "Base": null,
+        "Arguments": null,
+        "Name": "Whole",
+        "Specifiers": [],
+        "Members": []
+      },
+      "Bracketed": true,
+      "Explicit": false,
+      "Precedence": 0
+    },
+    "IsConst": false,
+    "Specifiers": [],
+    "Decorators": []
+  },
+  {
+    "Name": [
+      {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "Members": []
+        },
+        "Name": "b",
+        "Specifiers": []
+      }
+    ],
+    "Value": {
+      "Value": 4,
+      "Type": {
+        "Base": null,
+        "Arguments": null,
+        "Name": "Whole",
+        "Specifiers": [],
+        "Members": []
+      },
+      "Bracketed": true,
+      "Explicit": false,
+      "Precedence": 0
+    },
+    "IsConst": false,
+    "Specifiers": [],
+    "Decorators": []
+  },
+  {
+    "Condition": {
+      "Left": {
+        "Identity": {
+          "Type": {
+            "Base": null,
+            "Arguments": null,
+            "Name": "Any",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "a",
+          "Specifiers": []
+        },
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "Members": []
+        },
+        "Bracketed": false,
+        "Explicit": false,
+        "Precedence": 0
+      },
+      "Right": {
+        "Identity": {
+          "Type": {
+            "Base": null,
+            "Arguments": null,
+            "Name": "Any",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Name": "b",
+          "Specifiers": []
+        },
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "Members": []
+        },
+        "Bracketed": false,
+        "Explicit": false,
+        "Precedence": 0
+      },
+      "Operator": {
+        "Which": 12,
+        "Range": {
+          "Start": 27,
+          "End": 28,
+          "Text": "<"
+        },
+        "IsUnimplemented": false,
+        "IsSpecifier": false
+      },
+      "Type": {
+        "Base": null,
+        "Arguments": null,
+        "Name": "Any",
+        "Specifiers": [],
+        "Members": []
+      },
+      "Bracketed": true,
+      "Explicit": false,
+      "Precedence": 6
+    },
+    "NextIf": {
+      "Statements": [
+        {
+          "Name": [
+            {
+              "Type": {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Any",
+                "Specifiers": [],
+                "Members": []
+              },
+              "Name": "x",
+              "Specifiers": []
+            }
+          ],
+          "Value": {
+            "Value": 1,
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "Members": []
+            },
+            "Bracketed": true,
+            "Explicit": false,
+            "Precedence": 0
+          },
+          "IsConst": false,
+          "Specifiers": [],
+          "Decorators": []
+        }
+      ],
+      "Decorators": []
+    },
+    "NextElse": {
+      "Statements": [
+        {
+          "Name": [
+            {
+              "Type": {
+                "Base": null,
+                "Arguments": null,
+                "Name": "Any",
+                "Specifiers": [],
+                "Members": []
+              },
+              "Name": "x",
+              "Specifiers": []
+            }
+          ],
+          "Value": {
+            "Value": 2,
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Whole",
+              "Specifiers": [],
+              "Members": []
+            },
+            "Bracketed": true,
+            "Explicit": false,
+            "Precedence": 0
+          },
+          "IsConst": false,
+          "Specifiers": [],
+          "Decorators": []
+        }
+      ],
+      "Decorators": []
+    },
+    "Decorators": []
+  },
+  {
+    "Statements": [
+      {
+        "Name": [
+          {
+            "Type": {
+              "Base": null,
+              "Arguments": null,
+              "Name": "Any",
+              "Specifiers": [],
+              "Members": []
+            },
+            "Name": "inner",
+            "Specifiers": []
+          }
+        ],
+        "Value": {
+          "Value": 1,
+          "Type": {
+            "Base": null,
+            "Arguments": null,
+            "Name": "Whole",
+            "Specifiers": [],
+            "Members": []
+          },
+          "Bracketed": true,
+          "Explicit": false,
+          "Precedence": 0
+        },
+        "IsConst": false,
+        "Specifiers": [],
+        "Decorators": []
+      }
+    ],
+    "Decorators": []
+  },
+  {
+    "Name": [
+      {
+        "Type": {
+          "Base": null,
+          "Arguments": null,
+          "Name": "Any",
+          "Specifiers": [],
+          "Members": []
+        },
+        "Name": "outer",
+        "Specifiers": []
+      }
+    ],
+    "Value": {
+      "Value": 2,
+      "Type": {
+        "Base": null,
+        "Arguments": null,
+        "Name": "Whole",
+        "Specifiers": [],
+        "Members": []
+      },
+      "Bracketed": true,
+      "Explicit": false,
+      "Precedence": 0
+    },
+    "IsConst": false,
+    "Specifiers": [],
+    "Decorators": []
+  }
+]

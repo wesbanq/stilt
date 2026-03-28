@@ -1,4 +1,5 @@
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using System.Reflection;
 
@@ -14,7 +15,9 @@ namespace slate
 			None,
 			Base,
 			Ast,
-			Lexer
+			Lexer,
+			/// <summary>Lexer token dumps: string enum names, FileRange keeps Start/End/Text only (via Base exclusions).</summary>
+			Tokens
 		}
 
 		private static IEnumerable<string>? GetExcludedPropertyNames(ExclusionPreset preset)
@@ -26,6 +29,7 @@ namespace slate
 				ExclusionPreset.Base => baseProps,
 				ExclusionPreset.Ast => baseProps.Concat(new[] { "Scope", "RootScope", "Args" }),
 				ExclusionPreset.Lexer => baseProps.Concat(new[] { "Filepath", "Args", "CurrentToken", "CurrentPos", "Text" }),
+				ExclusionPreset.Tokens => baseProps.Concat(new[] { "IsUnimplemented", "IsSpecifier" }),
 				_ => null
 			};
 		}
@@ -40,6 +44,8 @@ namespace slate
 				ReferenceLoopHandling = ReferenceLoopHandling.Ignore,
 				Formatting = Formatting.Indented
 			};
+			if (preset == ExclusionPreset.Tokens)
+				settings.Converters.Add(new StringEnumConverter());
 			if (GetExcludedPropertyNames(preset) is { } names && names.Any())
 			{
 				settings.ContractResolver = new ExcludePropertiesContractResolver(names);

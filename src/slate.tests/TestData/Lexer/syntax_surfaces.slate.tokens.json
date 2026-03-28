@@ -1,0 +1,402 @@
+﻿[
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 0,
+      "End": 1,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 1,
+      "End": 2,
+      "Text": "x"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 2,
+      "End": 5,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "FuncDecl",
+    "Range": {
+      "Start": 5,
+      "End": 9,
+      "Text": "func"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 10,
+      "End": 14,
+      "Text": "main"
+    }
+  },
+  {
+    "Which": "OpenBracket",
+    "Range": {
+      "Start": 14,
+      "End": 15,
+      "Text": "("
+    }
+  },
+  {
+    "Which": "CloseBracket",
+    "Range": {
+      "Start": 15,
+      "End": 16,
+      "Text": ")"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 16,
+      "End": 19,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "WholeNumericLiteral",
+    "Range": {
+      "Start": 19,
+      "End": 20,
+      "Text": "1"
+    }
+  },
+  {
+    "Which": "Plus",
+    "Range": {
+      "Start": 21,
+      "End": 22,
+      "Text": "+"
+    }
+  },
+  {
+    "Which": "WholeNumericLiteral",
+    "Range": {
+      "Start": 23,
+      "End": 24,
+      "Text": "2"
+    }
+  },
+  {
+    "Which": "Star",
+    "Range": {
+      "Start": 25,
+      "End": 26,
+      "Text": "*"
+    }
+  },
+  {
+    "Which": "WholeNumericLiteral",
+    "Range": {
+      "Start": 27,
+      "End": 28,
+      "Text": "3"
+    }
+  },
+  {
+    "Which": "StrictStmtSeparator",
+    "Range": {
+      "Start": 28,
+      "End": 32,
+      "Text": ";\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 32,
+      "End": 33,
+      "Text": "a"
+    }
+  },
+  {
+    "Which": "GreaterOrEqual",
+    "Range": {
+      "Start": 34,
+      "End": 36,
+      "Text": ">="
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 37,
+      "End": 38,
+      "Text": "b"
+    }
+  },
+  {
+    "Which": "Equals",
+    "Range": {
+      "Start": 39,
+      "End": 41,
+      "Text": "=="
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 42,
+      "End": 43,
+      "Text": "c"
+    }
+  },
+  {
+    "Which": "Unequals",
+    "Range": {
+      "Start": 44,
+      "End": 46,
+      "Text": "!="
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 47,
+      "End": 48,
+      "Text": "d"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 48,
+      "End": 51,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 51,
+      "End": 52,
+      "Text": "a"
+    }
+  },
+  {
+    "Which": "StrictStmtSeparator",
+    "Range": {
+      "Start": 52,
+      "End": 53,
+      "Text": ";"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 53,
+      "End": 54,
+      "Text": "b"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 54,
+      "End": 57,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "OpenCurlyBracket",
+    "Range": {
+      "Start": 57,
+      "End": 58,
+      "Text": "{"
+    }
+  },
+  {
+    "Which": "OpenSquareBracket",
+    "Range": {
+      "Start": 59,
+      "End": 60,
+      "Text": "["
+    }
+  },
+  {
+    "Which": "OpenBracket",
+    "Range": {
+      "Start": 61,
+      "End": 62,
+      "Text": "("
+    }
+  },
+  {
+    "Which": "CloseBracket",
+    "Range": {
+      "Start": 63,
+      "End": 64,
+      "Text": ")"
+    }
+  },
+  {
+    "Which": "CloseSquareBracket",
+    "Range": {
+      "Start": 65,
+      "End": 66,
+      "Text": "]"
+    }
+  },
+  {
+    "Which": "CloseCurlyBracket",
+    "Range": {
+      "Start": 67,
+      "End": 68,
+      "Text": "}"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 68,
+      "End": 71,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 71,
+      "End": 72,
+      "Text": "x"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 73,
+      "End": 76,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 76,
+      "End": 88,
+      "Text": "'weird name'"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 88,
+      "End": 91,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "TypeDecl",
+    "Range": {
+      "Start": 91,
+      "End": 95,
+      "Text": "type"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 95,
+      "End": 96,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "TraitDecl",
+    "Range": {
+      "Start": 96,
+      "End": 101,
+      "Text": "trait"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 101,
+      "End": 102,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "VarDecl",
+    "Range": {
+      "Start": 102,
+      "End": 105,
+      "Text": "var"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 105,
+      "End": 106,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "True",
+    "Range": {
+      "Start": 106,
+      "End": 110,
+      "Text": "true"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 110,
+      "End": 111,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "False",
+    "Range": {
+      "Start": 111,
+      "End": 116,
+      "Text": "false"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 116,
+      "End": 117,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "Null",
+    "Range": {
+      "Start": 117,
+      "End": 121,
+      "Text": "null"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 121,
+      "End": 122,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "EOF",
+    "Range": {
+      "Start": 121,
+      "End": 122,
+      "Text": "\n"
+    }
+  }
+]

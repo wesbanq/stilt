@@ -46,17 +46,17 @@ namespace slate
 			}
 		}
 
-		public static string Preprocess(string code)
+		public static string Preprocess(string code, ProgramArgs? args = null)
 		{
 			//preprocessor needs to keep the same amount of lines to make sure the error reports are at the correct positions
 			const string commentRegex1 = """#.*""";
 			const string commentRegex2 = """##(?s:.*?)##""";
 			const string commentRegex3 = """\r\n""";
 			const string removeTabs = """\t""";
-			const string newTab = "    ";
+			string newTab = new string(' ', args?.TabSize ?? 4);
 			const string linebreakRegex = """ ?\\\s+""";
 			return Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(Regex.Replace(
-				code + "\n", commentRegex3, "\n")
+				code, commentRegex3, "\n")
 				, removeTabs, newTab)
 				, commentRegex2, m => { var lines = m.Value.Count(c => c == '\n'); return new String('\n', lines); })
 				, commentRegex1, "")
@@ -88,44 +88,10 @@ namespace slate
 			return rules;
 		}
 
-		/// <summary>Legacy: get all regex matches over full code (used only for comparison / fallback).</summary>
-		protected List<Token> GetTokenMatches(string code, List<string[]> rules)
-		{
-			List<Token> tokens = [];
-
-			for (int i = 0; i < rules.Count; ++i)
-			{
-				if (rules[i] is null || rules[i].Length == 0) continue;
-				foreach (var rule in rules[i])
-				{
-					var matchCollection = Regex.Matches(code, rule, RegexOptions.NonBacktracking);
-					try
-					{
-						foreach (Match match in matchCollection)
-						{
-							var newToken = new Token();
-
-							newToken.Range = new FileRange(match.Index, match.Index + match.Length, Filepath, Text);
-							newToken.Which = (TokenType)i;
-
-							tokens.Add(newToken);
-						}
-					}
-					catch (RegexMatchTimeoutException e)
-					{
-						Console.WriteLine(e);
-						throw;
-					}
-				}
-			}
-
-			return tokens;
-		}
-
 		public void SkipStmt()
 		{
 			while (CurrentToken.Which is not 
-				(TokenType.EOF or TokenType.StmtSeparator or TokenType.CloseCurlyBracket or TokenType.OpenCurlyBracket)
+				(TokenType.EOF or TokenType.StmtSeparator or TokenType.StrictStmtSeparator or TokenType.CloseCurlyBracket or TokenType.OpenCurlyBracket)
 			) 
 			{
 				Next();
@@ -136,11 +102,11 @@ namespace slate
 
 		public bool NextIs(params TokenType[] types) => 
 			types.Contains(PeekNext(1).Which) || 
-			(PeekNext(1).Which == TokenType.StmtSeparator && types.Contains(PeekNext(2).Which));
+			((PeekNext(1).Which == TokenType.StmtSeparator || PeekNext(1).Which == TokenType.StrictStmtSeparator) && types.Contains(PeekNext(2).Which));
 
 		public void SkipStmtSeparator()
 		{
-			if (CurrentIs(TokenType.StmtSeparator))
+			if (CurrentIs(TokenType.StmtSeparator, TokenType.StrictStmtSeparator))
 				Next();
 		}
 
@@ -221,25 +187,65 @@ namespace slate
 			return nextToken;
 		}
 
-		public void Goto(Token to)
+		private static readonly List<LexRule> LexRules = BuildLexRules();
+
+		private static void ApplySquareBracketDepth(TokenType which, ref int depth)
 		{
-			var t = Tokens.FindIndex(t => ReferenceEquals(t, to));
-			if (t == -1)
-				throw new ArgumentException($"Couldn't find token {to}");
-			CurrentPos = t;
+			if (which == TokenType.OpenSquareBracket) depth++;
+			else if (which == TokenType.CloseSquareBracket && depth > 0) depth--;
 		}
 
-		private static List<LexRule>? _lexRules;
-		private static List<LexRule> LexRules => _lexRules ??= BuildLexRules();
+		/// <summary>
+		/// <see cref="TokenType.StmtSeparator"/>: newline runs at square-bracket depth 0 (semicolons are <see cref="TokenType.StrictStmtSeparator"/> via regex).
+		/// </summary>
+		private static bool TryLexStmtSeparator(string code, int pos, int squareBracketDepth, out int length)
+		{
+			length = 0;
+			if (squareBracketDepth > 0 || pos >= code.Length)
+				return false;
+
+			var c = code[pos];
+			if (c is not ('\r' or '\n'))
+				return false;
+
+			var q = pos;
+			while (q < code.Length)
+			{
+				if (code[q] == '\r')
+				{
+					q++;
+					if (q < code.Length && code[q] == '\n')
+						q++;
+				}
+				else if (code[q] == '\n')
+					q++;
+				else
+					break;
+			}
+			length = q - pos;
+			return true;
+		}
 
 		public void Lex()
 		{
 			var code = Text.ToString();
 			var tokens = new List<Token>();
 			var pos = 0;
+			var squareBracketDepth = 0;
 
 			while (pos < code.Length)
 			{
+				if (TryLexStmtSeparator(code, pos, squareBracketDepth, out var sepLen))
+				{
+					tokens.Add(new Token
+					{
+						Which = TokenType.StmtSeparator,
+						Range = new FileRange(pos, pos + sepLen, Filepath, Text),
+					});
+					pos += sepLen;
+					continue;
+				}
+
 				int bestLen = 0;
 				TokenType bestType = 0;
 				bool bestIsSymbol = false;
@@ -266,10 +272,16 @@ namespace slate
 						Which = bestType,
 						Range = new FileRange(pos, pos + bestLen, Filepath, Text),
 					});
+					ApplySquareBracketDepth(bestType, ref squareBracketDepth);
 					pos += bestLen;
 				}
 				else
+				{
+					var ch = code[pos];
+					if (ch == '[') squareBracketDepth++;
+					else if (ch == ']' && squareBracketDepth > 0) squareBracketDepth--;
 					pos += 1;
+				}
 			}
 
 			Tokens = tokens;

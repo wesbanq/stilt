@@ -1,0 +1,41 @@
+# null-coalescing / null-conditional
+a ?? b?.c
+
+# pipeline-style (unimplemented ops but lexed)
+x |> y !> z .> w
+p => q
+
+# signals
+u -> v
+w <- x
+
+# exponent / inc-dec / range-ish
+n ** 2
+i++
+--j
+
+# logical spellings and symbols
+not a and b or c xor d
+a & b | c ^ d
+!z
+
+# decorators
+[[ note ]]
+
+# @ in identifiers
+@_slot0
+
+# specifiers + control keywords
+pub prv const override shared
+if then else elif return while for foreach in break continue repeat until
+new clone import as version
+
+# range (unimplemented token)
+lo .. hi
+
+# execute / line (ExecuteStmt regex)
+execute /tool
+next_stmt
+
+# mixed punctuation run (tie-breaking: longer symbols win)
+?..??..?

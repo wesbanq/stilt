@@ -19,7 +19,8 @@ namespace slate.Compilation
 		bool NoStd,
 		string OutputFileExtension,
 		string CodeFileExtension,
-		string ObjectFileExtension
+		string ObjectFileExtension,
+		int TabSize = 4
 	);
 
 	public class Compiler

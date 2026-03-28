@@ -1,0 +1,818 @@
+﻿[
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 0,
+      "End": 1,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 1,
+      "End": 2,
+      "Text": "a"
+    }
+  },
+  {
+    "Which": "NullCoalescing",
+    "Range": {
+      "Start": 3,
+      "End": 5,
+      "Text": "??"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 6,
+      "End": 7,
+      "Text": "b"
+    }
+  },
+  {
+    "Which": "NullAccess",
+    "Range": {
+      "Start": 7,
+      "End": 9,
+      "Text": "?."
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 9,
+      "End": 10,
+      "Text": "c"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 10,
+      "End": 13,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 13,
+      "End": 14,
+      "Text": "x"
+    }
+  },
+  {
+    "Which": "Update",
+    "Range": {
+      "Start": 15,
+      "End": 17,
+      "Text": "|>"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 18,
+      "End": 19,
+      "Text": "y"
+    }
+  },
+  {
+    "Which": "Overwrite",
+    "Range": {
+      "Start": 20,
+      "End": 22,
+      "Text": "!>"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 23,
+      "End": 24,
+      "Text": "z"
+    }
+  },
+  {
+    "Which": "Composition",
+    "Range": {
+      "Start": 25,
+      "End": 27,
+      "Text": ".>"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 28,
+      "End": 29,
+      "Text": "w"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 29,
+      "End": 30,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 30,
+      "End": 31,
+      "Text": "p"
+    }
+  },
+  {
+    "Which": "NamedTuple",
+    "Range": {
+      "Start": 32,
+      "End": 34,
+      "Text": "=>"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 35,
+      "End": 36,
+      "Text": "q"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 36,
+      "End": 39,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 39,
+      "End": 40,
+      "Text": "u"
+    }
+  },
+  {
+    "Which": "ConnectSignal",
+    "Range": {
+      "Start": 41,
+      "End": 43,
+      "Text": "->"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 44,
+      "End": 45,
+      "Text": "v"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 45,
+      "End": 46,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 46,
+      "End": 47,
+      "Text": "w"
+    }
+  },
+  {
+    "Which": "EmitSignal",
+    "Range": {
+      "Start": 48,
+      "End": 50,
+      "Text": "<-"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 51,
+      "End": 52,
+      "Text": "x"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 52,
+      "End": 55,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 55,
+      "End": 56,
+      "Text": "n"
+    }
+  },
+  {
+    "Which": "Exponent",
+    "Range": {
+      "Start": 57,
+      "End": 59,
+      "Text": "**"
+    }
+  },
+  {
+    "Which": "WholeNumericLiteral",
+    "Range": {
+      "Start": 60,
+      "End": 61,
+      "Text": "2"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 61,
+      "End": 62,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 62,
+      "End": 63,
+      "Text": "i"
+    }
+  },
+  {
+    "Which": "Increment",
+    "Range": {
+      "Start": 63,
+      "End": 65,
+      "Text": "++"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 65,
+      "End": 66,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "Decrement",
+    "Range": {
+      "Start": 66,
+      "End": 68,
+      "Text": "--"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 68,
+      "End": 69,
+      "Text": "j"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 69,
+      "End": 72,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "LogicalNot",
+    "Range": {
+      "Start": 72,
+      "End": 75,
+      "Text": "not"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 76,
+      "End": 77,
+      "Text": "a"
+    }
+  },
+  {
+    "Which": "LogicalAnd",
+    "Range": {
+      "Start": 78,
+      "End": 81,
+      "Text": "and"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 82,
+      "End": 83,
+      "Text": "b"
+    }
+  },
+  {
+    "Which": "LogicalOr",
+    "Range": {
+      "Start": 84,
+      "End": 86,
+      "Text": "or"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 87,
+      "End": 88,
+      "Text": "c"
+    }
+  },
+  {
+    "Which": "LogicalXor",
+    "Range": {
+      "Start": 89,
+      "End": 92,
+      "Text": "xor"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 93,
+      "End": 94,
+      "Text": "d"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 94,
+      "End": 95,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 95,
+      "End": 96,
+      "Text": "a"
+    }
+  },
+  {
+    "Which": "LogicalAnd",
+    "Range": {
+      "Start": 97,
+      "End": 98,
+      "Text": "&"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 99,
+      "End": 100,
+      "Text": "b"
+    }
+  },
+  {
+    "Which": "LogicalOr",
+    "Range": {
+      "Start": 101,
+      "End": 102,
+      "Text": "|"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 103,
+      "End": 104,
+      "Text": "c"
+    }
+  },
+  {
+    "Which": "LogicalXor",
+    "Range": {
+      "Start": 105,
+      "End": 106,
+      "Text": "^"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 107,
+      "End": 108,
+      "Text": "d"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 108,
+      "End": 109,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "LogicalNot",
+    "Range": {
+      "Start": 109,
+      "End": 110,
+      "Text": "!"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 110,
+      "End": 111,
+      "Text": "z"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 111,
+      "End": 114,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "DecoratorBegin",
+    "Range": {
+      "Start": 114,
+      "End": 116,
+      "Text": "[["
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 117,
+      "End": 121,
+      "Text": "note"
+    }
+  },
+  {
+    "Which": "DecoratorEnd",
+    "Range": {
+      "Start": 122,
+      "End": 124,
+      "Text": "]]"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 124,
+      "End": 127,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 127,
+      "End": 134,
+      "Text": "@_slot0"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 134,
+      "End": 137,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "PublicSpec",
+    "Range": {
+      "Start": 137,
+      "End": 140,
+      "Text": "pub"
+    }
+  },
+  {
+    "Which": "PrivateSpec",
+    "Range": {
+      "Start": 141,
+      "End": 144,
+      "Text": "prv"
+    }
+  },
+  {
+    "Which": "ConstSpec",
+    "Range": {
+      "Start": 145,
+      "End": 150,
+      "Text": "const"
+    }
+  },
+  {
+    "Which": "OverrideSpec",
+    "Range": {
+      "Start": 151,
+      "End": 159,
+      "Text": "override"
+    }
+  },
+  {
+    "Which": "SharedSpec",
+    "Range": {
+      "Start": 160,
+      "End": 166,
+      "Text": "shared"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 166,
+      "End": 167,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "If",
+    "Range": {
+      "Start": 167,
+      "End": 169,
+      "Text": "if"
+    }
+  },
+  {
+    "Which": "Then",
+    "Range": {
+      "Start": 170,
+      "End": 174,
+      "Text": "then"
+    }
+  },
+  {
+    "Which": "Else",
+    "Range": {
+      "Start": 175,
+      "End": 179,
+      "Text": "else"
+    }
+  },
+  {
+    "Which": "Elif",
+    "Range": {
+      "Start": 180,
+      "End": 184,
+      "Text": "elif"
+    }
+  },
+  {
+    "Which": "Return",
+    "Range": {
+      "Start": 185,
+      "End": 191,
+      "Text": "return"
+    }
+  },
+  {
+    "Which": "While",
+    "Range": {
+      "Start": 192,
+      "End": 197,
+      "Text": "while"
+    }
+  },
+  {
+    "Which": "For",
+    "Range": {
+      "Start": 198,
+      "End": 201,
+      "Text": "for"
+    }
+  },
+  {
+    "Which": "Foreach",
+    "Range": {
+      "Start": 202,
+      "End": 209,
+      "Text": "foreach"
+    }
+  },
+  {
+    "Which": "In",
+    "Range": {
+      "Start": 210,
+      "End": 212,
+      "Text": "in"
+    }
+  },
+  {
+    "Which": "Break",
+    "Range": {
+      "Start": 213,
+      "End": 218,
+      "Text": "break"
+    }
+  },
+  {
+    "Which": "Continue",
+    "Range": {
+      "Start": 219,
+      "End": 227,
+      "Text": "continue"
+    }
+  },
+  {
+    "Which": "Repeat",
+    "Range": {
+      "Start": 228,
+      "End": 234,
+      "Text": "repeat"
+    }
+  },
+  {
+    "Which": "Until",
+    "Range": {
+      "Start": 235,
+      "End": 240,
+      "Text": "until"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 240,
+      "End": 241,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "New",
+    "Range": {
+      "Start": 241,
+      "End": 244,
+      "Text": "new"
+    }
+  },
+  {
+    "Which": "Clone",
+    "Range": {
+      "Start": 245,
+      "End": 250,
+      "Text": "clone"
+    }
+  },
+  {
+    "Which": "Import",
+    "Range": {
+      "Start": 251,
+      "End": 257,
+      "Text": "import"
+    }
+  },
+  {
+    "Which": "As",
+    "Range": {
+      "Start": 258,
+      "End": 260,
+      "Text": "as"
+    }
+  },
+  {
+    "Which": "Version",
+    "Range": {
+      "Start": 261,
+      "End": 268,
+      "Text": "version"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 268,
+      "End": 271,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 271,
+      "End": 273,
+      "Text": "lo"
+    }
+  },
+  {
+    "Which": "Range",
+    "Range": {
+      "Start": 274,
+      "End": 276,
+      "Text": ".."
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 277,
+      "End": 279,
+      "Text": "hi"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 279,
+      "End": 282,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "ExecuteStmt",
+    "Range": {
+      "Start": 282,
+      "End": 296,
+      "Text": "execute /tool\n"
+    }
+  },
+  {
+    "Which": "Identifier",
+    "Range": {
+      "Start": 296,
+      "End": 305,
+      "Text": "next_stmt"
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 305,
+      "End": 308,
+      "Text": "\n\n\n"
+    }
+  },
+  {
+    "Which": "NullAccess",
+    "Range": {
+      "Start": 308,
+      "End": 310,
+      "Text": "?."
+    }
+  },
+  {
+    "Which": "Access",
+    "Range": {
+      "Start": 310,
+      "End": 311,
+      "Text": "."
+    }
+  },
+  {
+    "Which": "NullCoalescing",
+    "Range": {
+      "Start": 311,
+      "End": 313,
+      "Text": "??"
+    }
+  },
+  {
+    "Which": "Range",
+    "Range": {
+      "Start": 313,
+      "End": 315,
+      "Text": ".."
+    }
+  },
+  {
+    "Which": "StmtSeparator",
+    "Range": {
+      "Start": 316,
+      "End": 317,
+      "Text": "\n"
+    }
+  },
+  {
+    "Which": "EOF",
+    "Range": {
+      "Start": 316,
+      "End": 317,
+      "Text": "\n"
+    }
+  }
+]

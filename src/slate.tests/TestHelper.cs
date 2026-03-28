@@ -94,7 +94,7 @@ internal static class GoldenTestHelper
 
 		body.AppendLine("---------- Hint ----------");
 		body.AppendLine("Fix the .slate source (or compiler). To refresh expected JSON after intentional output changes:");
-		body.AppendLine("  dotnet test src/slate.tests/slate.tests.csproj -p:RegenerateGoldens=true");
+		body.AppendLine("  dotnet test src/slate.Tests/slate.Tests.csproj -p:RegenerateGoldens=true");
 
 		Assert.Fail(body.ToString());
 	}
@@ -170,7 +170,7 @@ internal static class GoldenTestHelper
 			sb.AppendLine();
 		}
 		sb.AppendLine("---------- Hint ----------");
-		sb.AppendLine("dotnet test src/slate.tests/slate.tests.csproj -p:RegenerateGoldens=true");
+		sb.AppendLine("dotnet test src/slate.Tests/slate.Tests.csproj -p:RegenerateGoldens=true");
 
 		return sb.ToString().TrimEnd();
 	}
@@ -263,7 +263,8 @@ internal static class GoldenTestHelper
 			if (goldenPath.StartsWith(testDataRoot, StringComparison.OrdinalIgnoreCase))
 			{
 				var relative = Path.GetRelativePath(testDataRoot, goldenPath);
-				var sourceGolden = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", "TestData", relative));
+				// net10.0 output: bin/Debug/net10.0 → project dir is three levels up from assemblyDir
+				var sourceGolden = Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", "..", "TestData", relative));
 				Directory.CreateDirectory(Path.GetDirectoryName(sourceGolden)!);
 				File.WriteAllText(sourceGolden, actual, Encoding.UTF8);
 			}

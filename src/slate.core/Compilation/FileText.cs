@@ -11,7 +11,7 @@ namespace slate.Compilation
 
 		public string Slice(int start, int len) => Text.Substring(start, len);
 		[JsonIgnore]
-		public FileRange EOF => new(Text.Length-1, Text.Length, Filepath, this);
+		public FileRange EOF => new(Math.Max(0, Text.Length-1), Text.Length, Filepath, this);
 
 		public override string ToString()
 		{
