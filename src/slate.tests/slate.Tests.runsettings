@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RunSettings>
+	<xUnit>
+		<!-- Avoid duplicate lines: xUnit stderr [FAIL] + VSTest "Failed / Error Message" for the same test. -->
+		<ReporterSwitch>silent</ReporterSwitch>
+	</xUnit>
+</RunSettings>

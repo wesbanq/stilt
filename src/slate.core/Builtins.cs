@@ -1,7 +1,7 @@
 using System.Reflection;
 using Microsoft.Extensions.FileProviders;
 
-namespace stilt
+namespace slate
 {
 	public static class Builtins
 	{
@@ -54,7 +54,7 @@ namespace stilt
 		{
 			Scope stdLibScope = new(BuiltinScope);
 
-			var provider = new EmbeddedFileProvider(Assembly.GetExecutingAssembly(), "stilt.Builtins");
+			var provider = new EmbeddedFileProvider(Assembly.GetExecutingAssembly(), "slate.Builtins");
 			IDirectoryContents folderContents = provider.GetDirectoryContents("");
 
 			if (!folderContents.Exists)

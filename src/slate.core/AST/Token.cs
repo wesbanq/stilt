@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace stilt
+namespace slate
 {
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
 	public class SymbolAttribute : Attribute, IDescriptable

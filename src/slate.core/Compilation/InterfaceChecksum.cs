@@ -1,9 +1,9 @@
 using System.Security.Cryptography;
 using System.Text;
-using stilt;
-using stilt.AST;
+using slate;
+using slate.AST;
 
-namespace stilt.Compilation
+namespace slate.Compilation
 {
 	/// <summary>
 	/// Computes a deterministic, content-based checksum of a module's public interface

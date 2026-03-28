@@ -1,4 +1,4 @@
-namespace stilt.IR
+namespace slate.IR
 {
     public interface INamespaceMapper
     {
@@ -28,13 +28,13 @@ namespace stilt.IR
             string ns;
             if (symbol.IsBuiltin)
             {
-                ns = "stilt:builtin";
+                ns = "slate:builtin";
             }
             else if (symbol.IsTemp)
             {
                 // For temp symbols, use parent scope's namespace
                 // This will be resolved when we know the context
-                ns = "stilt:temp";
+                ns = "slate:temp";
             }
             else if (!string.IsNullOrEmpty(symbol.Source) && symbol.Source != Symbol.TempSource)
             {
@@ -53,8 +53,7 @@ namespace stilt.IR
             }
             else
             {
-                // Default namespace
-                ns = "stilt";
+                ns = "slate";
             }
 
             _namespaceCache[symbol] = ns;
@@ -77,14 +76,14 @@ namespace stilt.IR
             {
                 // Block has a name (e.g., "if_0_then", "loop_0_body")
                 // Find parent namespace from context
-                var ns = "stilt";  // Default, should be set from context
+                var ns = "slate";  // Default, should be set from context
                 path = $"{ns}:{block.Name}";
             }
             else
             {
                 // Generate a unique name for anonymous blocks
                 var blockId = _blockCounter++;
-                path = $"stilt:block_{blockId}";
+                path = $"slate:block_{blockId}";
             }
 
             _blockPaths[block] = path;

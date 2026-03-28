@@ -1,6 +1,6 @@
 using System.Linq;
 
-namespace stilt.AST
+namespace slate.AST
 {
 	public abstract class Symbol
 	{

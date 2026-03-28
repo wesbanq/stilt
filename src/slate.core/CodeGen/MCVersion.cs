@@ -1,4 +1,4 @@
-namespace stilt.CodeGen
+namespace slate.CodeGen
 {
     public enum MCPlatform
 	{

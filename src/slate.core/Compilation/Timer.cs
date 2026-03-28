@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-namespace stilt.Compilation
+namespace slate.Compilation
 {
     public enum TimedEvents
 	{ Compilation, Lexing, Parsing, IRGeneration, Linking }

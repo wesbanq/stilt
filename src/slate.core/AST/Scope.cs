@@ -1,4 +1,4 @@
-namespace stilt.AST
+namespace slate.AST
 {
 	public class Scope
 	{

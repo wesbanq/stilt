@@ -1,7 +1,7 @@
 #pragma warning disable CS8601
 using System.Globalization;
 
-namespace stilt
+namespace slate
 {
 	public class Parser
 	{
@@ -219,11 +219,9 @@ namespace stilt
 			Expr? newExpr = null;
 			Dictionary<Symbol, Expr> dict = [];
 			ParseExpr(ref newExpr, currentToken);
-			var list = ParseArrayLiteral(currentToken).Value as List<Expr>;
-			
-			if (list is null)
-				throw new MalformedExpr(currentToken.Range);
-			
+			var list = ParseArrayLiteral(currentToken).Value as List<Expr> 
+				?? throw new MalformedExpr(currentToken.Range);
+            
 			foreach (var expr in list)
 			{
 				if (expr is AssignExpr assign)

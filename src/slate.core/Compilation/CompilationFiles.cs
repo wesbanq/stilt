@@ -1,6 +1,6 @@
 using Newtonsoft.Json.Linq;
 
-namespace stilt.Compilation
+namespace slate.Compilation
 {
 	public class ObjectFile
 	{
@@ -132,7 +132,7 @@ namespace stilt.Compilation
 		public bool HasErrors => Errors.Any(e => e.Severity >= ErrorSeverity.Error);
 
 		public new string TextChecksum => Text.GetSHA256Hash();
-		public new string InterfaceChecksum => global::stilt.Compilation.InterfaceChecksum.Compute(ParserResult?.RootScope, Filepath);
+		public new string InterfaceChecksum => global::slate.Compilation.InterfaceChecksum.Compute(ParserResult?.RootScope, Filepath);
 
 		public void Parse(ProgramArgs args)
 		{

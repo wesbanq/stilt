@@ -1,6 +1,6 @@
 using System.Reflection;
 
-namespace stilt
+namespace slate
 {
 	public class Lexer
 	{

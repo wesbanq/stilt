@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace stilt.Compilation
+namespace slate.Compilation
 {
     public class FileText
 	{

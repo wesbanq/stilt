@@ -2,7 +2,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
 using System.Reflection;
 
-namespace stilt
+namespace slate
 {
 	/// <summary>
 	/// JSON serialization for compiler dumps (AST, IR, etc.). Used by the CLI -j option and by the test suite for golden comparison.
