@@ -437,6 +437,7 @@ namespace slate
 				case TokenType.Else:
 				case TokenType.CloseBracket:
 				case TokenType.StmtSeparator:
+				case TokenType.StrictStmtSeparator:
 				case TokenType.CloseCurlyBracket:
 				case TokenType.CloseSquareBracket:
 				{
@@ -872,7 +873,7 @@ namespace slate
 			else if (Lex.CurrentIs(TokenType.Identifier))
 			{
 				var next = Lex.PeekNext(1);
-				if (next.Which != TokenType.As && next.Which != TokenType.StmtSeparator && next.Which != TokenType.EOF)
+				if (next.Which != TokenType.As && next.Which != TokenType.StmtSeparator && next.Which != TokenType.StrictStmtSeparator && next.Which != TokenType.EOF)
 					throw new UnexpectedToken(Lex.CurrentToken.Range, TokenType.StringLiteral, Lex.CurrentToken);
 				pathToken = Lex.ExpectThis(TokenType.Identifier);
 			}
@@ -952,13 +953,13 @@ namespace slate
 							?? throw new UnexpectedToken(nextToken.Range, TokenType.VarDecl, nextToken);
 					}
 					
-					nextToken = Lex.Expect(TokenType.StmtSeparator);
+					nextToken = Lex.Expect(TokenType.StrictStmtSeparator, TokenType.StmtSeparator);
 					ParseExpr(ref conditionExpr, nextToken);
 
-					nextToken = Lex.Expect(TokenType.StmtSeparator);
+					nextToken = Lex.Expect(TokenType.StrictStmtSeparator, TokenType.StmtSeparator);
 					ParseExpr(ref iteratorExpr, nextToken);
 					
-					nextToken = Lex.Expect(TokenType.StmtSeparator);
+					nextToken = Lex.Expect(TokenType.StrictStmtSeparator, TokenType.StmtSeparator);
 
 					Lex.SkipStmtSeparator();
 					var bodyStmt = ParseStmt(newScope);
@@ -1613,6 +1614,7 @@ namespace slate
 				}
 				case TokenType.EOF:
 				case TokenType.StmtSeparator:
+				case TokenType.StrictStmtSeparator:
 				case TokenType.CloseCurlyBracket:
 				{
 					break;

@@ -184,11 +184,14 @@ namespace slate
 		[Symbol(@"0b[01]+[01_]*[bsilfd]?", true)]
 		ByteNumericLiteral,
 
-		[Symbol(@"(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[e|E][-|+]\d+[bsilfd]?", true)]
+		[Symbol(@"(?:\d[\d_]*\.(?:\d[\d_]*)?|(?:\d[\d_]*)?\.\d[\d_]*)[eE][-+]\d+[bsilfd]?", true)]
 		ScientificNumericLiteral,
 
 		// Delimiters
-		[Symbol(@"\n+|;", true)]
+		[Symbol(@";[ \n]*", true)]
+		StrictStmtSeparator,
+
+		// Newline runs outside [] only; see Lexer.TryLexStmtSeparator (NonBacktracking regex cannot express this).
 		StmtSeparator,
 
 		[BinaryOperator(15)]

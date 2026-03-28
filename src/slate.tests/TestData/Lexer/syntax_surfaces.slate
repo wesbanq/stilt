@@ -1,0 +1,31 @@
+# bare identifier
+x
+
+# func call shape
+func main()
+
+# arithmetic spacing
+1 + 2 * 3;
+
+# comparison / equality operators
+a >= b == c != d
+
+# statement separators
+a;b
+
+# delimiters
+{ [ ( ) ] }
+
+# hash line comment strips rest of line
+x # trailing comment
+
+# single-quoted identifier
+'weird name'
+
+# declaration keywords and booleans / null
+type
+trait
+var
+true
+false
+null
