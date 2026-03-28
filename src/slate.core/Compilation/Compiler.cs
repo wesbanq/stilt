@@ -28,35 +28,10 @@ namespace slate.Compilation
 		public static readonly string CompilerVersion = 
 			System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
 		public ProgramArgs Args;
+		public Dictionary<TimedEvents, Timer> Timers = [];
 		public List<ObjectFile> Files = [];
 		public Linker? Link;
-		public Dictionary<TimedEvents, Timer> Timers = [];
-
-		public void WriteTimerReadout()
-		{
-			foreach (var timer in Timers)
-			{
-				Console.WriteLine(timer.Value.Time);
-			}
-			foreach (var file in Files)
-			{
-				Console.WriteLine($"{file.Filepath}:");
-				foreach (var timer in file.Timers)
-				{
-					Console.WriteLine(timer.Value.Time);
-				}
-			}
-		}
-
-		public void PrintBuildErrors()
-		{
-			foreach (var file in Files)
-			{
-				if (file is ParsedFile parsedFile)
-					parsedFile.Errors.ForEach(e => e.Print());
-			}
-			Link?.Errors.ForEach(e => e.Print());
-		}
+		public IEnumerable<CompilationMessage> Errors => Files.SelectMany(f => f is ParsedFile p ? p.Errors : []).Concat(Link?.Errors ?? []);
 
 		private static ObjectFile? SearchForObjectFile(string filepath, string extension)
 		{
@@ -136,8 +111,6 @@ namespace slate.Compilation
 			//object file deserialization
 			//separate ParserResult from Parser
 			//add ability touse functions before theyre defined
-			//ParseGenericStatemtent in Parser
-			//scope-based parser rewrite
 
 			Timers.Add(TimedEvents.Compilation, new Timer("Compilation"));
 			Timers[TimedEvents.Compilation].StartTimer();

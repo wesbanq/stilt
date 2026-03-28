@@ -636,8 +636,9 @@ namespace slate
 				typeArgs = args.ToList();
 			}
 
-			var baseType = TypeSymbolFactory.GetTempTypeSymbol(typeName, typeArgs);
-			return TypeSymbolFactory.GetTypeSymbol(baseType, typeArgs);
+			// var baseType = TypeSymbolFactory.GetTempTypeSymbol(typeName, typeArgs);
+			// return TypeSymbolFactory.GetTypeSymbol(baseType, typeArgs);
+return null; //TEMP
 		}
 
 		/// <summary>
