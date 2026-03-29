@@ -226,6 +226,14 @@ namespace slate
 			return true;
 		}
 
+		public void Goto(Token to)
+		{
+			var t = Tokens.FindIndex(t => ReferenceEquals(t, to));
+			if (t == -1)
+				throw new ArgumentException($"Couldn't find token {to}");
+			CurrentPos = t;
+		}
+
 		public void Lex()
 		{
 			var code = Text.ToString();

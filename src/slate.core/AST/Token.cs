@@ -26,7 +26,10 @@ namespace slate
 			Precedence = precedence;
 		}
 	}
-	public class UnaryOperatorAttribute(int p) : OperatorAttribute(p) { }
+	public class UnaryOperatorAttribute(int p, bool allowPrefix = true) : OperatorAttribute(p) 
+	{ 
+		public bool AllowPrefix { get; } = allowPrefix; 
+	}
 	public class BinaryOperatorAttribute(int p) : OperatorAttribute(p) { }
 	public class TernaryOperatorAttribute(int p) : OperatorAttribute(p) { }
 
@@ -239,6 +242,7 @@ namespace slate
 		[Symbol("??")]
 		NullCoalescing,
 
+		[BinaryOperator(2)]
 		[Symbol(":")]
 		Type,
 
