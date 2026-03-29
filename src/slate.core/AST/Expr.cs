@@ -4,6 +4,98 @@ namespace slate.AST
 {
 	public abstract class Expr : IRanged
 	{
+		/// <summary>
+		/// Inserts <paramref name="newExpr"/> into the tree rooted at <paramref name="rootExpr"/>.
+		/// When <paramref name="rootExpr"/> is non-null, it is treated as the current root (same as calling <see cref="InsertIntoTree"/> on it).
+		/// </summary>
+		public static Expr? InsertIntoTree(Expr? rootExpr, Expr? newExpr)
+		{
+			if (rootExpr is null && newExpr is not null)
+			{
+				if (!newExpr.Bracketed && newExpr is not UnaryExpr && newExpr is not CommaExpr && newExpr is IOperator)
+					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
+				return newExpr;
+			}
+			if (newExpr is null)
+				return rootExpr;
+			if (rootExpr is null)
+				return null;
+			return rootExpr.InsertIntoTree(newExpr);
+		}
+
+		/// <summary>
+		/// Inserts <paramref name="newExpr"/> into this expression tree (<c>this</c> is the root).
+		/// </summary>
+		/// <returns>The root of the tree after insertion (may differ from <c>this</c>).</returns>
+		public Expr? InsertIntoTree(Expr? newExpr)
+		{
+			if (newExpr is null)
+				return this;
+
+			Expr? rootExpr = this;
+			var toReplace = rootExpr.FindFirstPrecedenceOrNull(newExpr.Precedence, out var parent);
+			if (toReplace is null && parent is null)
+			{
+				if (newExpr is IOperator exprSpreadable)
+				{
+					exprSpreadable.InsertChild(rootExpr);
+					rootExpr = newExpr;
+				}
+				else
+					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
+			}
+
+			if (newExpr is IOperator spreadable)
+			{
+				if (toReplace is not null)
+				{
+					if (toReplace is CommaExpr rootComma && newExpr is CommaExpr)
+					{
+						++rootComma.ExprLength;
+						return rootExpr;
+					}
+
+					spreadable.InsertChild(toReplace);
+					if (parent is not null)
+					{
+						if (parent is IOperator op)
+							op.ReplaceChild(toReplace, newExpr);
+						else
+							throw new MalformedExpr((toReplace ?? newExpr)!.GetFullRangeOrThrow());
+					}
+					else
+						rootExpr = newExpr;
+
+					return rootExpr;
+				}
+
+				if (parent is not null)
+				{
+					if (parent is IOperator sParent)
+					{
+						if (toReplace is null && (newExpr.Bracketed || newExpr is (UnaryExpr or TernaryExpr)))
+							sParent.InsertChild(newExpr);
+						else
+							throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
+					}
+					else
+						throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
+
+					return rootExpr;
+				}
+
+				rootExpr = newExpr;
+				return rootExpr;
+			}
+
+			if (parent is IOperator newSpreadable)
+				newSpreadable.InsertChild(newExpr);
+			else
+				throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
+
+			return rootExpr;
+		}
+
 		public TypeSymbol Type = Builtins.None;
 		public bool Bracketed = false;
 		public int Precedence = 0;
@@ -105,6 +197,34 @@ namespace slate.AST
 			}
 
 			return null;
+		}
+
+		/// <summary>
+		/// Prefer the most-recently-added leaf node in the current tree.
+		/// Child ordering in <see cref="IOperator.GetChildren"/> is already "newest-first" for operators.
+		/// </summary>
+		public Expr GetLastExprInTree()
+		{
+			var current = this;
+			while (!current.Bracketed && current is IOperator op)
+			{
+				var next = op.GetChildren().First(c => c is not null);
+				if (next is null)
+					break;
+				current = next;
+			}
+			return current;
+		}
+
+		/// <summary>
+		/// Whether the next token should be treated as an operator (vs an operand), based on <see cref="FindFirstNull"/>.
+		/// </summary>
+		public static bool ExpectingOperator(Expr? expr)
+		{
+			if (expr is null)
+				return false;
+			var a = expr.FindFirstNull(out var p);
+			return a is null && p is null;
 		}
 	}
 

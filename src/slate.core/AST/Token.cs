@@ -46,11 +46,40 @@ namespace slate
 
 		public bool IsUnimplemented => Utils.GetAttributeFromEnum<TokenType, UnimplementedAttribute>(Which) is not null;
 		public bool IsSpecifier => Utils.GetAttributeFromEnum<TokenType, SpecifierAttribute>(Which) is not null;
+		public bool IsOperator => OperatorAttributes is not null;
 
-		public static string[] GetRulesFromType(TokenType t)
+		public OperatorAttribute[]? OperatorAttributes => Utils.GetAttributesFromEnum<TokenType, OperatorAttribute>(Which);
+		public bool TryGetOperatorExprs<T>(out List<Expr> exprs) 
+			where T : OperatorAttribute
 		{
-			var types = typeof(TokenType).GetFields();
-			return types[(int)t + 1].GetCustomAttributes<SymbolAttribute>().Select(o => o.Symbol).ToArray();
+			exprs = [];
+			if (OperatorAttributes is null)
+				return false;
+			var operators = OperatorAttributes.Where(o => o is T);
+
+			foreach (var op in operators)
+			{
+				Expr expr = op switch
+				{
+					UnaryOperatorAttribute => new UnaryExpr(op.Precedence, Range, this),
+					BinaryOperatorAttribute when Which == TokenType.OpenBracket => 
+						new CallExpr(op.Precedence, Range, this),
+					BinaryOperatorAttribute when Which == TokenType.Comma => 
+						new CommaExpr(op.Precedence, Range, this),
+					BinaryOperatorAttribute when Which == TokenType.Access => 
+						new AccessExpr(op.Precedence, Range, this),
+					BinaryOperatorAttribute when Which == TokenType.NullAccess => 
+						new NullAccessExpr(op.Precedence, Range, this),
+					BinaryOperatorAttribute when Which == TokenType.Assign => 
+						new AssignExpr(op.Precedence, Range, this),
+					BinaryOperatorAttribute => new BinaryExpr(op.Precedence, Range, this),
+					TernaryOperatorAttribute => new TernaryExpr(op.Precedence, Range, this),
+					_ => throw new UnexpectedToken(Range, this)
+				};
+				exprs.Add(expr);
+			}
+
+			return true;
 		}
 	}
 
@@ -297,7 +326,7 @@ namespace slate
 
 		[Unimplemented]
 		[Symbol("extend")]
-		ExtensionDef,
+		ExtensionDecl,
 
 		[Unimplemented]
 		[Symbol("signal")]
@@ -388,7 +417,6 @@ namespace slate
 		Version,
 
 		// Special
-
 		[Symbol(@"execute(?:\s*\/.*\n)*", true)]
 		[Symbol(@"execute +as +.*?\n(?:\s*\/.*)*", true)]
 		ExecuteStmt,
