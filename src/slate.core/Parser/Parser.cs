@@ -1,4 +1,5 @@
 #pragma warning disable CS8601
+using System.Diagnostics;
 using System.Globalization;
 
 namespace slate
@@ -15,153 +16,6 @@ namespace slate
 		private void NewError(SyntaxError err)
 		{
 			Result.CompilationIssues.Add(err);
-		}
-
-		private static Expr GetLastExprInTree(Expr root)
-		{
-			// Prefer the most-recently-added leaf node in the current tree.
-			// Child ordering in GetChildren() is already "newest-first" for operators.
-			var current = root;
-			while (!current.Bracketed && current is IOperator op)
-			{
-				var next = op.GetChildren().First(c => c is not null);
-				if (next is null)
-					break;
-				current = next;
-			}
-			return current;
-		}
-
-		private void InsertIntoExprTree(ref Expr? rootExpr, Expr? newExpr)
-		{
-			if (rootExpr is null && newExpr is not null)
-			{
-				if (!newExpr.Bracketed && newExpr is not UnaryExpr && newExpr is not CommaExpr && newExpr is IOperator)
-					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
-				rootExpr = newExpr;
-				return;
-			}
-
-			//get rid of null derefence warnings
-			if (newExpr is null || rootExpr is null)
-				return;
-
-			//add more comments to explain all of this later
-			var toReplace = rootExpr.FindFirstPrecedenceOrNull(newExpr.Precedence, out var parent);
-			if (toReplace is null && parent is null)
-			{
-				if (newExpr is IOperator exprSpreadable)
-				{
-					exprSpreadable.InsertChild(rootExpr);
-					rootExpr = newExpr;
-				}
-				else
-					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
-			}
-
-			if (newExpr is IOperator spreadable)
-			{
-				if (toReplace is not null)
-				{
-					//with the old CommaExpr foundSym tuple of 3 will evaluate to foundSym type of ((Type, Type), Type) instead of (Type, Type, Type)
-					//there might be foundSym better way to accomplishing this with BinaryExpr
-					//by looking if the child CommaExpr is bracketed during type eval
-					if (toReplace is CommaExpr rootComma && newExpr is CommaExpr)
-					{
-						++rootComma.ExprLength;
-						return;
-					}
-
-					spreadable.InsertChild(toReplace);
-					if (parent is not null)
-					{
-						if (parent is IOperator op)
-						{
-							op.ReplaceChild(toReplace, newExpr);
-						}
-						else
-							throw new MalformedExpr((toReplace ?? newExpr)!.GetFullRangeOrThrow());
-					}
-					else
-					{
-						rootExpr = newExpr;
-					}
-
-					return;
-				}
-
-				if (parent is not null)
-				{
-					if (parent is IOperator sParent)
-					{
-						if (toReplace is null && (newExpr.Bracketed || newExpr is (UnaryExpr or TernaryExpr)))
-							sParent.InsertChild(newExpr);
-						else
-						{
-							var range = newExpr.GetFullRangeOrThrow();
-							throw new MalformedExpr(range);
-						}
-					}
-					else
-					{
-						var range = newExpr.GetFullRangeOrThrow();
-						throw new MalformedExpr(range);
-					}
-
-					return;
-				}
-				else
-					rootExpr = newExpr;
-			}
-			else
-			{
-				if (parent is IOperator newSpreadable)
-					newSpreadable.InsertChild(newExpr);
-				else
-					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
-			}
-		}
-
-		private List<Expr> CreateOperatorExpr<T>(Token token)
-			where T : OperatorAttribute
-		{
-			var operatorAttr = Utils.GetAttributesFromEnum<TokenType, T>(token.Which);
-			if (operatorAttr is null)
-				throw new UnexpectedToken(token.Range, token);
-
-			List<Expr> exprs = [];
-			foreach (var op in operatorAttr)
-			{
-				Expr expr = op switch
-				{
-					UnaryOperatorAttribute => new UnaryExpr(op.Precedence, token.Range, token),
-					BinaryOperatorAttribute when token.Which == TokenType.OpenBracket => 
-						new CallExpr(op.Precedence, token.Range, token),
-					BinaryOperatorAttribute when token.Which == TokenType.Comma => 
-						new CommaExpr(op.Precedence, token.Range, token),
-					BinaryOperatorAttribute when token.Which == TokenType.Access => 
-						new AccessExpr(op.Precedence, token.Range, token),
-					BinaryOperatorAttribute when token.Which == TokenType.NullAccess => 
-						new NullAccessExpr(op.Precedence, token.Range, token),
-					BinaryOperatorAttribute when token.Which == TokenType.Assign => 
-						new AssignExpr(op.Precedence, token.Range, token),
-					BinaryOperatorAttribute => new BinaryExpr(op.Precedence, token.Range, token),
-					TernaryOperatorAttribute => new TernaryExpr(op.Precedence, token.Range, token),
-					_ => throw new UnexpectedToken(token.Range, token)
-				};
-				exprs.Add(expr);
-			}
-
-			return exprs;
-		}
-
-		private bool ExpectingOperator(ref Expr? expr)
-		{
-			if (expr is null)
-				return false;
-			var a = expr.FindFirstNull(out var p);
-			//foundSym is null - expecting operand / foundSym is not null - expecting operator
-			return a is null && p is null;
 		}
 
 		private ArrayLiteralExpr ParseArrayLiteral(Token currentToken)
@@ -318,14 +172,15 @@ namespace slate
 				{
 					ParseExpr(ref newExpr, Lex.Next());
 
-					if (ExpectingOperator(ref rootExpr))
+					if (Expr.ExpectingOperator(rootExpr))
 					{
 						if (newExpr is null && currentToken.Which == TokenType.OpenSquareBracket)
 							throw new SyntaxError(currentToken.Range, "No valid expression given as an index.");
-						var opExpr = CreateOperatorExpr<BinaryOperatorAttribute>(currentToken).First() as BinaryExpr;
-						if (opExpr is null)
+						if (!currentToken.TryGetOperatorExprs<BinaryOperatorAttribute>(out var opExprs))
 							throw new MalformedExpr(currentToken.Range);
-						opExpr.Right = newExpr;
+						
+						var opExpr = opExprs.First() as BinaryExpr;
+						opExpr!.Right = newExpr;
 						opExpr.Bracketed = true;
 						newExpr = opExpr;
 					}
@@ -338,7 +193,7 @@ namespace slate
 				}
 				case TokenType.OpenCurlyBracket:
 				{
-					if (ExpectingOperator(ref rootExpr))
+					if (Expr.ExpectingOperator(rootExpr))
 					{
 						if (rootExpr is not null)
 							rootExpr.Bracketed = true;
@@ -370,8 +225,8 @@ namespace slate
 					if (currentToken.IsUnimplemented)
 						throw new UnimplementedError(currentToken);
 
-					var possibleExprs = CreateOperatorExpr<OperatorAttribute>(currentToken)
-						?? throw new UnexpectedToken(currentToken.Range, currentToken);
+					if (!currentToken.TryGetOperatorExprs<OperatorAttribute>(out var possibleExprs))
+						throw new UnexpectedToken(currentToken.Range, currentToken);
 					if (Lex.NextIs(TokenType.Assign, TokenType.Type))
 					{
 						Lex.Next();
@@ -401,15 +256,14 @@ namespace slate
 						if (e is IOperator op)
 							return op.GetChildren().Count();
 						else
-							throw new Exception();
+							throw new UnreachableException();
 					})];
 
 					foreach (var expr in possibleExprs)
 					{
-						Expr? parent = null;
-						var a = rootExpr?.FindFirstPrecedenceOrNull(expr.Precedence, out parent);
+                        var a = rootExpr?.FindFirstPrecedenceOrNull(expr.Precedence, out Expr? parent);
 
-						if (expr is UnaryExpr unary)
+                        if (expr is UnaryExpr unary)
 						{
 							if (a is not null)
 								unary.Prefix = false;
@@ -448,31 +302,8 @@ namespace slate
 				}
 			}
 			
-			InsertIntoExprTree(ref rootExpr, newExpr);
+			rootExpr = Expr.InsertIntoTree(rootExpr, newExpr);
 			ParseExpr(ref rootExpr, Lex.Next());
-		}
-
-		private void AddToScope(List<Symbol> symbols, Scope scope)
-		{
-			foreach (var sym in symbols)
-			{
-				AddToScope(sym, scope);
-			}
-		}
-
-		private void AddToScope(Symbol symbol, Scope scope)
-		{
-			var foundSymbol = scope.FindSymbolByName(symbol.Name);
-			if (foundSymbol is not null)
-			{
-				var range = symbol.Identifier?.Range 
-					?? throw new Exception();
-				if (foundSymbol.IsBuiltin)
-					NewError(new ShadowedBuiltinSymbol(range, symbol));
-				else if (!scope.IsInScopeThatAllowsShadowingFromParent())
-					NewError(new ShadowedSymbol(range, symbol));
-			}
-			scope.AddSymbol(symbol);
 		}
 
 		/// <summary>
@@ -996,7 +827,8 @@ namespace slate
 					{
 						Scope = newScope,
 					};
-					AddToScope(moduleSym, newScope);
+					newStmt = importStmt;
+					newScope.AddSymbol(moduleSym);
 
 					break;
 				}
@@ -1316,7 +1148,6 @@ namespace slate
 				}
 			}
 
-			// Lex.Next();
 			return innerStmts;
 		}
 
@@ -1333,3 +1164,4 @@ namespace slate
 		}
 	}
 }
+
