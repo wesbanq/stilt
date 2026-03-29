@@ -110,7 +110,7 @@ namespace slate.AST
 	public class ExecuteStmt : Stmt
 	{
 		public string[] Commands;
-		public VarSymbol? Executor;
+		// public VarSymbol? Executor;
 
 		public ExecuteStmt(Token token)
 		{
@@ -138,8 +138,8 @@ namespace slate.AST
 				throw new ArgumentException("Invalid execute statement format: no command lines");
 
 			Commands = [.. commandLines];
-			if (!string.IsNullOrEmpty(executorStr))
-				Executor = new VarSymbol(executorStr);
+			// if (!string.IsNullOrEmpty(executorStr))
+			// 	Executor = new VarSymbol(executorStr);
 		}
 	}
 
@@ -201,6 +201,15 @@ namespace slate.AST
 	{
 		public required string Filepath;
 		public required string ModuleName;
-		public Scope? ImportedScope;
+		public required Symbol Name;
+
+		[SetsRequiredMembers]
+		public ImportStmt(string moduleName, string filepath, Symbol name)
+		{
+			ModuleName = moduleName;
+			Filepath = filepath;
+			Name = name;
+			name.Declaration = this;
+		}
 	}
 }

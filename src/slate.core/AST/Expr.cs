@@ -6,7 +6,6 @@ namespace slate.AST
 	{
 		public TypeSymbol Type = Builtins.None;
 		public bool Bracketed = false;
-		public bool Explicit = false;
 		public int Precedence = 0;
 
 		public FileRange? InnerRange { get; set; }
@@ -107,9 +106,6 @@ namespace slate.AST
 
 			return null;
 		}
-		
-		//public Expr(int precedence, FileRange range) { Precedence = precedence; InnerRange = range; }
-		//public Expr(int precedence) { Precedence = precedence; }
 	}
 
 	public interface IOperator
@@ -131,7 +127,7 @@ namespace slate.AST
 
 	public class IdentityExpr : Expr
 	{
-		public Symbol Identity;
+		public SymbolReference Identity;
 	}
 
 	public abstract class OperationExpr : Expr

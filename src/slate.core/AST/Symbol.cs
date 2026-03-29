@@ -59,26 +59,6 @@ namespace slate.AST
 	}
 
 	/// <summary>
-	/// Syntactic path to a name before resolution: optional qualifier (<c>a.b</c>),
-	/// this segment's identifier, and optional generic type arguments on this segment.
-	/// Not a <see cref="Symbol"/> — the linker attaches real symbols after lookup.
-	/// </summary>
-	public sealed class UnresolvedReference(
-        string name,
-        Token token,
-        UnresolvedReference? qualifier = null,
-        IEnumerable<UnresolvedReference>? typeArguments = null
-	)
-    {
-        public string Name { get; } = name;
-        public Token Token { get; } = token;
-        public UnresolvedReference? Qualifier { get; } = qualifier;
-        public IReadOnlyList<UnresolvedReference> TypeArguments { get; } = typeArguments is null
-                ? Array.Empty<UnresolvedReference>()
-                : typeArguments.ToList();
-    }
-
-	/// <summary>
 	/// Holds an unresolved name path and, after the linker runs, the <see cref="Symbol"/> it bound to
 	/// </summary>
 	public sealed class SymbolReference(UnresolvedReference unresolved)
@@ -99,23 +79,24 @@ namespace slate.AST
 	}
 
 	/// <summary>
-	/// Like <see cref="SymbolReference"/> but resolves only to a <see cref="TypeSymbol"/> (type positions in the AST).
+	/// Syntactic path to a name before resolution: optional qualifier (<c>a.b</c>),
+	/// this segment's identifier, and optional generic type arguments on this segment.
+	/// Not a <see cref="Symbol"/> — the linker attaches real symbols after lookup.
 	/// </summary>
-	public sealed class TypeSymbolReference(UnresolvedReference unresolved)
+	public sealed class UnresolvedReference(
+        string name,
+        Token token,
+        UnresolvedReference? qualifier = null,
+        IEnumerable<UnresolvedReference>? typeArguments = null
+	)
     {
-        public UnresolvedReference Unresolved { get; } = unresolved ?? throw new ArgumentNullException(nameof(unresolved));
-        private TypeSymbol? _resolved;
-
-		public TypeSymbol? Resolved => _resolved;
-		public bool IsResolved => _resolved is not null;
-
-        public void Resolve(TypeSymbol typeSymbol)
-		{
-			if (_resolved is not null)
-				throw new InvalidOperationException("Type symbol already resolved.");
-			_resolved = typeSymbol;
-		}
-	}
+        public string Name { get; } = name;
+        public Token Token { get; } = token;
+        public UnresolvedReference? Qualifier { get; } = qualifier;
+        public IReadOnlyList<UnresolvedReference> TypeArguments { get; } = typeArguments is null
+                ? Array.Empty<UnresolvedReference>()
+                : typeArguments.ToList();
+    }
 
 	public class VarSymbol : Symbol
 	{
