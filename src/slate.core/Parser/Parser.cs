@@ -308,12 +308,43 @@ namespace slate
 
 		/// <summary>
 		/// Parses a type: '('type[','...]')' | identifier['('type[','...]')'].
-		/// Tuples use TypeSymbolFactory.GetTuple.
 		/// </summary>
-		// private TypeSymbol ParseType()
-		// {
-			
-		// }
+		private UnresolvedReference ParseType()
+		{
+			if (Lex.CurrentIs(TokenType.OpenBracket))
+			{
+				Lex.GoPast(TokenType.OpenBracket);
+				var innerArgs = new List<UnresolvedReference>();
+				do
+				{
+					innerArgs.Add(ParseType());
+				} while (Lex.CurrentIs(TokenType.Comma));
+				Lex.ExpectThis(TokenType.CloseBracket);
+				return new UnresolvedReference($"Tuple_{innerArgs.Count}", Lex.CurrentToken, typeArguments: innerArgs);
+			}
+
+			var typeNameToken = Lex.ExpectThis(TokenType.Identifier);
+
+			var typeArgs = new List<UnresolvedReference>();
+			if (Lex.CurrentIs(TokenType.OpenSquareBracket))
+			{
+				Lex.GoPast(TokenType.OpenSquareBracket);
+				do
+				{
+					typeArgs.Add(ParseType());
+				} while (Lex.CurrentIs(TokenType.Comma));
+				Lex.ExpectThis(TokenType.CloseSquareBracket);
+			}
+
+			UnresolvedReference? qualifier = null;
+			if (Lex.CurrentIs(TokenType.Access))
+			{
+				Lex.GoPast(TokenType.Access);
+				qualifier = ParseType();
+			}
+
+			return new UnresolvedReference(typeNameToken.Range.Text, typeNameToken, qualifier, typeArgs);
+		}
 
 		private Stmt? ParseLoopStmt(Scope currentScope, Token firstToken)
 		{
