@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src\stilt.Tests\stilt.Tests.csproj" />
+  <Project Path="src\stilt.Core\stilt.Core.csproj" />
+  <Project Path="src\stilt.Cli\stilt.Cli.csproj" />
+</Solution>

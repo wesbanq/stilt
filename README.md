@@ -1,6 +1,6 @@
-# Slate Language Compiler
+# Stilt Language Compiler
 
-An experimental compiler for the Slate programming language, designed to be compiled into Minecraft datapacks.
+An experimental compiler for the Stilt programming language, designed to be compiled into Minecraft datapacks.
 
 > **WARNING**  
 > The project is currently incomplete and is not in a workable state.  
@@ -8,7 +8,7 @@ An experimental compiler for the Slate programming language, designed to be comp
 
 ## About
 
-Slate is a small experimental language designed to compile into Minecraft datapacks.
+Stilt is a small experimental language designed to compile into Minecraft datapacks.
 
 ## Roadmap
 
