@@ -1,5 +1,0 @@
-<Solution>
-  <Project Path="src\slate.Tests\slate.Tests.csproj" />
-  <Project Path="src\slate.Core\slate.Core.csproj" />
-  <Project Path="src\slate.Cli\slate.Cli.csproj" />
-</Solution>
