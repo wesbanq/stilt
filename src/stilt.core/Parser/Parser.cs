@@ -1,6 +1,7 @@
 #pragma warning disable CS8601
 using System.Diagnostics;
 using System.Globalization;
+using System.Security.Cryptography;
 
 namespace stilt
 {
@@ -307,39 +308,6 @@ namespace stilt
 			
 			rootExpr = Expr.InsertIntoTree(rootExpr, newExpr);
 			ParseExpr(ref rootExpr, Lex.Next());
-		}
-
-		private List<Symbol> ParseVarsList()
-		{
-			List<Symbol> vars = [];
-
-			void ParseVarItem()
-			{
-				var iden = Lex.ExpectThis(TokenType.Identifier);
-				_ = ParseGenericStmt(
-					new Scope(),
-					ExpectedValue.Opt(ExpectedValue.Kw(TokenType.Type), ExpectedValue.Type),
-					ExpectedValue.Opt(ExpectedValue.Kw(TokenType.Assign), ExpectedValue.Expr)
-				);
-				vars.Add(new VarSymbol(iden.Range.Text, t: iden));
-			}
-
-			if (Lex.CurrentIs(TokenType.Identifier))
-			{
-				ParseVarItem();
-				return vars;
-			}
-
-			Lex.ExpectThis(TokenType.OpenBracket);
-			ParseVarItem();
-			while (Lex.CurrentIs(TokenType.Comma))
-			{
-				Lex.Next();
-				ParseVarItem();
-			}
-			Lex.ExpectThis(TokenType.CloseBracket);
-
-			return vars;
 		}
 
 		/// <summary>
@@ -712,30 +680,37 @@ namespace stilt
 					if (!Lex.CurrentIs(TokenType.StmtSeparator, TokenType.StrictStmtSeparator))
 						throw new SyntaxError(Lex.CurrentToken.Range, "Expected statement separator after variable declaration.");
 
-					if (varCont.SingleExpr is not AssignExpr assign)
-						throw new SyntaxError(varCont.SingleExpr.GetFullRangeOrThrow(), "Expected assignment expression after variable declaration.");
+					if (varCont.SingleExpr is null || varCont.SingleExpr is not AssignExpr assign)
+						throw new SyntaxError(varCont.SingleExpr?.GetFullRangeOrThrow(), "Expected assignment expression after variable declaration.");
 
-					if (varCont.SingleType is not null)
+					if (assign.Left is not (IdentityExpr or CommaExpr))
+						throw new SyntaxError(varCont.SingleExpr.GetFullRangeOrThrow(), "Expected an identifier or a series of identifiers after variable declaration.");
+
+					List<Symbol> names;
+					if (assign.Left is CommaExpr idents)
 					{
-						var varDecl = new VarDeclStmt()
+						names = idents.Exprs.Select(e =>
 						{
-							Scope = newScope,
-							Name = varCont.Exprs.Select(e => e.Name).ToList(),
-							Value = varCont.Exprs.First().Value,
-						};
+							if (e is not IdentityExpr ident)
+								throw new SyntaxError(e.GetFullRangeOrThrow(), "Expected an identifier in variable declaration.");
+							return (Symbol)new VarSymbol(ident.Identity.Unresolved.Name, t: ident.Identity.Unresolved.Token);
+						}).ToList();
+					}
+					else
+					{
+						var ident = (IdentityExpr)assign.Left;
+						names = [new VarSymbol(ident.Identity.Unresolved.Name, t: ident.Identity.Unresolved.Token)];
 					}
 
 					var varDecl = new VarDeclStmt()
 					{
 						Scope = newScope,
-						Name = varCont.Exprs.Select(e => e.Name).ToList(),
-						Value = varCont.Exprs.First().Value,
+						Name = names,
+						Value = assign.Right,
 					};
 
-
-
 					newStmt = varDecl;
-					newScope.AddSymbol(varDecl.Name);
+					newScope.AddSymbols(varDecl.Name);
 
 					break;
 				}
