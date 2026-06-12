@@ -108,8 +108,8 @@ namespace stilt
                 }
 				case ExecuteStmt exec:
 				{
-					if (exec.Executor is not null && exec.Executor.IsTemp)
-						ResolveExecuteExecutor(exec, currentScope);
+					// if (exec.Executor is not null && exec.Executor.IsTemp)
+					// 	ResolveExecuteExecutor(exec, currentScope);
 					break;
 				}
 				case ImportStmt import:

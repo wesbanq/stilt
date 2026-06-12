@@ -45,8 +45,11 @@ namespace stilt
 			return mantissa * Math.Pow(10, exponent);
 		}
 
-		private void ParseExpr(ref Expr? rootExpr, Token currentToken)
+		private void ParseExpr(ref Expr? rootExpr, Token currentToken, params TokenType[] stopTokens)
 		{
+			if (stopTokens.Contains(currentToken.Which))
+				return;
+
 			Expr? newExpr = null;
 
 			switch (currentToken.Which)
@@ -306,6 +309,39 @@ namespace stilt
 			ParseExpr(ref rootExpr, Lex.Next());
 		}
 
+		private List<Symbol> ParseVarsList()
+		{
+			List<Symbol> vars = [];
+
+			void ParseVarItem()
+			{
+				var iden = Lex.ExpectThis(TokenType.Identifier);
+				_ = ParseGenericStmt(
+					new Scope(),
+					ExpectedValue.Opt(ExpectedValue.Kw(TokenType.Type), ExpectedValue.Type),
+					ExpectedValue.Opt(ExpectedValue.Kw(TokenType.Assign), ExpectedValue.Expr)
+				);
+				vars.Add(new VarSymbol(iden.Range.Text, t: iden));
+			}
+
+			if (Lex.CurrentIs(TokenType.Identifier))
+			{
+				ParseVarItem();
+				return vars;
+			}
+
+			Lex.ExpectThis(TokenType.OpenBracket);
+			ParseVarItem();
+			while (Lex.CurrentIs(TokenType.Comma))
+			{
+				Lex.Next();
+				ParseVarItem();
+			}
+			Lex.ExpectThis(TokenType.CloseBracket);
+
+			return vars;
+		}
+
 		/// <summary>
 		/// Parses a type: '('type[','...]')' | identifier['('type[','...]')'].
 		/// </summary>
@@ -503,7 +539,7 @@ namespace stilt
 			return new DecoratorObject(decoratorType, args);
 		}
 
-				private enum CaptureKind { Expr, Stmt, Keywords, OptionalSequence }
+				private enum CaptureKind { Expr, Stmt, Keywords, OptionalSequence, Type }
 
 		private readonly record struct ExpectedValue(
 			CaptureKind Kind,
@@ -512,6 +548,7 @@ namespace stilt
 		{
 			public static ExpectedValue Expr => new(CaptureKind.Expr);
 			public static ExpectedValue Stmt => new(CaptureKind.Stmt);
+			public static ExpectedValue Type => new(CaptureKind.Type);
 			public static ExpectedValue Kw(TokenType t) => new(CaptureKind.Keywords, Keywords: [t]);
 
 			public static ExpectedValue Kws(params TokenType[] ts)
@@ -529,20 +566,24 @@ namespace stilt
 					[TokenType.StmtSeparator, TokenType.StrictStmtSeparator, TokenType.EOF]);
 		}
 
-		private readonly record struct CapturedItem(CaptureKind Kind, Expr? Expr = null, Stmt? Stmt = null, Token? Keyword = null);
+		private readonly record struct CapturedItem(CaptureKind Kind, Expr? Expr = null, Stmt? Stmt = null, Token? Keyword = null, UnresolvedReference? Type = null);
 
 		private readonly record struct CapturedStmt(IReadOnlyList<CapturedItem> Items)
 		{
 			public readonly IReadOnlyList<Expr> Exprs => [.. Items.Where(i => i.Kind == CaptureKind.Expr).Select(i => i.Expr!).Where(e => e is not null)];
 			public readonly IReadOnlyList<Stmt> Stmts => [.. Items.Where(i => i.Kind == CaptureKind.Stmt).Select(i => i.Stmt!).Where(s => s is not null)];
 			public readonly IReadOnlyList<Token> Keywords => [.. Items.Where(i => i.Kind == CaptureKind.Keywords && i.Keyword is not null).Select(i => i.Keyword!)];
+			public readonly IReadOnlyList<UnresolvedReference> Types => [.. Items.Where(i => i.Kind == CaptureKind.Type).Select(i => i.Type!).Where(t => t is not null)];
 			public readonly Stmt SingleStmt => Stmts.Count == 1 
 				? Stmts[0] 
 				: throw new InvalidOperationException($"Expected exactly one statement, got {Stmts.Count}.");
 			public readonly Expr SingleExpr => Exprs.Count == 1 
 				? Exprs[0] 
 				: throw new InvalidOperationException($"Expected exactly one expression, got {Exprs.Count}.");
-			
+			public readonly UnresolvedReference SingleType => Types.Count == 1 
+				? Types[0] 
+				: throw new InvalidOperationException($"Expected exactly one type, got {Types.Count}.");
+
 			public readonly bool TryGetSingleStmt(out Stmt? stmt)
 			{
 				if (Stmts.Count == 1)
@@ -561,6 +602,16 @@ namespace stilt
 					return true;
 				}
 				expr = null;
+				return false;
+			}
+			public readonly bool TryGetSingleType(out UnresolvedReference? type)
+			{
+				if (Types.Count == 1)
+				{
+					type = Types[0];
+					return true;
+				}
+				type = null;
 				return false;
 			}
 		}
@@ -609,6 +660,12 @@ namespace stilt
 						items.Add(new CapturedItem(CaptureKind.Keywords, Keyword: keyword));
 						break;
 					}
+					case CaptureKind.Type:
+					{
+						var type = ParseType()!;
+						items.Add(new CapturedItem(CaptureKind.Type, Type: type));
+						break;
+					}
 					default:
 					{
 						throw new SyntaxError(Lex.CurrentToken.Range, $"Expected {expectedValue.Kind}. Got {Lex.CurrentToken.Which}.");
@@ -645,26 +702,40 @@ namespace stilt
 			{
 				case TokenType.VarDecl:
 				{
-					// Scope newScope = new(currentScope);
-					// Lex.GoPast(TokenType.VarDecl);
-					
-					// while (!Lex.CurrentIs(TokenType.EOF, ))
-					// {
+					Scope newScope = new(currentScope);
+					var varCont = ParseGenericStmt(
+						newScope,
+						ExpectedValue.Kw(TokenType.VarDecl),
+						ExpectedValue.Expr
+					);
 
-					// }
+					if (!Lex.CurrentIs(TokenType.StmtSeparator, TokenType.StrictStmtSeparator))
+						throw new SyntaxError(Lex.CurrentToken.Range, "Expected statement separator after variable declaration.");
 
-					// VarDeclStmt varDecl = new()
-					// {
-					// 	Scope = newScope,
-					// 	IsConst = isConst,
-					// 	Name = [.. syms],
-					// 	Value = valExpr,
-					// };
-					// foreach (var item in syms)
-					// 	item.Declaration = varDecl;
+					if (varCont.SingleExpr is not AssignExpr assign)
+						throw new SyntaxError(varCont.SingleExpr.GetFullRangeOrThrow(), "Expected assignment expression after variable declaration.");
 
-					// newStmt = varDecl;
-					// AddToScope(varDecl.Name, newScope);
+					if (varCont.SingleType is not null)
+					{
+						var varDecl = new VarDeclStmt()
+						{
+							Scope = newScope,
+							Name = varCont.Exprs.Select(e => e.Name).ToList(),
+							Value = varCont.Exprs.First().Value,
+						};
+					}
+
+					var varDecl = new VarDeclStmt()
+					{
+						Scope = newScope,
+						Name = varCont.Exprs.Select(e => e.Name).ToList(),
+						Value = varCont.Exprs.First().Value,
+					};
+
+
+
+					newStmt = varDecl;
+					newScope.AddSymbol(varDecl.Name);
 
 					break;
 				}
