@@ -1,0 +1,92 @@
+# .NET build artifacts
+[Pp]roperties/
+**/bin/
+**/obj/
+*.nupkg
+*.nuspec
+*.dll
+publish/
+**/publish/
+
+# Stilt compiler artifacts 
+
+# Compiled binaries (Windows)
+*.exe
+
+# --emit-c output
+*.stilt.c
+
+# Stilt object cache
+*.stilt.o
+
+# NuGet 
+packages/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Keep package-lock if npm is ever added, but not .NET lock files by default
+*.lock.json
+*.json
+
+# Test results 
+TestResults/
+*.trx
+*.coveragexml
+coverage*/
+.coverage
+
+# Visual Studio 
+.vs/
+.editorconfig
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.VC.db
+*.VC.opendb
+*.ncb
+*.opensdf
+*.sdf
+
+# Rider / JetBrains 
+.idea/
+*.sln.iml
+
+# VS Code 
+.vscode/
+.cursor/
+*.code-workspace
+
+# macOS 
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows 
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+docs/
+
+# Linux 
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# Editor temporaries 
+*.swp
+*.swo
+*.tmp
+*.bak
+*.orig
+*.log
+\#*\#
+.\#*
