@@ -2,6 +2,13 @@ using System.Linq;
 
 namespace stilt.AST
 {
+	/// <summary>
+	/// A named entity in the symbol table — see <see cref="VarSymbol"/> (values/functions) and <see cref="TypeSymbol"/>
+	/// (types). Identity is <see cref="Name"/> plus <see cref="Source"/> (the file it was declared in, or the sentinel
+	/// <see cref="BuiltinSource"/>/<see cref="TempSource"/>), which is also how two symbols are compared for equality.
+	/// <see cref="Declaration"/> links back to the AST node that introduced it. (Using file paths as identity is a known
+	/// rough edge, flagged for replacement.)
+	/// </summary>
 	public abstract class Symbol
 	{
 		public const string BuiltinSource = "<BUILTIN>";
@@ -116,6 +123,11 @@ namespace stilt.AST
                 : typeArguments.ToList();
     }
 
+	/// <summary>
+	/// A value-binding symbol: variables, function parameters, imported modules, and named functions (a function is a
+	/// <see cref="VarSymbol"/> whose <see cref="Type"/> is a <see cref="Builtins.Callable"/>). <see cref="Type"/> is a
+	/// <see cref="SymbolReference"/> so it can start unresolved or inferred (<see cref="Builtins.Infer"/>) and be filled in later.
+	/// </summary>
 	public class VarSymbol : Symbol
 	{
 		public SymbolReference Type = SymbolReference.AlreadyResolved(Builtins.Infer);
@@ -143,6 +155,13 @@ namespace stilt.AST
 		{ }
 	}
 
+	/// <summary>
+	/// A type. Carries its <see cref="Members"/>, single-inheritance <see cref="Inherits"/> parent, the
+	/// <see cref="ImplementedTraits"/> it satisfies, and generic arity (<see cref="ArgumentCount"/>/<see cref="Arguments"/>).
+	/// A generic instance points <see cref="Base"/> at the open type and reads its shared data through it, so each applied
+	/// shape (e.g. <c>array[int]</c>) is one canonical instance — see <see cref="TypeSymbolFactory"/>. The helpers
+	/// <see cref="InheritsFrom"/>/<see cref="Implements"/>/<see cref="GetMember"/> walk the inheritance chain.
+	/// </summary>
 	public class TypeSymbol : Symbol
 	{
 		private List<Symbol> _members = [];

@@ -1,5 +1,11 @@
 namespace stilt.Compilation
 {
+	/// <summary>
+	/// A half-open span <c>[Start, End)</c> within a <see cref="FileText"/>, attached to tokens and AST nodes to point
+	/// back at the source they came from. It caches the spanned <see cref="Text"/> and its surrounding source lines, and
+	/// converts offsets to line/column for diagnostics. The <c>+</c> operator merges two ranges into one covering both —
+	/// how a node derives its full span from its children.
+	/// </summary>
 	public class FileRange
 	{
 		[JsonIgnore]

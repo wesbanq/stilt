@@ -2,6 +2,14 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace stilt.AST
 {
+	/// <summary>
+	/// Base of every expression node. Expressions form a tree the parser grows one token at a time via
+	/// <see cref="InsertIntoTree(Expr?)"/>, which places each node according to its <see cref="Precedence"/>
+	/// (lower binds tighter) and <see cref="Bracketed"/> flag. Operator nodes implement <see cref="ITraversible"/>
+	/// to expose and rewire their children, which is what makes that precedence-based tree surgery possible.
+	/// <see cref="Type"/> starts as <see cref="Builtins.None"/> and is meant to be filled in by type checking;
+	/// <see cref="InnerRange"/>/<see cref="FullRange"/> track the node's own span and its whole subtree's span.
+	/// </summary>
 	public abstract class Expr : IRanged//, ITraversible
 	{
         // public abstract Expr?[] GetChildren();
@@ -232,6 +240,11 @@ namespace stilt.AST
 		}
 	}
 
+	/// <summary>
+	/// Implemented by operator nodes that hold child expressions, giving <see cref="Expr.InsertIntoTree(Expr?)"/> a
+	/// uniform way to read and rewire them. <see cref="GetChildren"/> returns children newest-first (operands are
+	/// inserted in reverse), which is what lets the tree builder find the most recent insertion point.
+	/// </summary>
 	public interface ITraversible
 	{
 		Expr?[] GetChildren();
@@ -249,11 +262,13 @@ namespace stilt.AST
 		FileRange GetInnerRangeOrFullRangeOrThrow();
 	}
 
+	/// <summary>A bare name use. Holds a <see cref="SymbolReference"/> that is unresolved until the <see cref="Linker"/> binds it to a symbol.</summary>
 	public class IdentityExpr : Expr
 	{
 		public SymbolReference Identity;
 	}
 
+	/// <summary>Base for operator nodes (unary/binary/ternary/comma). Carries the source <see cref="Operator"/> token and a precedence.</summary>
 	public abstract class OperationExpr : Expr
 	{
 		public Token? Operator;
@@ -420,6 +435,7 @@ namespace stilt.AST
 		{ }
 	}
 
+	/// <summary>A variadic operator node holding a list of sub-expressions — comma-separated lists, and (via its <see cref="AccessExpr"/>/<see cref="NullAccessExpr"/> subclasses) member-access chains. <see cref="ExprLength"/> is the expected arity while the node is still being filled.</summary>
 	public class CommaExpr : OperationExpr, ITraversible
 	{
 		public List<Expr> Exprs = [];
@@ -454,13 +470,15 @@ namespace stilt.AST
 		{ }
 	}
 
+	/// <summary>Member access <c>a.b.c</c>; stored as a chain whose segments the <see cref="Linker"/> resolves left along the dots.</summary>
 	public class AccessExpr : CommaExpr
 	{
 		public AccessExpr(int p, FileRange? r = null, Token? o = null)
 			: base(p, r, o)
 		{ }
 	}
-	
+
+	/// <summary>Null-safe member access <c>a?.b</c>; like <see cref="AccessExpr"/> but short-circuits on a null receiver.</summary>
 	public class NullAccessExpr : CommaExpr
 	{
 		public NullAccessExpr(int p, FileRange? r = null, Token? o = null)
@@ -468,22 +486,25 @@ namespace stilt.AST
 		{ }
 	}
 
+	/// <summary>An assignment <c>a = b</c>. <see cref="Operation"/> is the underlying operator for a compound form (e.g. <c>+=</c> carries <c>+</c>), or plain <c>=</c>.</summary>
 	public class AssignExpr : BinaryExpr
 	{
 		public TokenType? Operation;
 
-		public AssignExpr(int p, FileRange? r, Token? o = null) 
+		public AssignExpr(int p, FileRange? r, Token? o = null)
 			: base(p, r, o)
 		{ }
 	}
 
+	/// <summary>A function call: <see cref="BinaryExpr.Left"/> is the callee, <see cref="BinaryExpr.Right"/> the argument list (a <see cref="CommaExpr"/>).</summary>
 	public class CallExpr : BinaryExpr
 	{
-		public CallExpr(int p, FileRange? r, Token? o = null) 
+		public CallExpr(int p, FileRange? r, Token? o = null)
 			: base(p, r, o)
 		{ }
 	}
 
+	/// <summary>Base for constant-value nodes (numbers, strings, bools, null, array/table literals); <see cref="Value"/> holds the parsed value and <see cref="Expr.Type"/> its builtin type.</summary>
 	public class LiteralExpr : Expr
 	{
 		public required object? Value;
@@ -584,6 +605,7 @@ namespace stilt.AST
 		}
 	}
 
+	/// <summary>An anonymous function (lambda): its <see cref="Arguments"/> and body <see cref="Value"/>. Parsed and linked, though IR lowering for it is not implemented yet.</summary>
 	public class FuncLiteralExpr : Expr
 	{
 		public IEnumerable<VarSymbol> Arguments;

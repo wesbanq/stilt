@@ -5,20 +5,36 @@ using System.Security.Cryptography;
 
 namespace stilt
 {
+	/// <summary>
+	/// Recursive-descent parser that turns the lexer's token stream into an AST (pipeline stage 2).
+	/// Statements are parsed by <see cref="ParseStmt"/> — a switch on the leading keyword — with blocks
+	/// handled by <see cref="ParseBranch"/>; expressions are parsed by <see cref="ParseExpr"/>, which builds
+	/// a precedence-correct tree by handing each new node to <see cref="Expr.InsertIntoTree(Expr?)"/>.
+	///
+	/// As it parses it also builds the lexical <see cref="Scope"/> tree and records declared symbols, but it
+	/// does not resolve name <i>uses</i>: identifiers are captured as unresolved references and bound later by
+	/// the <see cref="Linker"/>. Recoverable problems are collected into <see cref="ParserResult.CompilationIssues"/>
+	/// (via <see cref="NewError"/>) and parsing skips to the next statement; with <c>--throw</c> they propagate instead.
+	/// The finished AST and scopes live in <see cref="Result"/>.
+	/// </summary>
 	public class Parser
 	{
 		public readonly ParserResult Result;
-		
+
 		private readonly Lexer Lex;
 		private readonly ProgramArgs Args;
+		/// <summary>Decorators (<c>[[ … ]]</c>) parsed but not yet attached; flushed onto the next statement that accepts them.</summary>
 		private List<DecoratorObject> CurrentDecorators = [];
+		/// <summary>Current brace-nesting depth, used by <see cref="ParseBranch"/> to decide which block a <c>}</c> closes.</summary>
 		private int _depth = 0;
 
+		/// <summary>Records a recoverable diagnostic on the result instead of throwing, so parsing can continue.</summary>
 		private void NewError(SyntaxError err)
 		{
 			Result.CompilationIssues.Add(err);
 		}
 
+		/// <summary>Parses the contents of an array literal <c>[ … ]</c> into an <see cref="ArrayLiteralExpr"/>, treating a top-level comma expression as the element list.</summary>
 		private ArrayLiteralExpr ParseArrayLiteral(Token currentToken)
 		{
 			if (currentToken.Which is TokenType.EOF)
@@ -35,6 +51,7 @@ namespace stilt
 				: new ArrayLiteralExpr(currentToken.Range, [newExpr]);
 		}
 
+		/// <summary>Evaluates a scientific-notation literal (e.g. <c>1.5e3</c>) to a double: parses the mantissa and exponent around the <c>e</c>/<c>E</c> and combines them.</summary>
 		private double ParseScientificLiteral(Token token)
 		{
 			var tokenText = token.Range.Text.Replace("_", "");
@@ -46,6 +63,15 @@ namespace stilt
 			return mantissa * Math.Pow(10, exponent);
 		}
 
+		/// <summary>
+		/// Parses one expression, growing it in <paramref name="rootExpr"/>. Walks tokens left to right: each token
+		/// becomes a node (<paramref name="newExpr"/>) — a literal/identifier operand, or an operator whose arity is
+		/// chosen from the current tree shape (<see cref="Expr.ExpectingOperator"/> distinguishes, say, a grouping
+		/// <c>(</c> from a call, and a unary <c>-</c> from a binary one) — which is then spliced into the tree at the
+		/// spot its precedence dictates via <see cref="Expr.InsertIntoTree(Expr?, Expr?)"/>. It then recurses on the
+		/// next token. Parsing stops when the token is in <paramref name="stopTokens"/> or is one that cannot extend
+		/// an expression (a separator, closing bracket, EOF, …), marking the result <see cref="Expr.Bracketed"/> and returning.
+		/// </summary>
 		private void ParseExpr(ref Expr? rootExpr, Token currentToken, params TokenType[] stopTokens)
 		{
 			if (stopTokens.Contains(currentToken.Which))
@@ -100,7 +126,9 @@ namespace stilt
 				case TokenType.ScientificNumericLiteral:
 				{
 					var tokenText = currentToken.Range.Text.Replace("_", "");
-					var literalType = tokenText.Last() switch 
+					// A trailing type suffix (b/s/i/l/f/d) pins the numeric type; without one, decimals/scientific
+					// default to Fractional and the rest to Whole. The token kind picks the radix below.
+					var literalType = tokenText.Last() switch
 					{
 						'b' => Builtins.Byte,
 						's' => Builtins.Short,
@@ -175,6 +203,8 @@ namespace stilt
 				{
 					ParseExpr(ref newExpr, Lex.Next());
 
+					// A bracket after a complete operand is postfix (a call's argument list, or a `[]` index);
+					// otherwise a `(` just groups, and a `[` starts an array literal.
 					if (Expr.ExpectingOperator(rootExpr))
 					{
 						if (newExpr is null && currentToken.Which == TokenType.OpenSquareBracket)
@@ -349,6 +379,12 @@ namespace stilt
 			return new UnresolvedReference(typeNameToken.Range.Text, typeNameToken, qualifier, typeArgs);
 		}
 
+		/// <summary>
+		/// Parses the four loop forms into their statement nodes: <c>while</c> (<see cref="PreconditionLoopStmt"/>),
+		/// <c>for</c> (<see cref="ForLoopStmt"/>), <c>foreach</c> (<see cref="ForeachLoopStmt"/>), and <c>repeat</c>
+		/// with an optional trailing <c>until</c> (<see cref="LoopStmt"/> or <see cref="PostconditionLoopStmt"/>).
+		/// The body and any condition/iterator are gathered with <see cref="ParseGenericStmt"/> into a new child scope.
+		/// </summary>
 		private Stmt? ParseLoopStmt(Scope currentScope, Token firstToken)
 		{
 			Scope newScope = new(currentScope);
@@ -462,6 +498,11 @@ namespace stilt
 			return newStmt;
 		}
 
+		/// <summary>
+		/// Parses a decorator annotation <c>[[ Name(args…) ]]</c>: resolves <c>Name</c> to a decorator type in
+		/// <paramref name="scope"/> and collects its literal arguments. The returned <see cref="DecoratorObject"/>
+		/// is buffered in <see cref="CurrentDecorators"/> and attached to the statement that follows.
+		/// </summary>
 		private DecoratorObject ParseDecorator(Scope scope, Token firstToken)
 		{
 			firstToken = Lex.GoPast(TokenType.DecoratorBegin);
@@ -508,6 +549,11 @@ namespace stilt
 
 		private enum CaptureKind { Expr, Stmt, Keywords, OptionalSequence, Type }
 
+		/// <summary>
+		/// One element of a statement's expected shape, used to describe grammar declaratively. A statement parser
+		/// lists the pieces it expects — e.g. <c>while</c> is <c>Kw(While), Expr, Stmt</c> — and <see cref="ParseGenericStmt"/>
+		/// consumes them in order. <see cref="Opt"/> wraps a sub-sequence that is attempted but rolled back if it fails.
+		/// </summary>
 		private readonly record struct ExpectedValue(
 			CaptureKind Kind,
 			TokenType[]? Keywords = null,
@@ -535,6 +581,11 @@ namespace stilt
 
 		private readonly record struct CapturedItem(CaptureKind Kind, Expr? Expr = null, Stmt? Stmt = null, Token? Keyword = null, UnresolvedReference? Type = null);
 
+		/// <summary>
+		/// The results of a <see cref="ParseGenericStmt"/> call: the captured items grouped by kind, with helpers
+		/// (<see cref="SingleExpr"/>, <see cref="SingleStmt"/>, the <c>TryGet…</c> methods) for the common case of
+		/// pulling out exactly one expression/statement/type that the caller then assembles into a concrete node.
+		/// </summary>
 		private readonly record struct CapturedStmt(IReadOnlyList<CapturedItem> Items)
 		{
 			public readonly IReadOnlyList<Expr> Exprs => [.. Items.Where(i => i.Kind == CaptureKind.Expr).Select(i => i.Expr!).Where(e => e is not null)];
@@ -583,8 +634,14 @@ namespace stilt
 			}
 		}
 
+		/// <summary>
+		/// Parses a sequence of <see cref="ExpectedValue"/> pieces in order, returning what each produced as a
+		/// <see cref="CapturedStmt"/>. Expressions, statements, and types recurse into their parsers; keywords are
+		/// asserted with <see cref="Lexer.ExpectThis"/>; an <see cref="ExpectedValue.Opt"/> sub-sequence is tried and,
+		/// on a <see cref="SyntaxError"/>, rewound to where it began so the surrounding parse continues unaffected.
+		/// </summary>
 		private CapturedStmt ParseGenericStmt (
-			Scope currentScope, 
+			Scope currentScope,
 			params ExpectedValue[] expectedValues
 		)
 		{
@@ -726,6 +783,7 @@ namespace stilt
 			return (args, returnType, body, funcScope);
 		}
 
+		/// <summary>Consumes any leading specifier keywords (e.g. <c>pub</c>, <c>const</c>) before a statement, rejecting duplicates, and advances <paramref name="firstToken"/> to the first non-specifier token.</summary>
 		private List<Token> CollectSpecifiers(ref Token firstToken)
 		{
 			List<Token> specifiers = [];
@@ -740,6 +798,14 @@ namespace stilt
 			return specifiers;
 		}
 
+		/// <summary>
+		/// Parses a single statement by switching on its leading token: declarations (<c>var</c>, <c>func</c>),
+		/// control flow (<c>if</c>, loops, <c>return</c>, <c>break</c>/<c>continue</c>), <c>import</c>, conditional
+		/// <c>version</c> blocks, braces (a nested <see cref="CompoundStmt"/>), decorators, and otherwise an
+		/// expression statement. Declarations register their symbols in <paramref name="currentScope"/> (or a fresh
+		/// child scope); any buffered decorators and the statement's source range are attached before returning.
+		/// Returns null for tokens that produce no statement (a stray separator, <c>}</c>, or EOF).
+		/// </summary>
 		private Stmt? ParseStmt(Scope currentScope)
 		{
 			var firstToken = Lex.CurrentToken;
@@ -810,6 +876,7 @@ namespace stilt
 				}
 				case TokenType.TraitDecl:
 				{
+					// INCOMPLETE: trait declarations are not parsed yet; the body below is the previous draft, left for reference.
 					// Lex.GoPast(TokenType.TraitDecl);
 					// var nameToken = Lex.ExpectThis(TokenType.Identifier);
 					// var traitName = nameToken.Range.Text;
@@ -869,6 +936,7 @@ namespace stilt
 				}
 				case TokenType.TypeDecl:
 				{
+					// INCOMPLETE: type declarations are not parsed yet; the body below is the previous draft, left for reference.
 					// Lex.GoPast(TokenType.TypeDecl);
 					// var nameToken = Lex.ExpectThis(TokenType.Identifier);
 					// var typeName = nameToken.Range.Text;
@@ -1056,6 +1124,8 @@ namespace stilt
 				}
 				case TokenType.Version:
 				{
+					// Compile-time switch on the target Minecraft version: each `comparison "x.y.z": stmt` arm is
+					// parsed, and the first whose comparison holds against Args.TargetVersion becomes this statement.
 					Lex.GoPast(TokenType.Version);
 					Lex.SkipStmtSeparator();
 					Lex.ExpectThis(TokenType.OpenCurlyBracket);
@@ -1197,6 +1267,13 @@ namespace stilt
 			return newStmt;
 		}
 
+		/// <summary>
+		/// Parses a run of statements until the brace that closes this branch (or EOF), returning them in order.
+		/// Uses <see cref="_depth"/> to tell apart a <c>}</c> that closes a nested block — which it consumes before
+		/// continuing — from the one that ends this branch, which it leaves for the caller. With <c>--throw</c> any
+		/// <see cref="SyntaxError"/> aborts; otherwise errors are recorded and parsing resumes at the next statement
+		/// (<see cref="Lexer.SkipStmt"/>), except a <see cref="ErrorSeverity.Critical"/> one which still propagates.
+		/// </summary>
 		private List<Stmt> ParseBranch(Scope parentScope)
 		{
 			//start token after the opening bracket
@@ -1300,6 +1377,7 @@ namespace stilt
 			return innerStmts;
 		}
 
+		/// <summary>Entry point: parses the whole file as one top-level branch into <see cref="ParserResult.Statements"/>, rooted at the file's <see cref="ParserResult.RootScope"/>.</summary>
 		public void ParseFile()
 		{
 			Result.Statements = ParseBranch(Result.RootScope);

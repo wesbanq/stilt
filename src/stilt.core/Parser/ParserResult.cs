@@ -1,5 +1,9 @@
 namespace stilt
 {
+	/// <summary>
+	/// Everything one file's <see cref="Parser"/> run produces: the top-level <see cref="Statements"/>, the file's
+	/// <see cref="RootScope"/> (parented to the builtins so global names resolve), and the diagnostics gathered along the way.
+	/// </summary>
 	public class ParserResult
 	{
 		public List<Stmt> Statements = [];

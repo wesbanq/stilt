@@ -2,18 +2,35 @@ using System.Reflection;
 
 namespace stilt
 {
+	/// <summary>
+	/// Turns preprocessed source text into a flat list of <see cref="Token"/>s (pipeline stage 1).
+	/// The token vocabulary is not hard-coded here: each <see cref="TokenType"/> enum field carries
+	/// <see cref="SymbolAttribute"/>s describing the literal(s) or regex(es) that produce it, and the lexer
+	/// reflects over them to build its rules (see <see cref="BuildLexRules"/>). The same enum also carries the
+	/// operator-precedence attributes the parser reads, keeping each token's spelling and grammar in one place.
+	///
+	/// After <see cref="Lex"/> fills <see cref="Tokens"/>, this object doubles as the parser's cursor over that
+	/// list: <see cref="CurrentPos"/> is the read head and <see cref="Next"/>/<see cref="PeekNext"/>/<see cref="Expect"/>
+	/// (etc.) move and inspect it.
+	/// </summary>
 	public class Lexer
 	{
 		public List<Token> Tokens;
+		/// <summary>Index of the token the parser is currently looking at; the lexer is also the token cursor.</summary>
 		public int CurrentPos = 0;
 		public readonly string Filepath;
 		public readonly ProgramArgs Args;
 		public FileText Text;
 
-		public Token CurrentToken => Tokens.Count > CurrentPos 
-			? Tokens[CurrentPos] 
+		public Token CurrentToken => Tokens.Count > CurrentPos
+			? Tokens[CurrentPos]
 			: throw new UnexpectedEOF(Text.EOF);
-		
+
+		/// <summary>
+		/// Reflects over the <see cref="TokenType"/> enum and collects each field's <see cref="SymbolAttribute"/>s,
+		/// split into literal <paramref name="symbols"/> (escaped to match verbatim) and raw <paramref name="regex"/>
+		/// patterns. Both lists are indexed by the enum value, so list slot <c>i</c> holds the patterns for <c>(TokenType)i</c>.
+		/// </summary>
 		public static void GetSymbolAttribute(out List<string[]> symbols, out List<string[]> regex)
 		{
 			symbols = new List<string[]>();
@@ -46,6 +63,11 @@ namespace stilt
 			}
 		}
 
+		/// <summary>
+		/// Cleans raw source before lexing: strips line (<c>#</c>) and block (<c>## … ##</c>) comments, normalizes
+		/// CRLF to LF, expands tabs to spaces, and joins backslash line-continuations. Comment and newline
+		/// replacements deliberately preserve the original line count so diagnostics still point at the right line.
+		/// </summary>
 		public static string Preprocess(string code, ProgramArgs? args = null)
 		{
 			//preprocessor needs to keep the same amount of lines to make sure the error reports are at the correct positions
@@ -68,6 +90,11 @@ namespace stilt
 		/// <summary>Compiled regex + metadata for O(n) single-pass lexing. isSymbol: true = literal/symbol (wins ties over regex).</summary>
 		private sealed record LexRule(Regex Regex, TokenType Type, bool IsSymbol);
 
+		/// <summary>
+		/// Compiles the patterns gathered by <see cref="GetSymbolAttribute"/> into one anchored, non-backtracking
+		/// <see cref="Regex"/> per pattern, tagged with its <see cref="TokenType"/> and whether it is a literal symbol.
+		/// Built once and cached in <see cref="LexRules"/>; <see cref="Lex"/> tries every rule at each position.
+		/// </summary>
 		private static List<LexRule> BuildLexRules()
 		{
 			GetSymbolAttribute(out var symbols, out var regex);
@@ -88,11 +115,12 @@ namespace stilt
 			return rules;
 		}
 
+		/// <summary>Advances to the next statement boundary (separator, brace, or EOF). Used to recover after a syntax error so parsing can resume at the following statement.</summary>
 		public void SkipStmt()
 		{
-			while (CurrentToken.Which is not 
+			while (CurrentToken.Which is not
 				(TokenType.EOF or TokenType.SoftStmtSeparator or TokenType.StrictStmtSeparator or TokenType.CloseCurlyBracket or TokenType.OpenCurlyBracket)
-			) 
+			)
 			{
 				Next();
 			}
@@ -100,16 +128,19 @@ namespace stilt
 
 		public bool CurrentIs(params TokenType[] types) => types.Contains(CurrentToken.Which);
 
-		public bool NextIs(params TokenType[] types) => 
-			types.Contains(PeekNext(1).Which) || 
+		/// <summary>True if the next meaningful token is one of <paramref name="types"/>, transparently looking past a single statement separator.</summary>
+		public bool NextIs(params TokenType[] types) =>
+			types.Contains(PeekNext(1).Which) ||
 			((PeekNext(1).Which == TokenType.SoftStmtSeparator || PeekNext(1).Which == TokenType.StrictStmtSeparator) && types.Contains(PeekNext(2).Which));
 
+		/// <summary>Consumes the current token if it is a statement separator; otherwise does nothing.</summary>
 		public void SkipStmtSeparator()
 		{
 			if (CurrentIs(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator))
 				Next();
 		}
 
+		/// <summary>Steps the cursor back one token (clamped at the start) and returns the new current token.</summary>
 		public Token Prev()
 		{
 			if (CurrentPos > 0)
@@ -117,6 +148,7 @@ namespace stilt
 			return CurrentToken;
 		}
 
+		/// <summary>Steps the cursor forward one token (clamped at EOF) and returns the new current token.</summary>
 		public Token Next()
 		{
 			if (CurrentPos < Tokens.Count - 1)
@@ -124,6 +156,7 @@ namespace stilt
 			return CurrentToken;
 		}
 
+		/// <summary>Advances to the first token of <paramref name="type"/> (or EOF), then steps once past it, returning the token that follows.</summary>
 		public Token GoPast(TokenType type)
 		{
 			while (!CurrentIs(type) && !CurrentIs(TokenType.EOF))
@@ -179,6 +212,7 @@ namespace stilt
 			return result;
 		}
 
+		/// <summary>Returns the token <paramref name="n"/> positions ahead without moving the cursor (temporarily shifts and restores <see cref="CurrentPos"/>).</summary>
 		public Token PeekNext(int n = 1)
 		{
 			CurrentPos += n;
@@ -226,6 +260,7 @@ namespace stilt
 			return true;
 		}
 
+		/// <summary>Moves the cursor back to a specific token instance. Lets the parser save a position and backtrack to it (e.g. when an optional construct fails to parse).</summary>
 		public void Goto(Token to)
 		{
 			var t = Tokens.FindIndex(t => ReferenceEquals(t, to));
@@ -234,6 +269,13 @@ namespace stilt
 			CurrentPos = t;
 		}
 
+		/// <summary>
+		/// Scans the whole source once, left to right, and fills <see cref="Tokens"/> (terminated with an EOF token).
+		/// At each position it first checks for a statement-separating newline run, then tries every <see cref="LexRule"/>
+		/// and keeps the longest match (maximal munch); ties are broken in favor of literal symbols over regex, so e.g.
+		/// the keyword <c>func</c> wins over the identifier pattern. Bytes that match nothing are skipped. Square-bracket
+		/// depth is tracked throughout so newlines inside <c>[ … ]</c> are not treated as statement separators.
+		/// </summary>
 		public void Lex()
 		{
 			var code = Text.ToString();

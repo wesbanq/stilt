@@ -6,8 +6,14 @@ using System.Text.RegularExpressions;
 
 namespace stilt;
 
+/// <summary>
+/// Assorted helpers used across the compiler: reflection lookups that read attributes off enum members (how
+/// <see cref="Token"/> reads its <see cref="TokenType"/> metadata), a recursive object <see cref="Dump"/> for
+/// debugging the AST/IR to the console, and string escape/unescape for source and diagnostics.
+/// </summary>
 public static class Utils
 {
+	/// <summary>Returns the first attribute of type <typeparamref name="A"/> on the given enum member, or null.</summary>
 	public static A? GetAttributeFromEnum<T, A>(T value)
 		where T : Enum
 		where A : Attribute
@@ -30,6 +36,7 @@ public static class Utils
 			return null;
 	}
 
+	/// <summary>Recursively prints an object's fields/properties to the console for debugging (used by the CLI's tree/ir dumps). Cycles are detected and elided; <paramref name="expanded"/> shows otherwise-hidden members like scopes and ranges.</summary>
 	public static void Dump(object? obj, int l = 0, bool expanded = false)
 	{
 		var visited = new HashSet<object>(ReferenceEqualityComparer.Instance);

@@ -2,7 +2,11 @@ using System.Security.Cryptography;
 
 namespace stilt.Compilation
 {
-    public class FileText
+	/// <summary>
+	/// One source file's full text plus its path. Both constructors run the text through <see cref="Lexer.Preprocess"/>,
+	/// so <see cref="Text"/> is always the preprocessed form the lexer consumes. <see cref="FileRange"/>s index into this text.
+	/// </summary>
+	public class FileText
 	{
 		[JsonIgnore]
 		public string Text;
