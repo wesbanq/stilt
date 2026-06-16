@@ -57,11 +57,10 @@ namespace stilt
 			{
 				case TokenType.Identifier:
 				{
-					var newSym = new UnresolvedReference(currentToken.Range.Text, currentToken);
 					newExpr = new IdentityExpr()
 					{
 						InnerRange = currentToken.Range,
-						Identity = new SymbolReference(newSym),
+						Identity = SymbolReference.NotResolved(currentToken),
 					};
 					break;
 				}
@@ -214,7 +213,7 @@ namespace stilt
 				case TokenType.Then:
 				case TokenType.Else:
 				case TokenType.CloseBracket:
-				case TokenType.StmtSeparator:
+				case TokenType.SoftStmtSeparator:
 				case TokenType.StrictStmtSeparator:
 				case TokenType.CloseCurlyBracket:
 				case TokenType.CloseSquareBracket:
@@ -257,7 +256,7 @@ namespace stilt
 
 					possibleExprs = [.. possibleExprs.OrderByDescending(e =>
 					{
-						if (e is IOperator op)
+						if (e is ITraversible op)
 							return op.GetChildren().Count();
 						else
 							throw new UnreachableException();
@@ -363,7 +362,7 @@ namespace stilt
 						newScope,
 						ExpectedValue.Kw(TokenType.While),
 						ExpectedValue.Expr,
-						ExpectedValue.Opt(ExpectedValue.Kws(TokenType.StmtSeparator, TokenType.StrictStmtSeparator)),
+						ExpectedValue.Opt(ExpectedValue.Kws(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator)),
 						ExpectedValue.Stmt);
 					newStmt = new PreconditionLoopStmt()
 					{
@@ -384,12 +383,12 @@ namespace stilt
 					}
 					var tail = ParseGenericStmt(
 						newScope,
-						ExpectedValue.Kws(TokenType.StrictStmtSeparator, TokenType.StmtSeparator),
+						ExpectedValue.Kws(TokenType.StrictStmtSeparator, TokenType.SoftStmtSeparator),
 						ExpectedValue.Expr,
-						ExpectedValue.Kws(TokenType.StrictStmtSeparator, TokenType.StmtSeparator),
+						ExpectedValue.Kws(TokenType.StrictStmtSeparator, TokenType.SoftStmtSeparator),
 						ExpectedValue.Expr,
-						ExpectedValue.Kws(TokenType.StrictStmtSeparator, TokenType.StmtSeparator),
-						ExpectedValue.Opt(ExpectedValue.Kws(TokenType.StmtSeparator, TokenType.StrictStmtSeparator)),
+						ExpectedValue.Kws(TokenType.StrictStmtSeparator, TokenType.SoftStmtSeparator),
+						ExpectedValue.Opt(ExpectedValue.Kws(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator)),
 						ExpectedValue.Stmt);
 					if (tail.Exprs.Count != 2 || tail.Stmts.Count != 1)
 						throw new SyntaxError(firstToken.Range, "Invalid for-loop header.");
@@ -411,7 +410,7 @@ namespace stilt
 						ExpectedValue.Stmt, //FIX might cause issues
 						ExpectedValue.Kw(TokenType.In),
 						ExpectedValue.Expr,
-						ExpectedValue.Opt(ExpectedValue.Kws(TokenType.StmtSeparator, TokenType.StrictStmtSeparator)),
+						ExpectedValue.Opt(ExpectedValue.Kws(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator)),
 						ExpectedValue.Stmt);
 					if (fe.Exprs.Count != 1 || fe.Stmts.Count != 2)
 						throw new SyntaxError(firstToken.Range, "Invalid foreach loop.");
@@ -431,9 +430,9 @@ namespace stilt
 					var r = ParseGenericStmt(
 						newScope,
 						ExpectedValue.Kw(TokenType.Repeat),
-						ExpectedValue.Opt(ExpectedValue.Kws(TokenType.StmtSeparator, TokenType.StrictStmtSeparator)),
+						ExpectedValue.Opt(ExpectedValue.Kws(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator)),
 						ExpectedValue.Stmt);
-					while (Lex.CurrentIs(TokenType.StmtSeparator, TokenType.StrictStmtSeparator))
+					while (Lex.CurrentIs(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator))
 						Lex.Next();
 					if (Lex.CurrentIs(TokenType.Until))
 					{
@@ -507,7 +506,7 @@ namespace stilt
 			return new DecoratorObject(decoratorType, args);
 		}
 
-				private enum CaptureKind { Expr, Stmt, Keywords, OptionalSequence, Type }
+		private enum CaptureKind { Expr, Stmt, Keywords, OptionalSequence, Type }
 
 		private readonly record struct ExpectedValue(
 			CaptureKind Kind,
@@ -531,7 +530,7 @@ namespace stilt
 			
 			public static ExpectedValue StmtEnd => 
 				new(CaptureKind.Keywords, Keywords: 
-					[TokenType.StmtSeparator, TokenType.StrictStmtSeparator, TokenType.EOF]);
+					[TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator, TokenType.EOF]);
 		}
 
 		private readonly record struct CapturedItem(CaptureKind Kind, Expr? Expr = null, Stmt? Stmt = null, Token? Keyword = null, UnresolvedReference? Type = null);
@@ -644,6 +643,89 @@ namespace stilt
 			return new CapturedStmt(items);
 		}
 
+		/// <summary>
+		/// Parses a named function declaration: <c>'func' name '('args')'[':' type] body</c>.
+		/// The arguments live in the returned <paramref name="funcScope"/> (parentless; the caller
+		/// wires its <see cref="Scope.Parent"/> to the enclosing scope). Delegates the argument
+		/// list, return type, and body to <see cref="ParseFuncLiteral()"/>.
+		/// </summary>
+		private (VarSymbol funcSymbol, Stmt body, Scope funcScope) ParseFunc()
+		{
+			Lex.ExpectThis(TokenType.FuncDecl);
+			var funcName = Lex.ExpectThis(TokenType.Identifier);
+			var (_, _, body, funcScope) = ParseFuncLiteral();
+
+			var funcSymbol = new VarSymbol(funcName.Range.Text, Lex.Filepath, funcName);
+
+			return (funcSymbol, body, funcScope);
+		}
+
+		/// <summary>
+		/// Parses an anonymous function expression: <c>'func' '('args')'[':' type] body</c>.
+		/// The argument/body scope is parented to <paramref name="currentScope"/> (the scope the
+		/// literal lexically appears in). The declared return type is not modelled on the
+		/// expression; the type checker infers it from the body.
+		/// </summary>
+		private FuncLiteralExpr ParseFuncLiteral(Scope currentScope)
+		{
+			var funcToken = Lex.ExpectThis(TokenType.FuncDecl);
+			var (args, _, body, funcScope) = ParseFuncLiteral();
+			funcScope.Parent = currentScope;
+
+			return new FuncLiteralExpr
+			{
+				InnerRange = funcToken.Range,
+				Arguments = args,
+				Value = body,
+			};
+		}
+
+		/// <summary>
+		/// Parses a function argument list, optional return type, and body:
+		/// <c>'('[name[':' type][','...]]')'[':' type] stmt</c>. Arguments are collected into a
+		/// fresh, parentless <see cref="Scope"/> that the body is parsed against; the caller wires
+		/// its <see cref="Scope.Parent"/> to the enclosing scope. Shared by
+		/// <see cref="ParseFuncLiteral(Scope)"/> and <see cref="ParseFunc"/>.
+		/// </summary>
+		private (List<VarSymbol> args, UnresolvedReference? returnType, Stmt body, Scope funcScope) ParseFuncLiteral()
+		{
+			Lex.ExpectThis(TokenType.OpenBracket);
+
+			List<VarSymbol> args = [];
+			while (!Lex.CurrentIs(TokenType.CloseBracket))
+			{
+				var argName = Lex.ExpectThis(TokenType.Identifier);
+
+				SymbolReference? argType = null;
+				if (Lex.CurrentIs(TokenType.Type))
+				{
+					Lex.Next();
+					argType = SymbolReference.FromUnresolved(ParseType());
+				}
+
+				args.Add(new VarSymbol(argName.Range.Text, Lex.Filepath, argType, argName));
+
+				if (!Lex.CurrentIs(TokenType.CloseBracket))
+					Lex.ExpectThis(TokenType.Comma);
+			}
+			Lex.ExpectThis(TokenType.CloseBracket);
+
+			UnresolvedReference? returnType = null;
+			if (Lex.CurrentIs(TokenType.Type))
+			{
+				Lex.Next();
+				returnType = ParseType();
+			}
+
+			var funcScope = new Scope();
+			funcScope.AddSymbols(args);
+
+			var body = ParseStmt(funcScope)
+				?? throw new SyntaxError(Lex.CurrentToken.Range, "Expected function body.");
+
+			return (args, returnType, body, funcScope);
+		}
+
 		private List<Token> CollectSpecifiers(ref Token firstToken)
 		{
 			List<Token> specifiers = [];
@@ -677,7 +759,7 @@ namespace stilt
 						ExpectedValue.Expr
 					);
 
-					if (!Lex.CurrentIs(TokenType.StmtSeparator, TokenType.StrictStmtSeparator))
+					if (!Lex.CurrentIs(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator))
 						throw new SyntaxError(Lex.CurrentToken.Range, "Expected statement separator after variable declaration.");
 
 					if (varCont.SingleExpr is null || varCont.SingleExpr is not AssignExpr assign)
@@ -689,16 +771,16 @@ namespace stilt
 					List<Symbol> names;
 					if (assign.Left is CommaExpr idents)
 					{
-						names = idents.Exprs.Select(e =>
+						names = [.. idents.Exprs.Select(e =>
 						{
 							if (e is not IdentityExpr ident)
 								throw new SyntaxError(e.GetFullRangeOrThrow(), "Expected an identifier in variable declaration.");
-							return (Symbol)new VarSymbol(ident.Identity.Unresolved.Name, t: ident.Identity.Unresolved.Token);
-						}).ToList();
+							return new VarSymbol(ident.Identity.Unresolved.Name, t: ident.Identity.Unresolved.Token) as Symbol;
+						})];
 					}
 					else
 					{
-						var ident = (IdentityExpr)assign.Left;
+						var ident = (assign.Left as IdentityExpr)!;
 						names = [new VarSymbol(ident.Identity.Unresolved.Name, t: ident.Identity.Unresolved.Token)];
 					}
 
@@ -716,23 +798,13 @@ namespace stilt
 				}
 				case TokenType.FuncDecl:
 				{
-					// Lex.GoPast(TokenType.FuncDecl);
-					// // var (funcSymbol, argDecls, typeArgs) = ParseFuncSignature(currentScope);
-					// //use exprs
+					// no default arguments
+					var (funcSymbol, body, funcScope) = ParseFunc();
+					funcScope.Parent = currentScope;
+					Lex.SkipStmtSeparator();
 
-					// Scope funcScope = new(currentScope);
-					// foreach (var argDecl in argDecls)
-					// 	AddToScope(argDecl.Name, funcScope);
-					// foreach (var typeArg in typeArgs)
-					// 	AddToScope(typeArg, funcScope);
-
-					// Lex.SkipStmtSeparator();
-					// var innerStmt = ParseStmt(funcScope);
-					// if (innerStmt is null)
-					// 	throw new SyntaxError(firstToken.Range, "Expected statement after function declaration.");
-
-					// newStmt = new FuncDeclStmt(funcSymbol, innerStmt) { Scope = funcScope };
-					// AddToScope(funcSymbol, currentScope);
+					newStmt = new FuncDeclStmt(funcSymbol, body) { Scope = funcScope };
+					currentScope.AddSymbol(funcSymbol);
 
 					break;
 				}
@@ -898,7 +970,7 @@ namespace stilt
 					var moduleName = importCont.Keywords.Count == 4 
 						? importCont.Keywords[3].Range.Text
 						: filepath[(filepath.LastIndexOf('/')+1) ..];
-					var moduleSym = new VarSymbol(moduleName, Lex.Filepath, Builtins.Module);
+					var moduleSym = new VarSymbol(moduleName, Lex.Filepath, SymbolReference.AlreadyResolved(Builtins.Module));
 
 					var importStmt = new ImportStmt(moduleName, filepath, moduleSym)
 					{
@@ -1083,7 +1155,7 @@ namespace stilt
 					break;
 				}
 				case TokenType.EOF:
-				case TokenType.StmtSeparator:
+				case TokenType.SoftStmtSeparator:
 				case TokenType.StrictStmtSeparator:
 				case TokenType.CloseCurlyBracket:
 				{

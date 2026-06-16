@@ -586,7 +586,7 @@ namespace stilt.IR
                     }
                     return lastResult ?? throw new IRGenerationError("CommaExpr must have at least one expression");
 
-                case LambdaFuncExpr lambda:
+                case FuncLiteralExpr lambda:
                     // TODO: Implement lambda functions
                     throw new IRGenerationError("Lambda functions not yet implemented in IR generator");
 

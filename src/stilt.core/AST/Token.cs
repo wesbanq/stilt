@@ -224,7 +224,7 @@ namespace stilt
 		StrictStmtSeparator,
 
 		// Newline runs outside [] only; see Lexer.TryLexStmtSeparator (NonBacktracking regex cannot express this).
-		StmtSeparator,
+		SoftStmtSeparator,
 
 		[BinaryOperator(15)]
 		[Symbol(",")]

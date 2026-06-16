@@ -7,6 +7,7 @@ namespace stilt
 	{
 		public static Scope BuiltinScope;
 
+		public static readonly TypeSymbol Infer = new("infer", Symbol.BuiltinSource);
 		public static readonly TypeSymbol None = new("none", Symbol.BuiltinSource);
 		public static readonly TypeSymbol Bool = new("bool", Symbol.BuiltinSource);
 		public static readonly TypeSymbol Num = new("num", Symbol.BuiltinSource);

@@ -91,7 +91,7 @@ namespace stilt
 		public void SkipStmt()
 		{
 			while (CurrentToken.Which is not 
-				(TokenType.EOF or TokenType.StmtSeparator or TokenType.StrictStmtSeparator or TokenType.CloseCurlyBracket or TokenType.OpenCurlyBracket)
+				(TokenType.EOF or TokenType.SoftStmtSeparator or TokenType.StrictStmtSeparator or TokenType.CloseCurlyBracket or TokenType.OpenCurlyBracket)
 			) 
 			{
 				Next();
@@ -102,11 +102,11 @@ namespace stilt
 
 		public bool NextIs(params TokenType[] types) => 
 			types.Contains(PeekNext(1).Which) || 
-			((PeekNext(1).Which == TokenType.StmtSeparator || PeekNext(1).Which == TokenType.StrictStmtSeparator) && types.Contains(PeekNext(2).Which));
+			((PeekNext(1).Which == TokenType.SoftStmtSeparator || PeekNext(1).Which == TokenType.StrictStmtSeparator) && types.Contains(PeekNext(2).Which));
 
 		public void SkipStmtSeparator()
 		{
-			if (CurrentIs(TokenType.StmtSeparator, TokenType.StrictStmtSeparator))
+			if (CurrentIs(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator))
 				Next();
 		}
 
@@ -196,7 +196,7 @@ namespace stilt
 		}
 
 		/// <summary>
-		/// <see cref="TokenType.StmtSeparator"/>: newline runs at square-bracket depth 0 (semicolons are <see cref="TokenType.StrictStmtSeparator"/> via regex).
+		/// <see cref="TokenType.SoftStmtSeparator"/>: newline runs at square-bracket depth 0 (semicolons are <see cref="TokenType.StrictStmtSeparator"/> via regex).
 		/// </summary>
 		private static bool TryLexStmtSeparator(string code, int pos, int squareBracketDepth, out int length)
 		{
@@ -247,7 +247,7 @@ namespace stilt
 				{
 					tokens.Add(new Token
 					{
-						Which = TokenType.StmtSeparator,
+						Which = TokenType.SoftStmtSeparator,
 						Range = new FileRange(pos, pos + sepLen, Filepath, Text),
 					});
 					pos += sepLen;

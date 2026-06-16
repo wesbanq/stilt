@@ -2,8 +2,12 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace stilt.AST
 {
-	public abstract class Expr : IRanged
+	public abstract class Expr : IRanged//, ITraversible
 	{
+        // public abstract Expr?[] GetChildren();
+		// public abstract void ReplaceChild(Expr expr, Expr expr1);
+		// public abstract void InsertChild(Expr expr);
+
 		/// <summary>
 		/// Inserts <paramref name="newExpr"/> into the tree rooted at <paramref name="rootExpr"/>.
 		/// When <paramref name="rootExpr"/> is non-null, it is treated as the current root (same as calling <see cref="InsertIntoTree"/> on it).
@@ -12,7 +16,7 @@ namespace stilt.AST
 		{
 			if (rootExpr is null && newExpr is not null)
 			{
-				if (!newExpr.Bracketed && newExpr is not UnaryExpr && newExpr is not CommaExpr && newExpr is IOperator)
+				if (!newExpr.Bracketed && newExpr is not UnaryExpr && newExpr is not CommaExpr && newExpr is ITraversible)
 					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
 				return newExpr;
 			}
@@ -36,7 +40,7 @@ namespace stilt.AST
 			var toReplace = rootExpr.FindFirstPrecedenceOrNull(newExpr.Precedence, out var parent);
 			if (toReplace is null && parent is null)
 			{
-				if (newExpr is IOperator exprSpreadable)
+				if (newExpr is ITraversible exprSpreadable)
 				{
 					exprSpreadable.InsertChild(rootExpr);
 					rootExpr = newExpr;
@@ -45,7 +49,7 @@ namespace stilt.AST
 					throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
 			}
 
-			if (newExpr is IOperator spreadable)
+			if (newExpr is ITraversible spreadable)
 			{
 				if (toReplace is not null)
 				{
@@ -58,7 +62,7 @@ namespace stilt.AST
 					spreadable.InsertChild(toReplace);
 					if (parent is not null)
 					{
-						if (parent is IOperator op)
+						if (parent is ITraversible op)
 							op.ReplaceChild(toReplace, newExpr);
 						else
 							throw new MalformedExpr((toReplace ?? newExpr)!.GetFullRangeOrThrow());
@@ -71,7 +75,7 @@ namespace stilt.AST
 
 				if (parent is not null)
 				{
-					if (parent is IOperator sParent)
+					if (parent is ITraversible sParent)
 					{
 						if (toReplace is null && (newExpr.Bracketed || newExpr is (UnaryExpr or TernaryExpr)))
 							sParent.InsertChild(newExpr);
@@ -88,7 +92,7 @@ namespace stilt.AST
 				return rootExpr;
 			}
 
-			if (parent is IOperator newSpreadable)
+			if (parent is ITraversible newSpreadable)
 				newSpreadable.InsertChild(newExpr);
 			else
 				throw new MalformedExpr(newExpr.GetFullRangeOrThrow());
@@ -105,7 +109,7 @@ namespace stilt.AST
 		{
 			get
 			{
-				if (this is IOperator op)
+				if (this is ITraversible op)
 				{
 					var children = op.GetChildren().Select(c => c?.FullRange);
 					FileRange? sum = InnerRange;
@@ -144,7 +148,7 @@ namespace stilt.AST
 			parent = null;
 			var firstNull = FindFirst(e =>
 			{
-				if (e is IOperator spreadable)
+				if (e is ITraversible spreadable)
 				{
 					return !e.Bracketed && spreadable.GetChildren().Any(c => c is null);
 				}
@@ -184,7 +188,7 @@ namespace stilt.AST
 				return null;
 			}
 
-			if (this is IOperator spreadable)
+			if (this is ITraversible spreadable)
 			{
 				foreach (var child in spreadable.GetChildren())
 				{
@@ -201,12 +205,12 @@ namespace stilt.AST
 
 		/// <summary>
 		/// Prefer the most-recently-added leaf node in the current tree.
-		/// Child ordering in <see cref="IOperator.GetChildren"/> is already "newest-first" for operators.
+		/// Child ordering in <see cref="ITraversible.GetChildren"/> is already "newest-first" for operators.
 		/// </summary>
 		public Expr GetLastExprInTree()
 		{
 			var current = this;
-			while (!current.Bracketed && current is IOperator op)
+			while (!current.Bracketed && current is ITraversible op)
 			{
 				var next = op.GetChildren().First(c => c is not null);
 				if (next is null)
@@ -228,7 +232,7 @@ namespace stilt.AST
 		}
 	}
 
-	public interface IOperator
+	public interface ITraversible
 	{
 		Expr?[] GetChildren();
 		void ReplaceChild(Expr what, Expr with);
@@ -262,7 +266,7 @@ namespace stilt.AST
 		}
 	}
 
-	public class UnaryExpr : OperationExpr, IOperator
+	public class UnaryExpr : OperationExpr, ITraversible
 	{
 		public Expr? Leaf;
 		public bool Prefix = true; // For increment/decrement operators
@@ -302,7 +306,7 @@ namespace stilt.AST
 		{ }
 	}
 
-	public class BinaryExpr : OperationExpr, IOperator
+	public class BinaryExpr : OperationExpr, ITraversible
 	{
 		public Expr? Left;
 		public Expr? Right;
@@ -353,7 +357,7 @@ namespace stilt.AST
 		{ }
 	}
 
-	public class TernaryExpr : OperationExpr, IOperator
+	public class TernaryExpr : OperationExpr, ITraversible
 	{
 		public Expr? Left;
 		public Expr? Middle;
@@ -416,7 +420,7 @@ namespace stilt.AST
 		{ }
 	}
 
-	public class CommaExpr : OperationExpr, IOperator
+	public class CommaExpr : OperationExpr, ITraversible
 	{
 		public List<Expr> Exprs = [];
 		public int ExprLength = 2;
@@ -580,9 +584,9 @@ namespace stilt.AST
 		}
 	}
 
-	public class LambdaFuncExpr : Expr
+	public class FuncLiteralExpr : Expr
 	{
-		public List<VarSymbol> Arguments = [];
+		public IEnumerable<VarSymbol> Arguments;
 		public Stmt Value;
 	}
 }

@@ -194,7 +194,7 @@ namespace stilt
 									key = resolved;
 								else
 								{
-									var range = key.Identifier?.Range;
+									var range = key.Token?.Range;
 									if (range is not null)
 										Errors.Add(new UndefinedSymbolError(range, key));
 								}
@@ -207,7 +207,7 @@ namespace stilt
 					break;
 				}
 
-				case LambdaFuncExpr lambda:
+				case FuncLiteralExpr lambda:
 				{
 					if (lambda.Value is not null)
 						ProcessStmt(lambda.Value, lambda.Value.Scope);

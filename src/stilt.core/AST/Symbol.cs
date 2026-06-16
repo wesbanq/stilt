@@ -16,7 +16,7 @@ namespace stilt.AST
 		public Stmt? Declaration;
 		public List<TokenType> Specifiers = [];
 		[JsonIgnore]
-		public Token? Identifier;
+		public Token? Token;
 
 		[JsonIgnore]
 		public bool IsBuiltin => Source.StartsWith(BuiltinSource);
@@ -49,8 +49,9 @@ namespace stilt.AST
 		{
 			Name = name;
 			Source = src;
-			Identifier = token;
+			Token = token;
 		}
+
 		protected Symbol(string name, string src = TempSource)
 		{
 			Name = name;
@@ -61,21 +62,38 @@ namespace stilt.AST
 	/// <summary>
 	/// Holds an unresolved name path and, after the linker runs, the <see cref="Symbol"/> it bound to
 	/// </summary>
-	public sealed class SymbolReference(UnresolvedReference unresolved)
+	public sealed class SymbolReference
     {
-        public UnresolvedReference Unresolved { get; } = unresolved ?? throw new ArgumentNullException(nameof(unresolved));
-        private Symbol? _resolved;
-
 		public Symbol? Resolved => _resolved;
+        public UnresolvedReference Unresolved => _unresolved;
 		public bool IsResolved => _resolved is not null;
+
+        private Symbol? _resolved;
+		private UnresolvedReference _unresolved;
 
         public void Resolve(Symbol symbol)
 		{
 			ArgumentNullException.ThrowIfNull(symbol);
-			if (_resolved is not null)
+			if (IsResolved)
 				throw new InvalidOperationException("Symbol already resolved.");
 			_resolved = symbol;
 		}
+
+		public static SymbolReference AlreadyResolved(Symbol sym) => new()
+        {
+			_resolved = sym, 
+			_unresolved = new UnresolvedReference(sym.Name, sym.Token!),
+		};
+
+		public static SymbolReference NotResolved(Token t) => new()
+		{
+			_unresolved = new UnresolvedReference(t.Range.Text, t),
+		};
+
+		public static SymbolReference FromUnresolved(UnresolvedReference unresolvedReference) => new()
+		{
+			_unresolved = unresolvedReference,
+		};
 	}
 
 	/// <summary>
@@ -100,7 +118,7 @@ namespace stilt.AST
 
 	public class VarSymbol : Symbol
 	{
-		public TypeSymbol Type = Builtins.None;
+		public SymbolReference Type = SymbolReference.AlreadyResolved(Builtins.Infer);
 
 		public override int GetHashCode()
 		{
@@ -110,20 +128,15 @@ namespace stilt.AST
 			return hash.ToHashCode();
 		}
 
-		public VarSymbol(string n, TypeSymbol? type = null, Token? t = null)
-			: base(n, t)
-		{
-			Type = type ?? Builtins.None;
-		}
-		public VarSymbol(string n, string s, TypeSymbol type, Token t)
+		public VarSymbol(string n, string s = TempSource, SymbolReference? type = null, Token? t = null)
 			: base(n, t, s)
 		{
-			Type = type;
+			if (type is not null) Type = type;
 		}
-		public VarSymbol(string n, string s, TypeSymbol type)
+		public VarSymbol(string n, string s = TempSource, SymbolReference? type = null)
 			: base(n, s)
 		{
-			Type = type;
+			if (type is not null) Type = type;
 		}
 		public VarSymbol(string n, string s, Token t)
 			: base(n, t, s)
