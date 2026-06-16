@@ -5,6 +5,11 @@ namespace stilt.Compilation
 		string Name { get; }
 	}
 
+	/// <summary>
+	/// Immutable bag of settings for one compiler run, built from the CLI arguments
+	/// (see <c>ConsoleArgs.ToCompilerArgs</c>). Passed by value through every stage so
+	/// the lexer, parser, linker, and IR generator all see the same configuration.
+	/// </summary>
 	public readonly record struct ProgramArgs(
 		int DebugLevel,
 		string? MainCodeFilepath,
@@ -23,14 +28,29 @@ namespace stilt.Compilation
 		int TabSize = 4
 	);
 
+	/// <summary>
+	/// Top-level driver of the compilation pipeline that turns Stilt source into a Minecraft
+	/// datapack. A run flows through these stages, each implemented by its own class:
+	/// <list type="number">
+	/// <item>Preprocess + lex (<see cref="Lexer"/>): source text becomes a flat token list.</item>
+	/// <item>Parse (<see cref="Parser"/>): tokens become an AST of <see cref="Stmt"/>/<see cref="Expr"/> nodes;
+	///       each source file produces one <see cref="ParsedFile"/>.</item>
+	/// <item>Link (<see cref="Linker"/>): names are resolved against scopes and <c>import</c>ed files are pulled in.</item>
+	/// <item>IR generation (<see cref="IRGenerator"/>): the AST is lowered to a tree of instruction <see cref="Block"/>s.</item>
+	/// <item>Code generation (<c>CodeGen</c>): IR becomes datapack commands — not yet implemented.</item>
+	/// </list>
+	/// <see cref="Build"/> runs stages 1–3; IR generation is driven separately (see the CLI's <c>ir</c> command).
+	/// </summary>
 	public class Compiler
 	{
-		public static readonly string CompilerVersion = 
+		public static readonly string CompilerVersion =
 			System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
 		public ProgramArgs Args;
 		public Dictionary<TimedEvents, Timer> Timers = [];
+		/// <summary>The main file plus every file reached transitively through imports; one per source file.</summary>
 		public List<ObjectFile> Files = [];
 		public Linker? Link;
+		/// <summary>All diagnostics gathered across the run: per-file parse issues plus linker errors.</summary>
 		public IEnumerable<CompilationMessage> Errors => Files.SelectMany(f => f is ParsedFile p ? p.Errors : []).Concat(Link?.Errors ?? []);
 
 		private static ObjectFile? SearchForObjectFile(string filepath, string extension)
@@ -64,6 +84,7 @@ namespace stilt.Compilation
 			File.WriteAllText(Path.ChangeExtension(filepath, extension), objectFile.Serialize());
 		}
 
+		/// <summary>Loads and parses the file at <paramref name="filepath"/> into a <see cref="ParsedFile"/>.</summary>
 		public static ObjectFile ParseFile(ProgramArgs args, string filepath)
 		{
 			// dont use ObjectFile for now
@@ -94,6 +115,7 @@ namespace stilt.Compilation
 			}	
 		}
 
+		/// <summary>Lexes and parses already-loaded source text into a fresh <see cref="ParsedFile"/> (stages 1–2 for a single file).</summary>
 		public static ObjectFile ParseFile(ProgramArgs args, FileText filetext)
 		{
 			var file = new ParsedFile(filetext);
@@ -101,6 +123,11 @@ namespace stilt.Compilation
 			return file;
 		}
 
+		/// <summary>
+		/// Runs the front end of the pipeline: parses the main file, and if it has no errors, links it
+		/// (which resolves names and recursively parses imports). Stops early on parse errors. Stage timings
+		/// are recorded in <see cref="Timers"/>. IR generation and code generation are not run here.
+		/// </summary>
 		public void Build()
 		{
 			//TODO

@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace stilt.AST
 {
+	/// <summary>An applied decorator <c>[[ Name(args…) ]]</c>: the decorator's type (which must inherit <see cref="Builtins.Decorator"/>) and its literal arguments. Attached to the statement it precedes.</summary>
 	public class DecoratorObject
 	{
 		public readonly TypeSymbol DecoratorType;
@@ -16,12 +17,18 @@ namespace stilt.AST
 		}
 	}
 
+	/// <summary>
+	/// Base of every statement node. Each statement remembers the lexical <see cref="Scope"/> it was parsed in
+	/// (which the <see cref="Linker"/> searches for name lookups) and any <see cref="Decorators"/> attached to it.
+	/// Like <see cref="Expr"/>, it tracks an inner span and a full span covering its sub-nodes.
+	/// </summary>
 	public abstract class Stmt : IRanged
 	{
 		public required Scope Scope;
 		public List<DecoratorObject> Decorators = [];
 
 		public FileRange? InnerRange { get; set; }
+		/// <summary>The span covering this statement and all its <see cref="IRanged"/> children, discovered by reflecting over fields and summing their ranges.</summary>
 		public FileRange? FullRange
 		{
 			get
@@ -107,6 +114,11 @@ namespace stilt.AST
 		public required Expr Expression;
 	}
 
+	/// <summary>
+	/// A raw command block — the <c>execute</c> escape hatch. The constructor parses the single token's text into
+	/// individual <see cref="Commands"/> (the lines beginning with <c>/</c>), to be emitted verbatim into the datapack.
+	/// (Parsing an <c>execute as &lt;target&gt;</c> executor is sketched out but not yet enabled.)
+	/// </summary>
 	public class ExecuteStmt : Stmt
 	{
 		public string[] Commands;
@@ -143,6 +155,7 @@ namespace stilt.AST
 		}
 	}
 
+	/// <summary>Base for declarations that introduce a named <see cref="Symbol"/> (variables, functions, types). <see cref="Specifiers"/> holds leading modifiers like <c>pub</c>/<c>const</c>.</summary>
 	public abstract class DeclStmt : Stmt
 	{
 		public Symbol Name;
@@ -157,6 +170,7 @@ namespace stilt.AST
 		public bool IsConst = false;
 	}
 
+	// INCOMPLETE: defined for the type system, but the parser does not emit TypeDeclStmt yet (see ParseStmt's TypeDecl case).
 	public class TypeDeclStmt : DeclStmt
 	{
 		[SetsRequiredMembers]
@@ -168,6 +182,7 @@ namespace stilt.AST
 		}
 	}
 
+	// INCOMPLETE: defined for the type system, but the parser does not emit TraitDeclStmt yet (see ParseStmt's TraitDecl case).
 	public class TraitDeclStmt : DeclStmt
 	{
 		[SetsRequiredMembers]
@@ -197,6 +212,7 @@ namespace stilt.AST
 		}
 	}
 
+	/// <summary>An <c>import "path" [as name]</c>: the source <see cref="Filepath"/>, the <see cref="ModuleName"/> it is bound to, and the module <see cref="Symbol"/> introduced into scope. The <see cref="Linker"/> loads the file and wires up its scope.</summary>
 	public class ImportStmt : Stmt
 	{
 		public required string Filepath;

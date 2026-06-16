@@ -2,6 +2,7 @@ using System.Reflection;
 
 namespace stilt
 {
+	/// <summary>Declares a spelling that lexes to the decorated <see cref="TokenType"/>: a literal string, or a regex when <see cref="IsRegex"/> is set. A token may carry several (e.g. <c>and</c> and <c>&amp;</c>).</summary>
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = true)]
 	public class SymbolAttribute : Attribute, IDescriptable
 	{
@@ -9,13 +10,14 @@ namespace stilt
 		public bool IsRegex;
 		public string Name => Symbol;
 
-		public SymbolAttribute(string symbol, bool regex = false) 
+		public SymbolAttribute(string symbol, bool regex = false)
 		{
 			Symbol = symbol;
 			IsRegex = regex;
 		}
 	}
 
+	/// <summary>Marks a <see cref="TokenType"/> as usable as an operator with the given binding <see cref="Precedence"/> (lower binds tighter). The subclass — <see cref="UnaryOperatorAttribute"/>/<see cref="BinaryOperatorAttribute"/>/<see cref="TernaryOperatorAttribute"/> — fixes its arity.</summary>
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
 	public class OperatorAttribute : Attribute
 	{
@@ -33,12 +35,19 @@ namespace stilt
 	public class BinaryOperatorAttribute(int p) : OperatorAttribute(p) { }
 	public class TernaryOperatorAttribute(int p) : OperatorAttribute(p) { }
 
+	/// <summary>Marks a token/keyword that is recognized by the lexer but not yet handled; using one raises an <see cref="UnimplementedError"/>.</summary>
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
 	public class UnimplementedAttribute : Attribute { }
 
+	/// <summary>Marks a token as a declaration specifier (e.g. <c>pub</c>, <c>const</c>) that may lead a statement.</summary>
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
 	public class SpecifierAttribute : Attribute { }
 
+	/// <summary>
+	/// A lexed token: which <see cref="TokenType"/> it is and the source <see cref="Range"/> it spans. Its role
+	/// (operator, specifier, unimplemented) is read on demand from the attributes on that enum value, so the token
+	/// stays a thin pairing while <see cref="TokenType"/> remains the single source of truth for the grammar.
+	/// </summary>
 	public class Token
 	{
 		public TokenType Which;
@@ -49,7 +58,12 @@ namespace stilt
 		public bool IsOperator => OperatorAttributes is not null;
 
 		public OperatorAttribute[]? OperatorAttributes => Utils.GetAttributesFromEnum<TokenType, OperatorAttribute>(Which);
-		public bool TryGetOperatorExprs<T>(out List<Expr> exprs) 
+		/// <summary>
+		/// Builds the candidate operator <see cref="Expr"/> nodes this token could start, restricted to attributes of
+		/// kind <typeparamref name="T"/>. A token may map to several arities (e.g. <c>-</c> is unary or binary), so the
+		/// parser asks for the relevant family and picks one based on context. Returns false if the token is not an operator.
+		/// </summary>
+		public bool TryGetOperatorExprs<T>(out List<Expr> exprs)
 			where T : OperatorAttribute
 		{
 			exprs = [];
@@ -83,6 +97,12 @@ namespace stilt
 		}
 	}
 
+	/// <summary>
+	/// Every kind of token in the language and the single source of truth for the grammar: each member's attributes
+	/// declare how it lexes (<see cref="SymbolAttribute"/>) and, where applicable, how it parses
+	/// (<see cref="OperatorAttribute"/> precedence/arity, <see cref="SpecifierAttribute"/>, <see cref="UnimplementedAttribute"/>).
+	/// The lexer and parser read these via reflection, so adding an operator is mostly a matter of annotating a member here.
+	/// </summary>
 	public enum TokenType
 	{
 		//regex patterns used CANNOT have backtracking

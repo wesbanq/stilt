@@ -3,6 +3,12 @@ using Microsoft.Extensions.FileProviders;
 
 namespace stilt
 {
+	/// <summary>
+	/// The language's built-in types (<see cref="Num"/>, <see cref="String"/>, <see cref="Bool"/>, the numeric tower,
+	/// …) and the <see cref="BuiltinScope"/> that holds them. That scope is the ultimate parent of every file's root
+	/// scope, so these names resolve everywhere. <see cref="PopulateBuiltinScope"/> must run once before compiling;
+	/// unless disabled, it also folds in the embedded standard library.
+	/// </summary>
 	public static class Builtins
 	{
 		public static Scope BuiltinScope;
@@ -30,6 +36,7 @@ namespace stilt
 		public static readonly TypeSymbol Float = new("float", Symbol.BuiltinSource, inherits : Fractional);
 		public static readonly TypeSymbol Double = new("double", Symbol.BuiltinSource, inherits : Fractional);
 
+		/// <summary>Builds <see cref="BuiltinScope"/> by reflecting every builtin <see cref="TypeSymbol"/> field into it, then (unless <c>--no-std</c>) adding the standard-library symbols. Call once at startup.</summary>
 		public static void PopulateBuiltinScope(ProgramArgs args)
 		{
 			BuiltinScope = new();
@@ -51,6 +58,7 @@ namespace stilt
 			}
 		}
 
+		/// <summary>Compiles the standard-library <c>.stilt</c> files embedded in the assembly and returns a scope holding all their top-level symbols.</summary>
 		public static Scope ImportBuiltins(ProgramArgs args)
 		{
 			Scope stdLibScope = new(BuiltinScope);

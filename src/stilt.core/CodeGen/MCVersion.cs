@@ -6,6 +6,11 @@ namespace stilt.CodeGen
 		Bedrock,
 	}
 
+	/// <summary>
+	/// A target Minecraft version (platform + major + minor) the datapack is compiled for. Drives the <c>version { … }</c>
+	/// compile-time conditionals in source and is selected with the <c>-v</c> CLI option; <see cref="ParseMCVersion"/>
+	/// reads the <c>java/1.x.y</c> form. The comparison operators only order versions within the same platform.
+	/// </summary>
 	public class MCVersion
 	{
 		public static readonly MCVersion LatestJava = new(MCPlatform.Java, 21, 9);

@@ -119,6 +119,7 @@ namespace stilt.Compilation
 		}
 	}
 
+	/// <summary>The in-memory file currently being compiled: an <see cref="ObjectFile"/> that still holds its live source (<see cref="Text"/>) and <see cref="Lexer"/>.</summary>
 	public class ParsedFile : ObjectFile
 	{
 		public Lexer? Lexer;
@@ -130,6 +131,7 @@ namespace stilt.Compilation
 		public new string TextChecksum => Text.GetSHA256Hash();
 		public new string InterfaceChecksum => global::stilt.Compilation.InterfaceChecksum.Compute(ParserResult?.RootScope, Filepath);
 
+		/// <summary>Runs the front-end stages for this single file — lex, then parse — timing each and storing the AST in <see cref="ObjectFile.ParserResult"/>.</summary>
 		public void Parse(ProgramArgs args)
 		{
 			Lexer = new Lexer(args, Filepath, Text);

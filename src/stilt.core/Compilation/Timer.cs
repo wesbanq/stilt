@@ -2,9 +2,11 @@ using System.Diagnostics;
 
 namespace stilt.Compilation
 {
+    /// <summary>The pipeline stages the compiler measures; each maps to a <see cref="Timer"/> in the compiler's timer table.</summary>
     public enum TimedEvents
 	{ Compilation, Lexing, Parsing, IRGeneration, Linking }
 
+    /// <summary>A named stopwatch wrapper used to measure how long each compilation stage takes; <see cref="Run(Action)"/> times a delegate, and <see cref="Time"/> formats the elapsed result.</summary>
     public class Timer
 	{
 		private string _name;

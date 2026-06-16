@@ -115,6 +115,11 @@ namespace stilt.Cli
 		}
 	}
 
+	/// <summary>
+	/// Command-line entry point. Parses arguments into <see cref="ProgramArgs"/>, sets up the builtins, and dispatches
+	/// on the chosen <see cref="ProgramCommand"/>. The commands expose the pipeline at increasing depth — <c>preprocess</c>,
+	/// <c>token</c> (lex), <c>tree</c> (parse), <c>ir</c>, and full <c>build</c> — and can dump each stage's output to JSON for inspection.
+	/// </summary>
 	internal static class Program
 	{
 		public static readonly string OutputFileExtension = ".zip";
@@ -157,6 +162,7 @@ namespace stilt.Cli
 			}
 		}
 
+		/// <summary>Parses CLI args, populates the builtin scope, then runs the selected command — building/dumping the program to the depth that command implies.</summary>
 		static int Main(string[] rawArgs)
 		{
 			var consoleArgs = new ConsoleArgs();
