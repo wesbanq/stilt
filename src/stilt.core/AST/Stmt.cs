@@ -199,7 +199,7 @@ namespace stilt.AST
 		public FuncDeclStmt(string name, string source, Stmt v, TypeSymbol? args = null, TypeSymbol? returns = null)
 		{
 			Value = v;
-			Name = new VarSymbol(name, source, new TypeSymbol(Builtins.Callable, [args ?? Builtins.None, returns ?? Builtins.None]))
+			Name = new VarSymbol(name, source, SymbolReference.AlreadyResolved(new TypeSymbol(Builtins.Callable, [args ?? Builtins.None, returns ?? Builtins.None])))
 			{ Declaration = this };
 		}
 
@@ -218,6 +218,8 @@ namespace stilt.AST
 		public required string Filepath;
 		public required string ModuleName;
 		public required Symbol Name;
+		[JsonIgnore]
+		public Scope? ImportedScope;
 
 		[SetsRequiredMembers]
 		public ImportStmt(string moduleName, string filepath, Symbol name)

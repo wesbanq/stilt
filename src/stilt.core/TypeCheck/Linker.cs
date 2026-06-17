@@ -1,5 +1,6 @@
 namespace stilt
 {
+	// INCOMPLETE: ported to the SymbolReference API so stilt.core compiles; the name-resolution logic itself is unfinished and untested.
 	public class Linker
 	{
 		public ProgramArgs Args;
@@ -128,7 +129,7 @@ namespace stilt
 			{
 				case IdentityExpr id:
 				{
-					if (id.Identity.IsTemp)
+					if (!id.Identity.IsResolved)
 						ResolveIdentity(id, currentScope, wantType: false);
 					break;
 				}
@@ -216,26 +217,35 @@ namespace stilt
 			}
 		}
 
+		// Binds an identifier reference to the symbol it resolved to (no-op if already bound).
+		private static void Bind(SymbolReference reference, Symbol symbol)
+		{
+			if (!reference.IsResolved)
+				reference.Resolve(symbol);
+		}
+
+		// Members of a variable's resolved type, or null if its type isn't resolved to a TypeSymbol yet.
+		private static IReadOnlyList<Symbol>? MembersOf(VarSymbol v) =>
+			(v.Type.Resolved as TypeSymbol)?.Members;
+
 		private void ResolveIdentity(IdentityExpr id, Scope scope, bool wantType)
 		{
+			var name = id.Identity.Unresolved.Name;
 			Symbol? found = wantType
-				? scope.FindTypeByName(id.Identity.Name)
-				: scope.FindVarByName(id.Identity.Name);
+				? scope.FindTypeByName(name)
+				: scope.FindVarByName(name);
 
-			if (found is null)
-				found = wantType
-					? scope.FindVarByName(id.Identity.Name) as Symbol
-					: scope.FindTypeByName(id.Identity.Name) as Symbol;
+			found ??= wantType
+				? scope.FindVarByName(name) as Symbol
+				: scope.FindTypeByName(name) as Symbol;
 
 			if (found is not null)
 			{
-				id.Identity = found;
+				Bind(id.Identity, found);
 				return;
 			}
 
-			var range = id.Identity.Identifier?.Range ?? id.FullRange ?? id.InnerRange;
-			if (range is not null)
-				Errors.Add(new UndefinedSymbolError(range, id.Identity));
+			Errors.Add(new UndefinedSymbolError(id.Identity.Unresolved.Token.Range, name));
 		}
 
 		private void ResolveAccessChain(CommaExpr access, Scope currentScope)
@@ -253,7 +263,7 @@ namespace stilt
 
 				if (seg is IdentityExpr id)
 				{
-					string name = id.Identity.Name;
+					string name = id.Identity.Unresolved.Name;
 
 					if (container is null)
 					{
@@ -263,7 +273,7 @@ namespace stilt
 						{
 							current = typeSym;
 							container = typeSym.Members;
-							id.Identity = typeSym;
+							Bind(id.Identity, typeSym);
 							continue;
 						}
 
@@ -275,14 +285,14 @@ namespace stilt
 							if (varSym.Declaration is ImportStmt importStmt && importStmt.ImportedScope is not null)
 								container = importStmt.ImportedScope.Symbols;
 							else
-								container = varSym.Type.Members;
-							id.Identity = varSym;
+								container = MembersOf(varSym);
+							Bind(id.Identity, varSym);
 							continue;
 						}
 
-						var range = id.Identity.Identifier?.Range ?? id.FullRange ?? id.InnerRange;
+						var range = id.Identity.Unresolved.Token.Range;
 						if (range is not null)
-							Errors.Add(new UndefinedSymbolError(range, id.Identity));
+							Errors.Add(new UndefinedSymbolError(range, id.Identity.Unresolved.Name));
 						return;
 					}
 
@@ -291,16 +301,16 @@ namespace stilt
 					if (member is not null)
 					{
 						current = member;
-						id.Identity = member;
+						Bind(id.Identity, member);
 						container = member is TypeSymbol ts ? ts.Members
-							: member is VarSymbol vs ? vs.Type.Members
+							: member is VarSymbol vs ? MembersOf(vs)
 							: null;
 						continue;
 					}
 
-					var segRange = id.Identity.Identifier?.Range ?? id.FullRange ?? id.InnerRange;
+					var segRange = id.Identity.Unresolved.Token.Range;
 					if (segRange is not null)
-						Errors.Add(new UndefinedSymbolError(segRange, id.Identity));
+						Errors.Add(new UndefinedSymbolError(segRange, id.Identity.Unresolved.Name));
 					return;
 				}
 
@@ -310,9 +320,9 @@ namespace stilt
 					var tipId = GetTipIdentityInChain(nested);
 					if (tipId is not null)
 					{
-						current = tipId.Identity;
+						current = tipId.Identity.Resolved;
 						container = current is TypeSymbol ts ? ts.Members
-							: current is VarSymbol vs ? vs.Type.Members
+							: current is VarSymbol vs ? MembersOf(vs)
 							: null;
 					}
 					else
@@ -329,19 +339,21 @@ namespace stilt
 			return first as IdentityExpr ?? (first is CommaExpr c ? GetTipIdentityInChain(c) : null);
 		}
 
-		private void ResolveExecuteExecutor(ExecuteStmt exec, Scope currentScope)
-		{
-			var name = exec.Executor!.Name;
-			var found = currentScope.FindVarByName(name);
-			if (found is not null)
-				exec.Executor = found;
-			else
-			{
-				var range = exec.Executor.Identifier?.Range ?? exec.FullRange ?? exec.InnerRange;
-				if (range is not null)
-					Errors.Add(new UndefinedSymbolError(range, exec.Executor));
-			}
-		}
+		// INCOMPLETE: resolving an `execute as <executor>` target. Disabled until ExecuteStmt.Executor exists again
+		// (it is currently commented out); nothing calls this yet.
+		// private void ResolveExecuteExecutor(ExecuteStmt exec, Scope currentScope)
+		// {
+		// 	var name = exec.Executor!.Name;
+		// 	var found = currentScope.FindVarByName(name);
+		// 	if (found is not null)
+		// 		exec.Executor = found;
+		// 	else
+		// 	{
+		// 		var range = exec.Executor.Identifier?.Range ?? exec.FullRange ?? exec.InnerRange;
+		// 		if (range is not null)
+		// 			Errors.Add(new UndefinedSymbolError(range, exec.Executor));
+		// 	}
+		// }
 
 		private void ProcessImport(ImportStmt import, Scope currentScope)
 		{

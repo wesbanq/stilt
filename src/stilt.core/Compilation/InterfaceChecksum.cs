@@ -39,7 +39,7 @@ namespace stilt.Compilation
 		{
 			return s switch
 			{
-				VarSymbol v => $"var:{v.Name}:{CanonicalizeType(v.Type, visited)}",
+				VarSymbol v => $"var:{v.Name}:{CanonicalizeType(v.Type.Resolved as TypeSymbol, visited)}",
 				TypeSymbol t => CanonicalizeTypeSymbol(t, visited),
 				_ => $"sym:{s.Name}:{s.Source}"
 			};

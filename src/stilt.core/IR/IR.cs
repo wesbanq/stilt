@@ -143,6 +143,8 @@ namespace stilt.IR
         public List<Block> Blocks = [];
     }
 
+    // INCOMPLETE: identity access ported to the SymbolReference API so it compiles; several node kinds are still
+    // unimplemented (see the throws below) and the generator is untested end-to-end.
     public class IRGenerator
     {
         public ProgramArgs Args;
@@ -285,7 +287,7 @@ namespace stilt.IR
             var valueVar = GenerateExpr(ret.Value, block);
             // Return value is stored in a special variable or passed via convention
             // For now, we'll use ASSIGN to a return variable
-            var returnVar = new VarSymbol("_return", Symbol.TempSource, ret.Value.Type);
+            var returnVar = new VarSymbol("_return", Symbol.TempSource, SymbolReference.AlreadyResolved(ret.Value.Type));
             var assign = new IRInstruction
             {
                 Target = returnVar,
@@ -552,7 +554,7 @@ namespace stilt.IR
                     return GenerateLiteral(lit, block);
 
                 case IdentityExpr id:
-                    return id.Identity as VarSymbol ?? throw new IRGenerationError("IdentityExpr must reference a VarSymbol");
+                    return id.Identity.Resolved as VarSymbol ?? throw new IRGenerationError("IdentityExpr must reference a VarSymbol");
 
                 // Handle derived types before base types
                 case AssignExpr assign:
@@ -713,7 +715,7 @@ namespace stilt.IR
             if (assign.Left is not IdentityExpr lhsId)
                 throw new IRGenerationError("Assignment LHS must be a variable reference");
 
-            if (lhsId.Identity is not VarSymbol lhsVar)
+            if (lhsId.Identity.Resolved is not VarSymbol lhsVar)
                 throw new IRGenerationError("Assignment LHS must reference a VarSymbol");
 
             // Handle compound assignment operators
@@ -752,7 +754,7 @@ namespace stilt.IR
             if (call.Left is not IdentityExpr funcId)
                 throw new IRGenerationError("Function call must reference a function");
 
-            var funcSymbol = funcId.Identity as VarSymbol;
+            var funcSymbol = funcId.Identity.Resolved as VarSymbol;
             if (funcSymbol is null)
                 throw new IRGenerationError("Function call must reference a VarSymbol");
 
@@ -786,7 +788,7 @@ namespace stilt.IR
         private VarSymbol AllocateTemp(TypeSymbol type)
         {
             var tempName = $"_t{_tempCounter++}";
-            return new VarSymbol(tempName, Symbol.TempSource, type);
+            return new VarSymbol(tempName, Symbol.TempSource, SymbolReference.AlreadyResolved(type));
         }
 
         public IRGenerator(ProgramArgs args, ObjectFile file)

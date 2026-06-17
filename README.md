@@ -6,9 +6,9 @@ language that compiles to **Minecraft datapacks**.
 > **Status — early, work in progress**
 >
 > The front end (preprocessing, lexing, parsing) is the most developed part and has golden
-> tests. The linker and IR generator are mid-refactor, so **`stilt.core` does not currently
-> compile end-to-end** — they still use the pre-`SymbolReference` symbol API (see the
-> [Roadmap](#roadmap)). Everything is subject to change.
+> tests. The linker and IR generator have been ported to the new `SymbolReference` API to
+> restore the build, but their resolution/lowering logic is still **unfinished and untested**
+> (see the [Roadmap](#roadmap)). Everything is subject to change.
 
 ## About
 
@@ -51,11 +51,11 @@ Golden tests for the lexer, parser (AST), and IR live in `src/stilt.tests` (they
 the core compiles again — see below).
 
 ### Partial / not yet wired up
-- **Linking** — name resolution and imports are written, but predate the move to deferred symbol
-  resolution (`SymbolReference`) and need updating before they compile.
+- **Linking** — name resolution and imports are written and now compile against the
+  `SymbolReference` API, but the resolution logic is unfinished and untested.
 - **IR generation** — statements, control flow, and most expressions are lowered, but array/table
-  literals, member access, lambdas, `foreach`, and `break`/`continue` are not; identity handling
-  also predates the `SymbolReference` refactor.
+  literals, member access, lambdas, `foreach`, and `break`/`continue` are not; the whole stage is
+  untested end-to-end.
 - **Type checking** — not implemented; `TypeChecker.cs` / `Analyzer.cs` are scaffolds.
 - **Code generation** — not implemented; `CodeGen/Generator.cs` is a stub, so IR is never lowered
   to commands.
@@ -107,8 +107,8 @@ Common options: `-i`/`--input <file>`, `-o`/`--output <file>`, `-v`/`--mc-versio
 
 ### Critical (blocking a buildable compiler)
 
-- **Linker & IR refactor** — both still treat `IdentityExpr.Identity` as a bare `Symbol` and read
-  `VarSymbol.Type.Members`; update them to the new `SymbolReference` API so `stilt.core` compiles again.
+- **Finish linking & IR** — both now compile against the `SymbolReference` API, but their
+  resolution/lowering logic is unfinished and untested; make them actually work.
 - **Type checking** — implement the `TypeChecker`/`Analyzer` stage (currently empty).
 - **Datapack code generation** — `CodeGen/Generator.cs` is a stub; lower IR to Minecraft commands.
 - **IR generation gaps** — array/table literals, member access (`obj.field`), lambdas, `foreach`,
