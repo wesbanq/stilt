@@ -122,12 +122,11 @@ namespace stilt.AST
 	public class ExecuteStmt : Stmt
 	{
 		public string[] Commands;
-		// public VarSymbol? Executor;
+		public Expr? Executor;
 
 		public ExecuteStmt(Token token)
 		{
 			var tokenText = token.Range.Text.Trim();
-			// New syntax: "execute\n/line1\n/line2" or "execute as <target>\n/line1\n/line2"
 			string? executorStr = null;
 			var firstNewline = tokenText.IndexOf('\n');
 			if (firstNewline >= 0)
@@ -146,12 +145,10 @@ namespace stilt.AST
 				if (cmd.Length > 0)
 					commandLines.Add(cmd);
 			}
-			if (commandLines.Count == 0)
-				throw new ArgumentException("Invalid execute statement format: no command lines");
 
 			Commands = [.. commandLines];
 			// if (!string.IsNullOrEmpty(executorStr))
-			// 	Executor = new VarSymbol(executorStr);
+			// 	Executor = SymbolReference.NotResolved(executorStr, token);
 		}
 	}
 
@@ -199,7 +196,7 @@ namespace stilt.AST
 		public FuncDeclStmt(string name, string source, Stmt v, TypeSymbol? args = null, TypeSymbol? returns = null)
 		{
 			Value = v;
-			Name = new VarSymbol(name, source, SymbolReference.AlreadyResolved(new TypeSymbol(Builtins.Callable, [args ?? Builtins.None, returns ?? Builtins.None])))
+			Name = new VarSymbol(name, source, SymbolReference.AlreadyResolved(new TypeSymbol(Builtins.Callable, [SymbolReference.AlreadyResolved(args ?? Builtins.None), SymbolReference.AlreadyResolved(returns ?? Builtins.None)])))
 			{ Declaration = this };
 		}
 

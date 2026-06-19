@@ -98,6 +98,11 @@ namespace stilt.AST
 			_unresolved = new UnresolvedReference(t.Range.Text, t),
 		};
 
+		public static SymbolReference NotResolved(string name, Token t) => new()
+		{
+			_unresolved = new UnresolvedReference(name, t),
+		};
+
 		public static SymbolReference FromUnresolved(UnresolvedReference unresolvedReference) => new()
 		{
 			_unresolved = unresolvedReference,

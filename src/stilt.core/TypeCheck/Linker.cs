@@ -118,8 +118,8 @@ namespace stilt
                 }
 				case ExecuteStmt exec:
 				{
-					// if (exec.Executor is not null && exec.Executor.IsTemp)
-					// 	ResolveExecuteExecutor(exec, currentScope);
+					if (exec.Executor is not null)
+						ProcessExpr(exec.Executor, exec.Scope);
 
 					break;
 				}
@@ -174,17 +174,16 @@ namespace stilt
 					
 					break;
 				}
-				// case ArrayLiteralExpr arr:
-				// {
-				// 	if (arr.Value is List<Expr> list)
-				// 	{
-				// 		foreach (var e in list)
-				// 			ProcessExpr(e, currentScope);
-				// 	}
-				// 	break;
-				// }
-				// case TableLiteralExpr tbl:
-				// {
+				case ArrayLiteralExpr arr:
+				{
+					if (arr.Value is List<Expr> list)
+						foreach (var e in list)
+							ProcessExpr(e, currentScope);
+
+					break;
+				}
+				case TableLiteralExpr tbl:
+				{
 				// 	if (tbl.Value is Dictionary<Symbol, Expr> dict)
 				// 	{
 				// 		var newDict = new Dictionary<Symbol, Expr>();
@@ -209,8 +208,9 @@ namespace stilt
 				// 		}
 				// 		tbl.Value = newDict;
 				// 	}
-				// 	break;
-				// }
+
+					break;
+				}
 				case FuncLiteralExpr lambda:
 				{
 					if (lambda.Value is not null)
@@ -231,133 +231,144 @@ namespace stilt
 		private static IReadOnlyList<Symbol>? MembersOf(VarSymbol v) =>
 			(v.Type.Resolved as TypeSymbol)?.Members;
 
+		/// <summary>
+		/// Resolves a (possibly qualified, possibly generic) reference path and binds <paramref name="symbol"/> to the
+		/// symbol it denotes — the tip of the qualifier chain (e.g. <c>C</c> in <c>a.b.C</c>). On failure an error is
+		/// recorded and the reference is left unbound.
+		/// </summary>
 		private void ResolveReference(SymbolReference symbol, Scope scope)
 		{
-			var name = symbol.Unresolved.Name;
-			Symbol? found = scope.FindVarByName(name);
-			found ??= scope.FindTypeByName(name);
-			
-			if (found is null)
-			{
-				Errors.Add(new UndefinedSymbolError(symbol.Unresolved.Token.Range, name));
-				return;
-			}
-			
-			Bind(symbol, found);
-			if (found is TypeSymbol ts)
-			{
-				foreach (var arg in ts.Arguments)
-					ResolveReference(arg, scope);
-			}
+			var resolved = ResolvePath(symbol.Unresolved, scope);
+			if (resolved is not null)
+				Bind(symbol, resolved);
 		}
 
+		/// <summary>
+		/// Resolves the leftmost segment of <paramref name="reference"/> against the lexical <paramref name="scope"/>,
+		/// then follows the qualifier chain into member containers. Returns the resolved tip symbol, or null on failure.
+		/// </summary>
+		private Symbol? ResolvePath(UnresolvedReference reference, Scope scope)
+		{
+			var name = reference.Name;
+			Symbol? found = scope.FindVarByName(name);
+			found ??= scope.FindTypeByName(name);
+
+			if (found is null)
+			{
+				Errors.Add(new UndefinedSymbolError(reference.Token.Range, name));
+				return null;
+			}
+
+			return ResolveSegment(reference, found, scope);
+		}
+
+		/// <summary>
+		/// Given the symbol a segment resolved to, validates any generic type arguments on it and, if the segment is
+		/// qualified (<c>.rest</c>), walks into the symbol's member container to resolve the remainder of the path.
+		/// </summary>
+		private Symbol? ResolveSegment(UnresolvedReference reference, Symbol found, Scope scope)
+		{
+			// Validate generic type arguments (e.g. `int` in `array[int]`). Building the applied type itself is left to
+			// generic application; here we only resolve the arguments so undefined ones are reported.
+			foreach (var typeArg in reference.TypeArguments)
+				ResolveReference(SymbolReference.FromUnresolved(typeArg), scope);
+
+			if (reference.Qualifier is null)
+				return found;
+
+			var container = MemberContainerOf(found);
+			if (container is null)
+			{
+				Errors.Add(new UndefinedSymbolError(reference.Qualifier.Token.Range, reference.Qualifier.Name));
+				return null;
+			}
+
+			return ResolveInContainer(reference.Qualifier, container, scope);
+		}
+
+		/// <summary>
+		/// Resolves a qualified segment by name within a member <paramref name="container"/>, then continues down the chain.
+		/// </summary>
+		private Symbol? ResolveInContainer(UnresolvedReference reference, IReadOnlyList<Symbol> container, Scope scope)
+		{
+			var member = container.FirstOrDefault(s => s.Name == reference.Name);
+			if (member is null)
+			{
+				Errors.Add(new UndefinedSymbolError(reference.Token.Range, reference.Name));
+				return null;
+			}
+
+			return ResolveSegment(reference, member, scope);
+		}
+
+		/// <summary>
+		/// The symbols reachable through <c>.</c> on a symbol: an imported module's scope, or a type's members (for a
+		/// value, the members of its resolved type). Null when nothing can be accessed off it.
+		/// </summary>
+		private static IReadOnlyList<Symbol>? MemberContainerOf(Symbol symbol)
+		{
+            return symbol switch
+            {
+                VarSymbol v when v.Declaration is ImportStmt { ImportedScope: not null } import => import.ImportedScope.Symbols,
+                VarSymbol v => MembersOf(v),
+                TypeSymbol t => t.Members,
+                _ => null,
+            };
+        }
+
+		/// <summary>
+		/// Resolves a member-access chain (<c>a.b.c</c>), binding each segment's reference: the first segment against
+		/// the lexical <paramref name="currentScope"/>, each later segment within the previous segment's member
+		/// container. A nested chain segment is resolved first and the walk continues from its tip. Shares the
+		/// resolution primitives (<see cref="ResolvePath"/>, <see cref="ResolveInContainer"/>,
+		/// <see cref="MemberContainerOf"/>) with <see cref="ResolveReference"/>.
+		/// </summary>
 		private void ResolveAccessChain(CommaExpr access, Scope currentScope)
 		{
 			if (access.Exprs.Count == 0) return;
 
-			// Exprs order: [rightmost, ..., leftmost] e.g. a.b.c -> [c, b, a]; receiver is last
+			// Exprs order: [rightmost, ..., leftmost] e.g. a.b.c -> [c, b, a]; walk leftmost-first.
 			var exprs = access.Exprs;
 			IReadOnlyList<Symbol>? container = null;
-			Symbol? current = null;
 
-			//TODO
 			for (int i = exprs.Count - 1; i >= 0; i--)
 			{
-				var seg = exprs[i];
-
-				if (seg is IdentityExpr id)
+				switch (exprs[i])
 				{
-					string name = id.Identity.Unresolved.Name;
-
-					if (container is null)
+					case CommaExpr nested:
 					{
-						// First segment: resolve from scope; prefer TypeSymbol (static) then VarSymbol (instance)
-						var typeSym = currentScope.FindTypeByName(name);
-						if (typeSym is not null)
-						{
-							current = typeSym;
-							container = typeSym.Members;
-							Bind(id.Identity, typeSym);
-							continue;
-						}
-
-						var varSym = currentScope.FindVarByName(name);
-						if (varSym is not null)
-						{
-							current = varSym;
-							// Check if this is an imported module
-							if (varSym.Declaration is ImportStmt importStmt && importStmt.ImportedScope is not null)
-								container = importStmt.ImportedScope.Symbols;
-							else
-								container = MembersOf(varSym);
-							Bind(id.Identity, varSym);
-							continue;
-						}
-
-						var range = id.Identity.Unresolved.Token.Range;
-						if (range is not null)
-							Errors.Add(new UndefinedSymbolError(range, id.Identity.Unresolved.Name));
-						return;
+						ResolveAccessChain(nested, currentScope);
+						var tip = GetTipIdentityInChain(nested)?.Identity.Resolved;
+						if (tip is null)
+							return;
+						container = MemberContainerOf(tip);
+						break;
 					}
-
-					// Later segment: look up in container
-					var member = container.FirstOrDefault(s => s.Name == name);
-					if (member is not null)
+					case IdentityExpr id:
 					{
-						current = member;
-						Bind(id.Identity, member);
-						container = member is TypeSymbol ts ? ts.Members
-							: member is VarSymbol vs ? MembersOf(vs)
-							: null;
-						continue;
-					}
+						// A null container means this is the first segment (resolved against the lexical scope);
+						// otherwise the segment is a member of the previous segment's container.
+						var resolved = container is null
+							? ResolvePath(id.Identity.Unresolved, currentScope)
+							: ResolveInContainer(id.Identity.Unresolved, container, currentScope);
+						if (resolved is null)
+							return;
 
-					var segRange = id.Identity.Unresolved.Token.Range;
-					if (segRange is not null)
-						Errors.Add(new UndefinedSymbolError(segRange, id.Identity.Unresolved.Name));
-					return;
-				}
-
-				if (seg is CommaExpr nested)
-				{
-					ResolveAccessChain(nested, currentScope);
-					var tipId = GetTipIdentityInChain(nested);
-					if (tipId is not null)
-					{
-						current = tipId.Identity.Resolved;
-						container = current is TypeSymbol ts ? ts.Members
-							: current is VarSymbol vs ? MembersOf(vs)
-							: null;
+						Bind(id.Identity, resolved);
+						container = MemberContainerOf(resolved);
+						break;
 					}
-					else
-						return;
 				}
 			}
 		}
 
-		// Gets the leftmost (tip) IdentityExpr in an access chain - the result of the access.
+		/// <summary>Gets the tip (result) <see cref="IdentityExpr"/> of an access chain — the segment the whole access evaluates to.</summary>
 		private static IdentityExpr? GetTipIdentityInChain(CommaExpr comma)
 		{
 			if (comma.Exprs.Count == 0) return null;
 			var first = comma.Exprs[0];
 			return first as IdentityExpr ?? (first is CommaExpr c ? GetTipIdentityInChain(c) : null);
 		}
-
-		// INCOMPLETE: resolving an `execute as <executor>` target. Disabled until ExecuteStmt.Executor exists again
-		// (it is currently commented out); nothing calls this yet.
-		// private void ResolveExecuteExecutor(ExecuteStmt exec, Scope currentScope)
-		// {
-		// 	var name = exec.Executor!.Name;
-		// 	var found = currentScope.FindVarByName(name);
-		// 	if (found is not null)
-		// 		exec.Executor = found;
-		// 	else
-		// 	{
-		// 		var range = exec.Executor.Identifier?.Range ?? exec.FullRange ?? exec.InnerRange;
-		// 		if (range is not null)
-		// 			Errors.Add(new UndefinedSymbolError(range, exec.Executor));
-		// 	}
-		// }
 
 		private void ProcessImport(ImportStmt import, Scope currentScope)
 		{
