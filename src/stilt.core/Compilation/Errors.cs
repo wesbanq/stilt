@@ -11,7 +11,7 @@ namespace stilt.Errors
 			{
 				var (lineS, columnS) = Range.StartLineAndColumn;
 				var (lineE, columnE) = Range.EndLineAndColumn;
-				var text = Range.TextLines;
+				var text = Range.SurroundingText;
 
 				var res = "";
 				for (int line = lineS; line <= lineE; ++line)
@@ -178,7 +178,11 @@ namespace stilt.Errors
 		}
 	}
 
-	public class GenerationError : CompilationMessage
+	public class ImportError(FileRange? pos, string importPath) 
+		: SyntaxError(pos, $"Cannot import '{importPath}': file not found.")
+	{ }
+
+    public class GenerationError : CompilationMessage
 	{
 		public GenerationError(string msg)
 			: base(msg)

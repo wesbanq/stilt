@@ -27,14 +27,14 @@ namespace stilt
 		public static readonly TypeSymbol Callable = new("Callable", Symbol.BuiltinSource, argumentCount: 2);
 		public static readonly TypeSymbol Module = new("Module", Symbol.BuiltinSource);
 		public static readonly TypeSymbol Object = new("Object", Symbol.BuiltinSource);
-		public static readonly TypeSymbol Whole = new("whole", Symbol.BuiltinSource, inherits: Num);
-		public static readonly TypeSymbol Fractional = new("fract", Symbol.BuiltinSource, inherits: Num);
-		public static readonly TypeSymbol Byte = new("byte", Symbol.BuiltinSource, inherits: Whole);
-		public static readonly TypeSymbol Short = new("short", Symbol.BuiltinSource, inherits: Whole);
-		public static readonly TypeSymbol Int = new("int", Symbol.BuiltinSource, inherits : Whole);
-		public static readonly TypeSymbol Long = new("long", Symbol.BuiltinSource, inherits : Whole);
-		public static readonly TypeSymbol Float = new("float", Symbol.BuiltinSource, inherits : Fractional);
-		public static readonly TypeSymbol Double = new("double", Symbol.BuiltinSource, inherits : Fractional);
+		public static readonly TypeSymbol Whole = new("whole", Symbol.BuiltinSource, inherits: [Num]);
+		public static readonly TypeSymbol Fractional = new("fract", Symbol.BuiltinSource, inherits: [Num]);
+		public static readonly TypeSymbol Byte = new("byte", Symbol.BuiltinSource, inherits: [Whole]);
+		public static readonly TypeSymbol Short = new("short", Symbol.BuiltinSource, inherits: [Whole]);
+		public static readonly TypeSymbol Int = new("int", Symbol.BuiltinSource, inherits : [Whole]);
+		public static readonly TypeSymbol Long = new("long", Symbol.BuiltinSource, inherits : [Whole]);
+		public static readonly TypeSymbol Float = new("float", Symbol.BuiltinSource, inherits : [Fractional]);
+		public static readonly TypeSymbol Double = new("double", Symbol.BuiltinSource, inherits : [Fractional]);
 
 		/// <summary>Builds <see cref="BuiltinScope"/> by reflecting every builtin <see cref="TypeSymbol"/> field into it, then (unless <c>--no-std</c>) adding the standard-library symbols. Call once at startup.</summary>
 		public static void PopulateBuiltinScope(ProgramArgs args)

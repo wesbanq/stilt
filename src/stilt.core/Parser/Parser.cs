@@ -118,6 +118,13 @@ namespace stilt
 					newExpr = new BoolLiteralExpr(currentToken.Which == TokenType.True, currentToken.Range);
 					break;
 				}
+				case TokenType.FuncDecl:
+				{
+					Scope currentScope = new();
+					newExpr = ParseFuncLiteral(currentScope);
+
+					break;
+				}
 				case TokenType.HexNumericLiteral:
 				case TokenType.ByteNumericLiteral:
 				case TokenType.OctalNumericLiteral:
@@ -339,6 +346,22 @@ namespace stilt
 			ParseExpr(ref rootExpr, Lex.Next());
 		}
 
+		private IEnumerable<UnresolvedReference> ParseGenericTypeArgs()
+		{
+			var typeArgs = new List<UnresolvedReference>();
+
+			Lex.ExpectThis(TokenType.OpenSquareBracket);
+			typeArgs.Add(ParseType());
+			while (Lex.CurrentIs(TokenType.Comma))
+			{
+				Lex.Next();
+				typeArgs.Add(ParseType());
+			}
+			Lex.ExpectThis(TokenType.CloseSquareBracket);
+
+			return typeArgs;
+		}
+
 		/// <summary>
 		/// Parses a type: '('type[','...]')' | identifier['('type[','...]')'].
 		/// </summary>
@@ -346,28 +369,23 @@ namespace stilt
 		{
 			if (Lex.CurrentIs(TokenType.OpenBracket))
 			{
-				Lex.GoPast(TokenType.OpenBracket);
+				Lex.ExpectThis(TokenType.OpenBracket);
 				var innerArgs = new List<UnresolvedReference>();
-				do
+				innerArgs.Add(ParseType());
+				while (Lex.CurrentIs(TokenType.Comma))
 				{
+					Lex.Next();
 					innerArgs.Add(ParseType());
-				} while (Lex.CurrentIs(TokenType.Comma));
+				}
 				Lex.ExpectThis(TokenType.CloseBracket);
 				return new UnresolvedReference($"Tuple_{innerArgs.Count}", Lex.CurrentToken, typeArguments: innerArgs);
 			}
 
 			var typeNameToken = Lex.ExpectThis(TokenType.Identifier);
 
-			var typeArgs = new List<UnresolvedReference>();
-			if (Lex.CurrentIs(TokenType.OpenSquareBracket))
-			{
-				Lex.GoPast(TokenType.OpenSquareBracket);
-				do
-				{
-					typeArgs.Add(ParseType());
-				} while (Lex.CurrentIs(TokenType.Comma));
-				Lex.ExpectThis(TokenType.CloseSquareBracket);
-			}
+			IEnumerable<UnresolvedReference>? typeArgs = Lex.CurrentIs(TokenType.OpenSquareBracket)
+				? ParseGenericTypeArgs()
+				: null;
 
 			UnresolvedReference? qualifier = null;
 			if (Lex.CurrentIs(TokenType.Access))
@@ -777,14 +795,32 @@ namespace stilt
 			var funcScope = new Scope();
 			funcScope.AddSymbols(args);
 
+			Lex.SkipStmtSeparator();
 			var body = ParseStmt(funcScope)
-				?? throw new SyntaxError(Lex.CurrentToken.Range, "Expected function body.");
+				// ?? throw new SyntaxError(Lex.CurrentToken.Range, "Expected function body.");
+				// give it an empty CompoundStmt
+				?? new CompoundStmt() { Scope = funcScope };
 
 			return (args, returnType, body, funcScope);
 		}
 
+		private IEnumerable<SymbolReference> ParseInheritance()
+		{
+			List<SymbolReference> types = [];
+			Lex.SkipStmtSeparator();
+			types.Add(SymbolReference.FromUnresolved(ParseType()));
+			
+			while (Lex.CurrentIs(TokenType.LogicalAnd))
+			{
+				Lex.SkipStmtSeparator();
+				types.Add(SymbolReference.FromUnresolved(ParseType()));
+			}
+
+			return types;
+		}
+
 		/// <summary>Consumes any leading specifier keywords (e.g. <c>pub</c>, <c>const</c>) before a statement, rejecting duplicates, and advances <paramref name="firstToken"/> to the first non-specifier token.</summary>
-		private List<Token> CollectSpecifiers(ref Token firstToken)
+		private IEnumerable<Token> CollectSpecifiers(ref Token firstToken)
 		{
 			List<Token> specifiers = [];
 			while (firstToken.IsSpecifier)
@@ -799,6 +835,47 @@ namespace stilt
 		}
 
 		/// <summary>
+		/// Parses a generic parameter list at a declaration site: <c>'[' name [':' bound ['&amp;' bound...]] [','...] ']'</c>.
+		/// Each parameter becomes a <see cref="TypeParameter"/> carrying its position and its (still unresolved) constraint
+		/// bounds, so <c>[T, U: Comparable &amp; Hashable]</c> records two parameters, the second bounded by two traits.
+		/// </summary>
+		private List<TypeParameter> ParseGenericTypeArgDecl()
+		{
+			Lex.ExpectThis(TokenType.OpenSquareBracket);
+
+			List<TypeParameter> parameters = [];
+			while (!Lex.CurrentIs(TokenType.CloseSquareBracket))
+			{
+				var name = Lex.ExpectThis(TokenType.Identifier);
+
+				List<SymbolReference> constraints = [];
+				if (Lex.CurrentIs(TokenType.Type))
+				{
+					Lex.Next();
+					constraints.Add(SymbolReference.FromUnresolved(ParseType()));
+					while (Lex.CurrentIs(TokenType.LogicalAnd))
+					{
+						Lex.Next();
+						constraints.Add(SymbolReference.FromUnresolved(ParseType()));
+					}
+				}
+
+				parameters.Add(new TypeParameter(name.Range.Text, Lex.Filepath, name, parameters.Count, constraints));
+
+				if (!Lex.CurrentIs(TokenType.Comma))
+					break;
+				Lex.Next();
+			}
+
+			Lex.ExpectThis(TokenType.CloseSquareBracket);
+
+			if (parameters.Count == 0)
+				throw new SyntaxError(Lex.CurrentToken.Range, "Expected generic type arguments.");
+
+			return parameters;
+		}
+
+		/// <summary>
 		/// Parses a single statement by switching on its leading token: declarations (<c>var</c>, <c>func</c>),
 		/// control flow (<c>if</c>, loops, <c>return</c>, <c>break</c>/<c>continue</c>), <c>import</c>, conditional
 		/// <c>version</c> blocks, braces (a nested <see cref="CompoundStmt"/>), decorators, and otherwise an
@@ -809,7 +886,7 @@ namespace stilt
 		private Stmt? ParseStmt(Scope currentScope)
 		{
 			var firstToken = Lex.CurrentToken;
-			List<Token> specifiers = CollectSpecifiers(ref firstToken);
+			IEnumerable<Token> specifiers = CollectSpecifiers(ref firstToken);
 
 			Expr? newExpr = null;
 			Stmt? newStmt = null;
@@ -825,39 +902,56 @@ namespace stilt
 						ExpectedValue.Expr
 					);
 
-					if (!Lex.CurrentIs(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator))
+					// A declaration is terminated by a statement separator, or by the end of its
+					// enclosing block ('}') or file (EOF) — none of which are consumed here.
+					if (!Lex.CurrentIs(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator, TokenType.CloseCurlyBracket, TokenType.EOF))
 						throw new SyntaxError(Lex.CurrentToken.Range, "Expected statement separator after variable declaration.");
 
-					if (varCont.SingleExpr is null || varCont.SingleExpr is not AssignExpr assign)
-						throw new SyntaxError(varCont.SingleExpr?.GetFullRangeOrThrow(), "Expected assignment expression after variable declaration.");
 
-					if (assign.Left is not (IdentityExpr or CommaExpr))
-						throw new SyntaxError(varCont.SingleExpr.GetFullRangeOrThrow(), "Expected an identifier or a series of identifiers after variable declaration.");
+					// A variable declaration may have an initializer (`var a = 1`, parsed as an
+					// AssignExpr) or no initializer (`var a`, parsed as the target expression alone).
+					var declExpr = varCont.SingleExpr;
+					Expr target;
+					Expr? value;
+					if (declExpr is AssignExpr assign)
+					{
+						target = assign.Left!;
+						value = assign.Right;
+					}
+					else
+					{
+						target = declExpr;
+						value = null;
+					}
+
+					if (target is not (IdentityExpr or CommaExpr))
+						throw new SyntaxError(target?.GetFullRangeOrThrow(), "Expected an identifier or a series of identifiers after variable declaration.");
 
 					List<Symbol> names;
-					if (assign.Left is CommaExpr idents)
+					if (target is CommaExpr idents)
 					{
 						names = [.. idents.Exprs.Select(e =>
 						{
 							if (e is not IdentityExpr ident)
 								throw new SyntaxError(e.GetFullRangeOrThrow(), "Expected an identifier in variable declaration.");
-							return new VarSymbol(ident.Identity.Unresolved.Name, t: ident.Identity.Unresolved.Token) as Symbol;
+							return new VarSymbol(ident.Identity.Unresolved.Name, Lex.Filepath, t: ident.Identity.Unresolved.Token) as Symbol;
 						})];
 					}
 					else
 					{
-						var ident = (assign.Left as IdentityExpr)!;
-						names = [new VarSymbol(ident.Identity.Unresolved.Name, t: ident.Identity.Unresolved.Token)];
+						var ident = (target as IdentityExpr)!;
+						names = [new VarSymbol(ident.Identity.Unresolved.Name, Lex.Filepath, t: ident.Identity.Unresolved.Token)];
 					}
 
 					var varDecl = new VarDeclStmt()
 					{
 						Scope = newScope,
 						Name = names,
-						Value = assign.Right,
+						Value = value,
 					};
 
 					newStmt = varDecl;
+					names.ForEach(name => name.Declaration = varDecl);
 					newScope.AddSymbols(varDecl.Name);
 
 					break;
@@ -869,142 +963,71 @@ namespace stilt
 					funcScope.Parent = currentScope;
 					Lex.SkipStmtSeparator();
 
-					newStmt = new FuncDeclStmt(funcSymbol, body) { Scope = funcScope };
+					var funcDecl = new FuncDeclStmt(funcSymbol, body) { Scope = funcScope };
+					newStmt = funcDecl;
+					funcSymbol.Declaration = funcDecl;
 					currentScope.AddSymbol(funcSymbol);
 
 					break;
 				}
 				case TokenType.TraitDecl:
 				{
-					// INCOMPLETE: trait declarations are not parsed yet; the body below is the previous draft, left for reference.
-					// Lex.GoPast(TokenType.TraitDecl);
-					// var nameToken = Lex.ExpectThis(TokenType.Identifier);
-					// var traitName = nameToken.Range.Text;
-					// var typeArgs = ParseGenericTypeArguments(nameToken);
+					Lex.GoPast(TokenType.TraitDecl);
+					var nameToken = Lex.ExpectThis(TokenType.Identifier);
+					var typeParams = Lex.CurrentIs(TokenType.OpenSquareBracket) ? ParseGenericTypeArgDecl() : null;
 
-					// Lex.ExpectThis(TokenType.OpenCurlyBracket);
-					// Lex.SkipStmtSeparator();
+					Lex.SkipStmtSeparator();
+					Lex.ExpectThis(TokenType.OpenCurlyBracket);
+					
+					var traitSym = new TypeSymbol(nameToken.Range.Text, Lex.Filepath, nameToken,
+					    inherits: [SymbolReference.AlreadyResolved(Builtins.Trait)], typeParameters: typeParams);
+					var traitScope = new Scope(currentScope);
+					traitScope.AddSymbols(typeParams ?? []);
+					currentScope.AddSymbol(traitSym);
 
-					// Scope traitScope = new(currentScope) { AllowShadowingFromParent = true };
-					// foreach (var typeArg in typeArgs)
-					// 	AddToScope(typeArg, traitScope);
-
-					// var baseTraitSym = new TypeSymbol(traitName, Lex.Filepath);
-					// var traitSym = TypeSymbolFactory.GetTypeSymbol(baseTraitSym, typeArgs);
-					// var traitStmt = new TraitDeclStmt(traitSym) { Scope = traitScope };
-
-					// while (!Lex.CurrentIs(TokenType.CloseCurlyBracket))
-					// {
-					// 	switch (Lex.CurrentToken.Which)
-					// 	{
-					// 		case TokenType.FuncDecl:
-					// 		{
-					// 			Lex.GoPast(TokenType.FuncDecl);
-					// 			// var (sym, _, _) = ParseFuncSignature(traitScope);
-					// 			sym.Source = Lex.Filepath;
-					// 			sym.Declaration = traitStmt;
-					// 			(traitStmt.Name as TypeSymbol)!.Members.Add(sym);
-					// 			break;
-					// 		}
-					// 		case TokenType.VarDecl:
-					// 		{
-					// 			Lex.GoPast(TokenType.VarDecl);
-					// 			var add = ParseNameTypePair(traitScope);
-					// 			if (add.Count != 1) 
-					// 				throw new SyntaxError(Lex.CurrentToken.Range, "Expected single variable declaration in trait body.");
-					// 			var sym = add[0];
-					// 			sym.Source = Lex.Filepath;
-					// 			sym.Declaration = traitStmt;
-					// 			(traitStmt.Name as TypeSymbol)!.Members.Add(sym);
-					// 			break;
-					// 		}
-					// 		default:
-					// 		{
-					// 			throw new SyntaxError(Lex.CurrentToken.Range, "Expected variable or function declaration in trait body.");
-					// 		}
-					// 	}
-						
-					// 	Lex.SkipStmtSeparator();
-					// }
-
-					// AddToScope(traitStmt.Name, currentScope);
-					// newStmt = traitStmt;
-					// //increase depth so ParseBranch doesnt think the } closes the block
-					// ++_depth;
+					var traitDecl = new TraitDeclStmt(traitSym)
+					{
+						Scope = currentScope,
+					};
+					newStmt = traitDecl;
+					traitSym.Declaration = traitDecl;
 
 					break;
 				}
 				case TokenType.TypeDecl:
 				{
-					// INCOMPLETE: type declarations are not parsed yet; the body below is the previous draft, left for reference.
-					// Lex.GoPast(TokenType.TypeDecl);
-					// var nameToken = Lex.ExpectThis(TokenType.Identifier);
-					// var typeName = nameToken.Range.Text;
-					// var (inheritedType, traits) = ParseInheritanceAndTraits();
-					// var typeArgs = ParseGenericTypeArguments(nameToken);
+					Lex.GoPast(TokenType.TypeDecl);
+					var nameToken = Lex.ExpectThis(TokenType.Identifier);
+					var typeParams = Lex.CurrentIs(TokenType.OpenSquareBracket) ? ParseGenericTypeArgDecl() : null;
 
-					// if (!Lex.CurrentIs(TokenType.OpenCurlyBracket))
-					// 	throw new UnexpectedToken(nameToken.Range, TokenType.OpenCurlyBracket, nameToken);
-					// Lex.GoPast(TokenType.OpenCurlyBracket);
-					// Lex.SkipStmtSeparator();
+					Lex.SkipStmtSeparator();
+					IEnumerable<SymbolReference> inheritance = Lex.CurrentIs(TokenType.Type) 
+						? ParseInheritance() 
+						: [];
 
-					// //create base type symbol
-					// var baseTypeSym = new TypeSymbol(typeName, Lex.Filepath, nameToken, inherits: inheritedType, implementedTraits: traits);
+					Lex.SkipStmtSeparator();
+					Lex.ExpectThis(TokenType.OpenCurlyBracket);
+					Lex.SkipStmtSeparator();
+					
+					var typeSym = new TypeSymbol(
+						nameToken.Range.Text, 
+						Lex.Filepath, 
+						nameToken, 
+						inheritance, 
+						typeParameters: typeParams
+					);
+					var typeScope = new Scope(currentScope);
+					typeScope.AddSymbols(typeParams ?? []);
 
-					// //make sure its registered in the factory
-					// var typeSym = TypeSymbolFactory.GetTypeSymbol(baseTypeSym);
-					// if (typeArgs.Count > 0)
-					// 	typeSym = TypeSymbolFactory.GetTypeSymbol(baseTypeSym, typeArgs);
-
-					// Scope newScope = new(currentScope) { AllowShadowingFromParent = true };
-
-					// //potentailly remove self as a variable and use a special self token
-					// var selfSym = new VarSymbol("self", typeSym) { Source = Lex.Filepath, Specifiers = [TokenType.PrivateSpec] };
-					// newScope.AddSymbol(selfSym);
-
-					// var body = new CompoundStmt() { Scope = newScope, Statements = ParseBranch(newScope) };
-					// foreach (var stmt in body.Statements)
-					// {
-					// 	if (stmt is VarDeclStmt vd)
-					// 	{
-					// 		if (vd.Name.Count != 1)
-					// 			throw new SyntaxError(vd.Name.First().Identifier?.Range ?? firstToken.Range, "Expected single variable declaration in type body.");
-					// 		var sym = vd.Name[0];
-
-					// 		if (typeSym.GetMember(sym.Name) is not null && !sym.Specifiers.Contains(TokenType.OverrideSpec))
-					// 			NewError(new ShadowedClassMember(sym.Identifier?.Range ?? firstToken.Range, sym));
-
-					// 		typeSym.Members.Add(sym);
-					// 		if (!sym.Specifiers.Contains(TokenType.PrivateSpec) && !sym.Specifiers.Contains(TokenType.PublicSpec))
-					// 		{
-					// 			// if (Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault))
-					// 			// 	sym.Specifiers.Add(TokenType.PrivateSpec);
-					// 			// else
-					// 				sym.Specifiers.Add(TokenType.PublicSpec);
-					// 		}
-					// 	}
-					// 	else if (stmt is DeclStmt decl)
-					// 	{
-					// 		if (typeSym.GetMember(decl.Name.Name) is not null && !decl.Name.Specifiers.Contains(TokenType.OverrideSpec))
-					// 			NewError(new ShadowedClassMember(decl.Name.Identifier?.Range ?? firstToken.Range, decl.Name));
-
-					// 		typeSym.Members.Add(decl.Name);
-					// 		if (!decl.Name.Specifiers.Contains(TokenType.PrivateSpec) && !decl.Name.Specifiers.Contains(TokenType.PublicSpec))
-					// 		{
-					// 			// if (Result.GlobalDecorators.Any(d => d.DecoratorType == Builtins.PrivateByDefault))
-					// 			// 	decl.Name.Specifiers.Add(TokenType.PrivateSpec);
-					// 			// else
-					// 				decl.Name.Specifiers.Add(TokenType.PublicSpec);
-					// 		}
-					// 	}
-					// 	else if (stmt is not null)
-					// 		throw new SyntaxError(stmt.GetFullRangeOrThrow(), "Only declarations are allowed in type bodies.");
-					// }
-
-					// CheckTraitMethods(typeSym);
-
-					// AddToScope(typeSym, currentScope);
-					// newStmt = new TypeDeclStmt(typeSym, body) { Scope = currentScope };
+					Lex.SkipStmtSeparator();
+					Lex.ExpectThis(TokenType.CloseCurlyBracket);
+					var typeDecl = new TypeDeclStmt(typeSym, new CompoundStmt() { Scope = typeScope })
+					{
+						Scope = currentScope,
+					};
+					newStmt = typeDecl;
+					typeSym.Declaration = typeDecl;
+					currentScope.AddSymbol(typeSym);
 
 					break;
 				}
@@ -1034,7 +1057,7 @@ namespace stilt
 							ExpectedValue.Kw(TokenType.Identifier)
 						)
 					); 
-					var filepath = importCont.Keywords[0].Range.Text;
+					var filepath = importCont.Keywords[1].Range.Text;
 					var moduleName = importCont.Keywords.Count == 4 
 						? importCont.Keywords[3].Range.Text
 						: filepath[(filepath.LastIndexOf('/')+1) ..];
@@ -1045,6 +1068,7 @@ namespace stilt
 						Scope = newScope,
 					};
 					newStmt = importStmt;
+					moduleSym.Declaration = importStmt;
 					newScope.AddSymbol(moduleSym);
 
 					break;
@@ -1207,8 +1231,17 @@ namespace stilt
 
 					Lex.Next();
 					var innerStmt = ParseBranch(newScope);
-					//Lex.Next();
-					
+
+					// ParseBranch stops on (without consuming) the '}' that closes this block; consume
+					// it here and unwind the depth so this block is fully self-contained. This lets a
+					// block-bodied statement (if/else, while, func) see the token that follows the
+					// closing brace — e.g. `else` after `if … { … }`.
+					if (Lex.CurrentIs(TokenType.CloseCurlyBracket))
+					{
+						Lex.Next();
+						--_depth;
+					}
+
 					newStmt = new CompoundStmt()
 					{
 						Scope = newScope,
@@ -1251,8 +1284,8 @@ namespace stilt
 				}
 			}
 
-			if (newStmt is not DeclStmt && specifiers.Count > 0)
-				throw new UnexpectedSpecifier(specifiers[0].Range);
+			if (newStmt is not DeclStmt && specifiers.Count() > 0)
+				throw new UnexpectedSpecifier(specifiers.ElementAt(0).Range);
 
 			//if (Lex.CurrentToken.Which is not (TokenType.StmtSeparator or TokenType.CloseCurlyBracket or TokenType.EOF or TokenType.Else or TokenType.Elif))
 			//	throw new RunonStatement(Lex.CurrentToken.Range);
@@ -1376,7 +1409,7 @@ namespace stilt
 
 			return innerStmts;
 		}
-
+		
 		/// <summary>Entry point: parses the whole file as one top-level branch into <see cref="ParserResult.Statements"/>, rooted at the file's <see cref="ParserResult.RootScope"/>.</summary>
 		public void ParseFile()
 		{

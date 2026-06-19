@@ -7,6 +7,9 @@ namespace stilt
         //TODO
         //scope symbol shadowing
         //
+        //TODO: enforce single inheritance. TypeSymbol.Inherits now holds every base type (class base + traits) in one
+        //list; reject any type whose Inherits contains more than one non-trait base (a base that does not inherit from
+        //Builtins.Trait). Also flag duplicate/cyclic bases here.
 
 		public ProgramArgs Args;
 		public List<Scope> Modules = [];

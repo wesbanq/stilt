@@ -41,17 +41,18 @@ namespace stilt.Compilation
 	/// </list>
 	/// <see cref="Build"/> runs stages 1–3; IR generation is driven separately (see the CLI's <c>ir</c> command).
 	/// </summary>
-	public class Compiler
-	{
+	public class Compiler(ProgramArgs args)
+    {
 		public static readonly string CompilerVersion =
 			System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "unknown";
-		public ProgramArgs Args;
+		public ProgramArgs Args = args;
 		public Dictionary<TimedEvents, Timer> Timers = [];
 		/// <summary>The main file plus every file reached transitively through imports; one per source file.</summary>
-		public List<ObjectFile> Files = [];
+		public Dictionary<string, ObjectFile> Files = [];
 		public Linker? Link;
 		/// <summary>All diagnostics gathered across the run: per-file parse issues plus linker errors.</summary>
-		public IEnumerable<CompilationMessage> Errors => Files.SelectMany(f => f is ParsedFile p ? p.Errors : []).Concat(Link?.Errors ?? []);
+		public List<CompilationMessage> Errors => Files.Values.SelectMany(f => f.ParserResult!.CompilationIssues).Concat(Link?.Errors ?? []).ToList();
+		public bool HasErrors => Errors.Any(e => e.Severity >= ErrorSeverity.Error);
 
 		private static ObjectFile? SearchForObjectFile(string filepath, string extension)
 		{
@@ -123,6 +124,61 @@ namespace stilt.Compilation
 			return file;
 		}
 
+		private List<T> ScanStmt<T>(IEnumerable<Stmt?> stmts)
+			where T : Stmt
+		{
+			var list = new List<T>();
+			foreach (var stmt in stmts)
+			{
+				if (stmt is null)
+					continue;
+
+				switch (stmt)
+				{
+					case T t:
+					{
+						list.Add(t);
+						break;
+					}
+					case CompoundStmt compound:
+					{
+						list.AddRange(ScanStmt<T>(compound.Statements));
+						break;
+					}
+					case IfStmt ifStmt:
+					{
+						list.AddRange(ScanStmt<T>([ifStmt.NextIf, ifStmt.NextElse]));
+						break;
+					}
+					case ForLoopStmt forLoop:
+					{
+						list.AddRange(ScanStmt<T>([forLoop.LoopVariable, forLoop.Body]));
+						break;
+					}
+					case ForeachLoopStmt foreachLoop:
+					{
+						list.AddRange(ScanStmt<T>([foreachLoop.LoopVariable, foreachLoop.Body]));
+						break;
+					}
+					case LoopStmt loop:
+					{
+						list.AddRange(ScanStmt<T>([loop.Body]));
+						break;
+					}
+					case VarDeclStmt:
+					{
+						break;
+					}
+					case DeclStmt decl:
+					{
+						list.AddRange(ScanStmt<T>([decl.Value]));
+						break;
+					}
+				}
+			}
+			return list;
+		}
+
 		/// <summary>
 		/// Runs the front end of the pipeline: parses the main file, and if it has no errors, links it
 		/// (which resolves names and recursively parses imports). Stops early on parse errors. Stage timings
@@ -134,40 +190,49 @@ namespace stilt.Compilation
 			//remove recursion from ParseExpr
 			//multiline exprs
 			//evaluate constant values at compile time
-			//virtual filerange and error reports for them
 			//object file deserialization
-			//separate ParserResult from Parser
 			//add ability touse functions before theyre defined
 
 			Timers.Add(TimedEvents.Compilation, new Timer("Compilation"));
 			Timers[TimedEvents.Compilation].StartTimer();
 
-			Timers[TimedEvents.Compilation].Run(() =>
+			Queue<string> parseQueue = new([Args.MainCodeFilepath!]);
+			Timers.Add(TimedEvents.Parsing, new Timer("Parsing"));
+			Timers[TimedEvents.Parsing].Run(() =>
 			{
-				var file = ParseFile(Args, Args.MainCodeFilepath!);
-				Files.Add(file);
+				while (parseQueue.Count > 0)
+				{
+					var filepath = parseQueue.Dequeue();
+					var file = ParseFile(Args, filepath);
+					Files.Add(filepath, file);
+
+					var importStmts = ScanStmt<ImportStmt>(file.ParserResult!.Statements);
+					foreach (var importStmt in importStmts)
+					{
+						var importPath = Path.GetFullPath(importStmt.Filepath[1..^1]);
+
+						if (!File.Exists(importPath))
+                            Errors.Add(new ImportError(importStmt.InnerRange, importPath));
+
+						if (!Files.ContainsKey(importPath))
+							parseQueue.Enqueue(importPath);
+					}
+
+					file.ParserResult!.ImportedFiles.ForEach(f => parseQueue.Enqueue(f));
+				}
 			});
 
-			if (Files.OfType<ParsedFile>().Any(f => f.HasErrors))
+			if (HasErrors)
 			{
 				Timers[TimedEvents.Compilation].StopTimer();
 				return;
 			}
 
+			Link = new Linker(Args, Files);
 			Timers.Add(TimedEvents.Linking, new Timer("Linking"));
-			Link = new Linker(
-				Args,
-                [.. Files.Select(f => f.ParserResult!.RootScope)],
-                [.. Files.Select(f => f.ParserResult!.Statements)]
-            );
 			Timers[TimedEvents.Linking].Run(() => Link.Link());
 
 			Timers[TimedEvents.Compilation].StopTimer();
 		}
-
-		public Compiler(ProgramArgs args)
-		{
-			Args = args;
-		}
-	}
+    }
 }

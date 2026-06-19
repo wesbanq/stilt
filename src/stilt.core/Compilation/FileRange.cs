@@ -8,10 +8,10 @@ namespace stilt.Compilation
 	/// </summary>
 	public class FileRange
 	{
-		[JsonIgnore]
 		public readonly int Start;
-		[JsonIgnore]
 		public readonly int End;
+		public readonly string Text;
+		
 		[JsonIgnore]
 		public readonly string Filename;
 
@@ -20,20 +20,26 @@ namespace stilt.Compilation
 
 		[JsonIgnore]
 		public int Length => End - Start;
-		public readonly string Text;
 		[JsonIgnore]
-		public readonly string[] TextLines;
+		public readonly string[] SurroundingText;
 
-		private static string[] GetLines(string text, int Start, int End)
+		private static string[] GetLines(FileText text, int Start, int End)
 		{
-			var newStart = Start;
-			var newEnd = End-1;
-			while (newStart > 0 && text[--newStart] != '\n');
-			if (text[newStart] == '\n') ++newStart;
-			while (newEnd < text.Length && text[newEnd] != '\n') ++newEnd;
-			--newEnd;
+			if (text.Length == 0)
+				return [""];
 
-			return text.Substring(newStart, newEnd - newStart + 1).Split("\n");
+			// Walk back to the first character of the line containing Start.
+			int lineStart = Math.Clamp(Start, 0, text.Length - 1);
+			while (lineStart > 0 && text[lineStart - 1] != '\n')
+				--lineStart;
+
+			// Walk forward to the newline (or EOF) ending the line containing the last
+			// character of the range; End is exclusive, so inspect End - 1.
+			int lineEnd = Math.Clamp(End - 1, lineStart, text.Length);
+			while (lineEnd < text.Length && text[lineEnd] != '\n')
+				++lineEnd;
+
+			return text.Substring(lineStart, lineEnd - lineStart).Split("\n");
 		}
 
 		public string FormatLineAndColumn()
@@ -72,7 +78,7 @@ namespace stilt.Compilation
 			_text = file;
 
 			Text = _text.Slice(start, Length);
-			TextLines = GetLines(Text, Start, End);
+			SurroundingText = GetLines(_text, Start, End);
 		}
 
 		public static FileRange? operator +(FileRange? left, FileRange? right)

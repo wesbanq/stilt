@@ -136,7 +136,7 @@ namespace stilt
 		/// <summary>Consumes the current token if it is a statement separator; otherwise does nothing.</summary>
 		public void SkipStmtSeparator()
 		{
-			if (CurrentIs(TokenType.SoftStmtSeparator, TokenType.StrictStmtSeparator))
+			if (CurrentIs(TokenType.SoftStmtSeparator))
 				Next();
 		}
 

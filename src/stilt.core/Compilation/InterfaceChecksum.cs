@@ -47,7 +47,7 @@ namespace stilt.Compilation
 
 		private static string CanonicalizeTypeSymbol(TypeSymbol t, HashSet<TypeSymbol> visited)
 		{
-			var basePart = t.Inherits is null ? "" : CanonicalizeType(t.Inherits, visited);
+			var basePart = string.Join("&", t.Inherits.Select(b => CanonicalizeType(b, visited)));
 			var argsPart = t.Arguments is null || t.ArgumentCount == 0
 				? ""
 				: string.Join(",", t.Arguments.Take(t.ArgumentCount).Select(a => CanonicalizeType(a, visited)));
@@ -77,7 +77,7 @@ namespace stilt.Compilation
 			visited.Add(t);
 			try
 			{
-				var basePart = t.Inherits is null ? "" : CanonicalizeType(t.Inherits, visited);
+				var basePart = string.Join("&", t.Inherits.Select(b => CanonicalizeType(b, visited)));
 				var argsPart = t.Arguments is null || t.ArgumentCount == 0
 					? ""
 					: string.Join(",", t.Arguments.Take(t.ArgumentCount).Select(a => CanonicalizeType(a, visited)));

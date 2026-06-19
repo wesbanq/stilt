@@ -213,11 +213,10 @@ namespace stilt.AST
 	}
 
 	/// <summary>An <c>import "path" [as name]</c>: the source <see cref="Filepath"/>, the <see cref="ModuleName"/> it is bound to, and the module <see cref="Symbol"/> introduced into scope. The <see cref="Linker"/> loads the file and wires up its scope.</summary>
-	public class ImportStmt : Stmt
+	public class ImportStmt : DeclStmt
 	{
 		public required string Filepath;
 		public required string ModuleName;
-		public required Symbol Name;
 		[JsonIgnore]
 		public Scope? ImportedScope;
 

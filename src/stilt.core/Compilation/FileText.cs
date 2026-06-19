@@ -12,10 +12,22 @@ namespace stilt.Compilation
 		public string Text;
 		[JsonIgnore]
 		public string Filepath;
+		[JsonIgnore]
+		public readonly int Length;
 
 		public string Slice(int start, int len) => Text.Substring(start, len);
 		[JsonIgnore]
 		public FileRange EOF => new(Math.Max(0, Text.Length-1), Text.Length, Filepath, this);
+
+		public char this[int idx]
+		{
+			get => Text[idx];
+		}
+
+		public string Substring(int start, int length)
+		{
+			return Text.Substring(start, length);
+		}
 
 		public override string ToString()
 		{
@@ -35,12 +47,14 @@ namespace stilt.Compilation
 			Filepath = filename;
 			Text = Lexer.Preprocess(File.ReadAllText(filename))
 				?? throw new Exception();
+			Length = Text.Length;
 		}
 
 		public FileText(string filename, string text)
 		{
 			Filepath = filename;
 			Text = Lexer.Preprocess(text);
+			Length = Text.Length;
 		}
 	}
 }
