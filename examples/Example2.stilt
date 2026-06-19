@@ -1,11 +1,10 @@
 var a = 2
 var b = 4
 
-if a < b {
-	execute
-		/say "Hello, world!"
-		/tp @p ~2 ~1 ~2
-} else {
-	a++
-	Entity + 2
+{
+func a(): num
 }
+
+
+if a < b {} else {
+	a++; 4 + 2}

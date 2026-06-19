@@ -1,6 +1,6 @@
 ﻿[
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 0,
       "End": 1,
@@ -16,7 +16,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 8,
       "End": 9,
@@ -32,7 +32,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 28,
       "End": 29,
@@ -48,7 +48,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 35,
       "End": 36,
@@ -64,7 +64,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 55,
       "End": 58,
@@ -104,7 +104,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 74,
       "End": 75,
@@ -128,7 +128,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 88,
       "End": 89,
@@ -144,7 +144,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 92,
       "End": 95,
@@ -176,7 +176,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 113,
       "End": 114,
@@ -200,7 +200,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 120,
       "End": 121,
@@ -216,7 +216,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 123,
       "End": 126,
@@ -240,7 +240,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 129,
       "End": 132,
@@ -256,7 +256,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 144,
       "End": 151,
@@ -272,7 +272,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 162,
       "End": 163,

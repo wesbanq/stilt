@@ -1,6 +1,6 @@
 ﻿[
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 0,
       "End": 1,
@@ -48,7 +48,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 10,
       "End": 13,
@@ -112,7 +112,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 29,
       "End": 30,
@@ -144,7 +144,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 36,
       "End": 39,
@@ -176,7 +176,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 45,
       "End": 46,
@@ -208,7 +208,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 52,
       "End": 55,
@@ -240,7 +240,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 61,
       "End": 62,
@@ -264,7 +264,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 65,
       "End": 66,
@@ -288,7 +288,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 69,
       "End": 72,
@@ -360,7 +360,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 94,
       "End": 95,
@@ -424,7 +424,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 108,
       "End": 109,
@@ -448,7 +448,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 111,
       "End": 114,
@@ -480,7 +480,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 124,
       "End": 127,
@@ -496,7 +496,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 134,
       "End": 137,
@@ -544,7 +544,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 166,
       "End": 167,
@@ -656,7 +656,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 240,
       "End": 241,
@@ -704,7 +704,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 268,
       "End": 271,
@@ -736,7 +736,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 279,
       "End": 282,
@@ -760,7 +760,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 305,
       "End": 308,
@@ -800,7 +800,7 @@
     }
   },
   {
-    "Which": "StmtSeparator",
+    "Which": "SoftStmtSeparator",
     "Range": {
       "Start": 316,
       "End": 317,
