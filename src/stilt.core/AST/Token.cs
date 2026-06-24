@@ -168,11 +168,11 @@ namespace stilt
 		[Symbol("<=")]
 		LesserOrEqual,
 
-		[BinaryOperator(6)]
+		[BinaryOperator(7)]
 		[Symbol("==")]
 		Equals,
 
-		[BinaryOperator(6)]
+		[BinaryOperator(7)]
 		[Symbol("!=")]
 		Unequals,
 
@@ -182,17 +182,17 @@ namespace stilt
 		[Symbol("not")]
 		LogicalNot,
 
-		[BinaryOperator(2)]
+		[BinaryOperator(10)]
 		[Symbol("|")]
 		[Symbol("or")]
 		LogicalOr,
 
-		[BinaryOperator(2)]
+		[BinaryOperator(8)]
 		[Symbol("&")]
 		[Symbol("and")]
 		LogicalAnd,
 
-		[BinaryOperator(2)]
+		[BinaryOperator(9)]
 		[Symbol("^")]
 		[Symbol("xor")]
 		LogicalXor,
@@ -287,7 +287,7 @@ namespace stilt
 		[Symbol("?.")]
 		NullAccess,
 
-		[BinaryOperator(1)]
+		[BinaryOperator(11)]
 		[Symbol("??")]
 		NullCoalescing,
 
